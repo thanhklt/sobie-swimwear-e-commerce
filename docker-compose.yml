@@ -1,2 +1,0 @@
-# Khung Compose tổng thể; chưa khai báo service.
-# PostgreSQL và Redis thuộc hạ tầng; giữ thư mục infra/ cho phần cấu hình này.

@@ -27,7 +27,7 @@ Nhân viên chọn một đơn "Đã xác nhận" trong trang quản lý đơn h
 - **2a. Bàn giao nhiều đơn một lúc `[GD]`:** Nhân viên chọn nhiều đơn "Đã xác nhận" và bấm "Bàn giao vận chuyển"; hệ thống xử lý từng đơn như bước 3–5, đơn nào không hợp lệ thì bỏ qua và báo lại cho Nhân viên.
 
 ## Exceptions
-- **E1. Đơn không ở "Đã xác nhận":** đơn đang "Chưa xử lý", đã "Đang giao" hoặc đã ở trạng thái kết thúc — hệ thống từ chối, báo trạng thái hiện tại, đơn không đổi.
+- **E1. Đơn không ở "Đã xác nhận":** đơn đang "Chưa xử lý" hoặc "Đang giao" hoặc đã ở trạng thái kết thúc — hệ thống từ chối, báo trạng thái hiện tại, đơn không đổi.
 - **E2. Đơn không tồn tại:** hệ thống báo không tìm thấy đơn.
 
 ## Postconditions
@@ -37,33 +37,33 @@ Nhân viên chọn một đơn "Đã xác nhận" trong trang quản lý đơn h
 ## Acceptance Criteria
 
 ### AC-1: Bàn giao đơn thành công
-Given: đơn DH001 ở trạng thái "Đã xác nhận"
-When: Nhân viên bấm "Bàn giao vận chuyển" cho DH001
-Then: đơn DH001 chuyển sang "Đang giao"
-And: DH001 xuất hiện trên Trang giả lập vận chuyển
-And: lịch sử trạng thái đơn ghi "Đã xác nhận → Đang giao" kèm Nhân viên thực hiện
+Given: Đơn DH001 ở trạng thái "Đã xác nhận"  
+When: Nhân viên bấm "Bàn giao vận chuyển" cho DH001  
+Then: Đơn DH001 chuyển sang "Đang giao"  
+And: DH001 xuất hiện trên Trang giả lập vận chuyển  
+And: Lịch sử trạng thái đơn ghi "Đã xác nhận → Đang giao" kèm Nhân viên thực hiện
 
 ### AC-2: Đơn chưa xác nhận
-Given: đơn DH002 ở trạng thái "Chưa xử lý"
-When: Nhân viên bấm "Bàn giao vận chuyển" cho DH002
-Then: hệ thống từ chối và báo đơn đang "Chưa xử lý"
-And: DH002 không xuất hiện trên Trang giả lập vận chuyển
+Given: Đơn DH002 ở trạng thái "Chưa xử lý"  
+When: Nhân viên bấm "Bàn giao vận chuyển" cho DH002  
+Then: Hệ thống từ chối và báo đơn đang "Chưa xử lý"  
+And: DH002 không xuất hiện trên Trang giả lập vận chuyển  
 
 ### AC-3: Đơn đã bàn giao
-Given: đơn DH001 đã ở trạng thái "Đang giao"
-When: Nhân viên bấm "Bàn giao vận chuyển" cho DH001 lần nữa
-Then: hệ thống từ chối, đơn giữ trạng thái "Đang giao"
+Given: Đơn DH001 đã ở trạng thái "Đang giao"  
+When: Nhân viên bấm "Bàn giao vận chuyển" cho DH001 lần nữa  
+Then: Hệ thống từ chối, đơn giữ trạng thái "Đang giao"  
 
 ### AC-4: Bàn giao nhiều đơn
-Given: đơn DH001 và DH003 ở "Đã xác nhận", đơn DH002 ở "Chưa xử lý"
-When: Nhân viên chọn cả 3 đơn và bấm "Bàn giao vận chuyển"
-Then: DH001 và DH003 chuyển sang "Đang giao"
-And: DH002 không đổi và hệ thống báo DH002 không được bàn giao
+Given: Đơn DH001 và DH003 ở "Đã xác nhận", đơn DH002 ở "Chưa xử lý"  
+When: Nhân viên chọn cả 3 đơn và bấm "Bàn giao vận chuyển"  
+Then: DH001 và DH003 chuyển sang "Đang giao"  
+And: DH002 không đổi và hệ thống báo DH002 không được bàn giao  
 
 ### AC-5: Khách thấy trạng thái mới
-Given: đơn DH001 của khách A ở "Đã xác nhận"
-When: Nhân viên bàn giao DH001
-Then: khách A mở chi tiết đơn thấy trạng thái "Đang giao"
+Given: Đơn DH001 của khách A ở "Đã xác nhận"  
+When: Nhân viên bàn giao DH001  
+Then: Khách A mở chi tiết đơn thấy trạng thái "Đang giao"  
 
 ## Dependencies
 - **Upstream UC:** UC-23 Xác nhận hoặc từ chối đơn

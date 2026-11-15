@@ -97,8 +97,9 @@ Then: sản phẩm A không xuất hiện trong danh sách của Y
 - UC thuộc catalog-context.
 - Nút tim có trên cả thẻ sản phẩm và trang chi tiết.
 - Khách vãng lai bấm tim thì được yêu cầu đăng nhập; sau đăng nhập quay lại trang đang xem, không tự lưu sản phẩm.
-- Danh sách yêu thích sắp xếp mới thêm nhất trước, có phân trang.
+- Danh sách yêu thích sắp xếp mới thêm nhất trước (theo thứ tự thêm; ERD không có cột thời gian riêng), có phân trang.
 - Sản phẩm ngừng bán vẫn ở danh sách, hiển thị nhãn "Ngừng bán" và không mở được trang chi tiết.
 
 ## History
 - v1 (2026-11-15): initial
+- v2 (2026-11-15): theo data model v1 — sắp xếp theo thứ tự thêm, không dùng cột thời gian

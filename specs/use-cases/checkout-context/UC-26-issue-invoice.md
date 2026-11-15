@@ -18,7 +18,7 @@ Hệ thống
 ## Main Flow
 1. Hệ thống nhận sự kiện đơn "Giao thành công".
 2. Hệ thống tạo hóa đơn cho đơn gồm mã hóa đơn, mã đơn, thời điểm xuất và snapshot tại thời điểm xuất: tên sản phẩm, đơn giá gốc, đơn giá sau giảm, số lượng, tiền giảm, phí vận chuyển, tổng thanh toán, địa chỉ, người đặt, số điện thoại, email, phương thức thanh toán.
-3. Với đơn COD, hệ thống ghi nhận đơn "Đã thanh toán" khi giao thành công `[GD]` và lưu lịch sử thay đổi của đơn.
+3. Với đơn COD, hệ thống ghi nhận đơn "Đã thanh toán" khi giao thành công `[GD]` (không ghi lịch sử cho thay đổi trạng thái thanh toán).
 4. Hóa đơn ở chế độ chỉ đọc, không sửa và không xóa.
 
 ## Alternative Flows
@@ -30,7 +30,8 @@ Hệ thống
 
 ## Postconditions
 - Đơn "Giao thành công" có đúng 1 hóa đơn chỉ đọc, lưu snapshot thông tin tại thời điểm xuất.
-- Với đơn COD: trạng thái thanh toán "Đã thanh toán"; lịch sử thay đổi của đơn có thêm 1 dòng với nguồn là Hệ thống `[GD]`.
+- Với đơn COD: trạng thái thanh toán "Đã thanh toán" `[GD]`.
+- UC này không ghi thêm lịch sử trạng thái đơn; dòng "Đang giao → Giao thành công" do UC-36 ghi.
 
 ## Acceptance Criteria
 
@@ -74,11 +75,14 @@ Then: DH0003 được ghi nhận "Đã thanh toán" và có hóa đơn
 - Hóa đơn lưu snapshot tại thời điểm xuất gồm: tên sản phẩm, đơn giá gốc, đơn giá sau giảm, số lượng, tiền giảm, phí vận chuyển, tổng thanh toán, địa chỉ, người đặt, số điện thoại, email, phương thức thanh toán (theo ERD).
 - Mỗi đơn có tối đa 1 hóa đơn (theo ERD).
 - Mỗi lần đơn đổi trạng thái, hệ thống lưu lịch sử: trạng thái cũ, trạng thái mới, nguồn thay đổi, người đổi (nếu có), thời điểm (theo ERD).
+- Thay đổi trạng thái thanh toán không được ghi lịch sử; `order_status_history` chỉ lưu trạng thái đơn (đã chốt 15/11/2026).
+- Mã hóa đơn hiển thị sinh từ `invoice_id`, không có cột riêng (data model v1).
 
 ### Giả định [GD]
-- Đơn COD được ghi nhận "Đã thanh toán" khi giao thành công; thay đổi này cũng được ghi vào lịch sử của đơn.
+- Đơn COD được ghi nhận "Đã thanh toán" khi giao thành công.
 - Lỗi tạo hóa đơn không làm thay đổi trạng thái giao của đơn; hệ thống thử lại.
 
 ## History
 - v1 (2026-11-15): initial
 - v2 (2026-11-15): chốt snapshot hóa đơn và mỗi đơn tối đa 1 hóa đơn (theo ERD); lưu lịch sử khi COD chuyển "Đã thanh toán"
+- v3 (2026-11-15): không ghi thay đổi trạng thái thanh toán vào lịch sử (theo data model v1); mã hóa đơn sinh từ `invoice_id`

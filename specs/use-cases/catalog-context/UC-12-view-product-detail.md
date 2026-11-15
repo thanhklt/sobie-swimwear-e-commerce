@@ -17,7 +17,7 @@ Người dùng bấm vào một thẻ sản phẩm.
 
 ## Main Flow
 1. Người dùng mở trang chi tiết sản phẩm.
-2. Hệ thống hiển thị tên, mô tả, bộ ảnh (gallery) của sản phẩm theo thứ tự hiển thị, các màu và size có sẵn, bảng size, nút thả tim (yêu thích).
+2. Hệ thống hiển thị tên, mô tả, bộ ảnh (gallery) của sản phẩm theo thứ tự hiển thị, các màu và size có sẵn, bảng size chung của cửa hàng, nút thả tim (yêu thích).
 3. Người dùng chọn màu; bộ ảnh không thay đổi theo màu.
 4. Người dùng chọn size; hệ thống hiển thị giá bán của size đó (mọi màu cùng size có cùng giá) và tình trạng còn/hết hàng của biến thể (màu × size) đã chọn.
 5. Nếu sản phẩm có khuyến mãi theo sản phẩm còn hiệu lực, hệ thống hiển thị giá gốc và giá sau giảm.
@@ -37,57 +37,62 @@ Người dùng bấm vào một thẻ sản phẩm.
 ## Acceptance Criteria
 
 ### AC-1: Hiển thị thông tin sản phẩm
-Given: sản phẩm A Đang bán, có bộ ảnh, mô tả và bảng size
+Given: sản phẩm A Đang bán, có bộ ảnh và mô tả
 When: người dùng mở trang chi tiết sản phẩm A
-Then: tên, mô tả, bộ ảnh, các màu, các size, bảng size và nút thả tim được hiển thị
+Then: tên, mô tả, bộ ảnh, các màu, các size, bảng size chung và nút thả tim được hiển thị
 
-### AC-2: Bộ ảnh theo thứ tự hiển thị
+### AC-2: Bảng size chung
+Given: sản phẩm A và sản phẩm B đều Đang bán
+When: người dùng lần lượt mở trang chi tiết sản phẩm A và sản phẩm B
+Then: cả hai trang hiển thị cùng một bảng size chung của cửa hàng
+
+### AC-3: Bộ ảnh theo thứ tự hiển thị
 Given: sản phẩm A có 3 ảnh với thứ tự hiển thị 1, 2, 3
 When: người dùng mở trang chi tiết sản phẩm A
 Then: ảnh được hiển thị đúng thứ tự 1, 2, 3
 
-### AC-3: Đổi màu không đổi ảnh
+### AC-4: Đổi màu không đổi ảnh
 Given: người dùng đang xem sản phẩm A có màu Đỏ và Xanh
 When: người dùng chuyển từ màu Đỏ sang màu Xanh
 Then: bộ ảnh của sản phẩm giữ nguyên
 
-### AC-4: Giá theo size
+### AC-5: Giá theo size
 Given: sản phẩm A có giá size S = 300.000đ, size M = 320.000đ
 When: người dùng chọn size M
 Then: giá hiển thị là 320.000đ
 
-### AC-5: Cùng size khác màu cùng giá
+### AC-6: Cùng size khác màu cùng giá
 Given: sản phẩm A có giá size M = 320.000đ, có màu Đỏ và Xanh
 When: người dùng chọn size M, lần lượt với màu Đỏ và màu Xanh
 Then: giá hiển thị đều là 320.000đ
 
-### AC-6: Giá sau khuyến mãi theo sản phẩm
+### AC-7: Giá sau khuyến mãi theo sản phẩm
 Given: sản phẩm A có khuyến mãi theo sản phẩm còn hiệu lực làm giá size M còn 288.000đ
 When: người dùng chọn size M
 Then: hệ thống hiển thị giá gốc 320.000đ và giá sau giảm 288.000đ
 
-### AC-7: Còn hàng
+### AC-8: Còn hàng
 Given: biến thể Đỏ × M có tồn kho > 0
 When: người dùng chọn màu Đỏ và size M
 Then: hệ thống hiển thị "Còn hàng" và cho phép thêm vào giỏ
 
-### AC-8: Hết hàng
+### AC-9: Hết hàng
 Given: biến thể Đỏ × L có tồn kho = 0
 When: người dùng chọn màu Đỏ và size L
 Then: hệ thống hiển thị "Hết hàng"
 And: nút thêm vào giỏ bị vô hiệu hóa
 
-### AC-9: Chưa chọn đủ màu và size
+### AC-10: Chưa chọn đủ màu và size
 Given: người dùng mới chọn màu, chưa chọn size
 When: người dùng bấm thêm vào giỏ
 Then: hệ thống không thêm vào giỏ và nhắc "Vui lòng chọn màu và size"
 
-### AC-10: Sản phẩm Ngừng bán
+### AC-11: Sản phẩm Ngừng bán
 Given: sản phẩm B ở trạng thái Ngừng bán
 When: người dùng truy cập trang chi tiết sản phẩm B
 Then: hệ thống hiển thị trang "Không tìm thấy sản phẩm"
 
-### AC-11: Thả tim từ trang chi tiết
+### AC-12: Thả tim từ trang chi tiết
 Given: Khách hàng đang đăng nhập, sản phẩm A chưa có trong danh sách yêu thích
 When: Khách hàng bấm nút thả tim trên trang chi tiết sản phẩm A
 Then: sản phẩm A được thêm vào danh sách yêu thích (UC-38)
@@ -106,7 +111,9 @@ Then: sản phẩm A được thêm vào danh sách yêu thích (UC-38)
 - Bộ ảnh (gallery) gắn theo sản phẩm, có thứ tự hiển thị; chọn màu không đổi ảnh (theo ERD, đã chốt 15/11/2026).
 - Giá bán đổi theo size; cùng size khác màu cùng giá (đã chốt 15/11/2026).
 - Có chức năng thả tim lưu sản phẩm vào danh sách yêu thích (đã chốt 15/11/2026, UC-38).
+- Dùng một bảng size chung cho cả cửa hàng, nội dung cố định (hard-code như trang thông tin), không phải trường của sản phẩm (đã chốt 15/11/2026).
 
 ## History
 - v1 (2026-11-15): initial
 - v2 (2026-11-15): ảnh theo sản phẩm (theo ERD), chốt giá theo size chung cho mọi màu, thêm nút thả tim dẫn tới UC-38
+- v3 (2026-11-15): chốt bảng size chung cố định cho cả cửa hàng; thêm AC-2, đánh số lại AC

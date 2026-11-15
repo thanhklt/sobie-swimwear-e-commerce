@@ -112,15 +112,19 @@ Chưa xử lý ──(UC-23 xác nhận)──► Đã xác nhận ──(UC-40 
 | Trang giả lập | Không cần đăng nhập, mỗi loại 1 trang | UC-25, UC-36 |
 | Hóa đơn (ERD) | Lưu snapshot thông tin đơn lúc xuất | UC-26 |
 | Dashboard | Bỏ chỉ số hiệu quả khuyến mãi | UC-37 |
+| Bảng size | Một bảng size chung, nội dung cố định | UC-12, UC-14 |
+| Giá theo size | Giữ `variant_sell_price`; đặt giá cho size thì ghi cùng giá cho mọi màu của size đó | UC-16 |
+| Từ chối đơn | Không nhập, không lưu lý do | UC-23 |
+| Lịch sử thanh toán | Đổi trạng thái thanh toán không ghi vào lịch sử trạng thái đơn | UC-25, UC-26 |
+| Sửa khuyến mãi | Khuyến mãi đã tạo không được sửa, chỉ ngừng; tạo có popup xác nhận | UC-28 → UC-31 |
+| Tra cứu khuyến mãi | Không có tên; danh sách lọc theo khoảng thời gian — hiện khuyến mãi có thời gian hiệu lực giao với khoảng chọn (kể cả một phần); chưa kết thúc thì tính đến hiện tại | UC-28, UC-29, UC-30 |
+| Nhà cung cấp | Có trạng thái Đang hợp tác / Ngừng hợp tác; chỉ chọn nhà cung cấp Đang hợp tác khi lập phiếu | UC-32, UC-33 |
+| Phiếu nhập | Không lưu người / thời điểm xác nhận | UC-34 |
+| Hàng hoàn | Chống cộng tồn hai lần bằng trạng thái đơn, không có cột đánh dấu | UC-35 |
 
-## Việc cần cập nhật ở ERD
+## Data model
 
-- `variant_sell_price` đang ở biến thể, trong khi giá chỉ đổi theo size → chuyển giá về size hoặc đảm bảo đồng bộ giá các màu cùng size (UC-16).
-- Thêm cột giá vốn (bình quân gia quyền) ở `variant` (UC-34).
-- Bổ sung SĐT, email, địa chỉ cho `supplier` (UC-32).
-- Tách `account` (email, SĐT, mật khẩu, vai trò, trạng thái) và thêm bảng hồ sơ Employee, Admin (UC-01, UC-06).
-- Chưa có trường bảng size của sản phẩm `[GD]` (UC-14).
-- `order_status_history` chỉ lưu trạng thái đơn; lưu lịch sử trạng thái thanh toán là `[GD]` (UC-25, UC-26).
+Xem [data_model_v1.md](../entity-model/data_model_v1.md) — bám sát ERD, chỉ thay đổi 6 điểm đã chốt.
 
 ## Tổng hợp giả định `[GD]`
 
@@ -172,7 +176,6 @@ Mỗi dòng là một giả định đang có trong mục *Notes* của UC, ch�
 | UC-13 | Chỉ có một trang chính sách chung. |
 | UC-14 | Sản phẩm có 2 trạng thái: Đang bán, Ngừng bán; sản phẩm mới tạo ở trạng thái Ngừng bán. |
 | UC-14 | Tên, danh mục, giới tính là trường bắt buộc. |
-| UC-14 | Bảng size là một trường của sản phẩm (ERD chưa có trường này). |
 | UC-14 | Chỉ chuyển Đang bán khi đã có biến thể và mọi size đã có giá. |
 | UC-14 | Không xóa sản phẩm đã có trong đơn hàng hoặc phiếu nhập. |
 | UC-15 | Biến thể mới tạo có tồn kho = 0; tồn kho không sửa tay. |
@@ -195,29 +198,23 @@ Mỗi dòng là một giả định đang có trong mục *Notes* của UC, ch�
 | UC-21 | Danh sách đơn sắp xếp mới nhất trước, có phân trang. |
 | UC-22 | Hủy đơn cũng hoàn lượt của khuyến mãi theo hóa đơn đã áp (voucher đã chốt). |
 | UC-23 | UC này gồm cả xem danh sách đơn, có phân trang và lọc theo trạng thái. |
-| UC-23 | Từ chối đơn bắt buộc nhập lý do; khách xem được lý do. |
 | UC-23 | Không cho xác nhận đơn QR khi chưa thanh toán. |
 | UC-23 | Từ chối đơn cũng hoàn lượt của khuyến mãi theo hóa đơn đã áp (voucher đã chốt). |
 | UC-24 | Tác vụ chạy mỗi 5 phút. |
 | UC-24 | Tự hủy cũng hoàn lượt của khuyến mãi theo hóa đơn đã áp (voucher đã chốt). |
 | UC-25 | Gửi trùng xác nhận cho đơn đã thanh toán là idempotent. |
-| UC-25 | Đổi trạng thái thanh toán cũng được ghi vào lịch sử thay đổi của đơn. |
-| UC-26 | Đơn COD được ghi nhận "Đã thanh toán" khi giao thành công; thay đổi này cũng được ghi vào lịch sử của đơn. |
+| UC-26 | Đơn COD được ghi nhận "Đã thanh toán" khi giao thành công. |
 | UC-26 | Lỗi tạo hóa đơn không làm thay đổi trạng thái giao của đơn; hệ thống thử lại. |
 | UC-27 | Nhân viên có trang danh sách hóa đơn, mới nhất trước, phân trang, tìm theo mã đơn hoặc mã hóa đơn. |
 | UC-28 | Một khuyến mãi áp dụng cho một hoặc nhiều sản phẩm. |
 | UC-28 | Ngày kết thúc tự động không dùng cho loại này; ngày kết thúc được ghi khi Nhân viên kết thúc chương trình. |
 | UC-28 | Phần trăm giảm hợp lệ: lớn hơn 0 và nhỏ hơn 100. |
-| UC-28 | Sửa khuyến mãi không làm thay đổi đơn đã tạo. |
 | UC-28 | Danh sách khuyến mãi hiển thị trạng thái: sắp diễn ra, đang hiệu lực, đã kết thúc. |
 | UC-29 | Được phép có nhiều khuyến mãi theo hóa đơn cùng hiệu lực; UC-31 chọn cái giảm nhiều nhất trong số đủ điều kiện. |
-| UC-29 | Sửa hoặc ngừng khuyến mãi không làm thay đổi đơn đã tạo. |
 | UC-29 | Đơn bị hủy hoặc bị từ chối thì hoàn lượt khuyến mãi theo hóa đơn (giảm số lượng đã dùng 1). |
-| UC-29 | Phần trăm giảm hợp lệ: lớn hơn 0 và nhỏ hơn 100; số lượng được áp dụng ≥ 1 và không nhỏ hơn số lượng đã dùng. |
+| UC-29 | Phần trăm giảm hợp lệ: lớn hơn 0 và nhỏ hơn 100; số lượng được áp dụng ≥ 1. |
 | UC-29 | Danh sách khuyến mãi hiển thị số lượng được áp dụng, số lượng đã dùng và trạng thái. |
-| UC-30 | Mã voucher không phân biệt hoa thường và không sửa được sau khi tạo. |
-| UC-30 | Tổng lượt dùng mới không được nhỏ hơn số lượt đã dùng. |
-| UC-30 | Có thao tác ngừng voucher. |
+| UC-30 | Mã voucher không phân biệt hoa thường. |
 | UC-30 | Phần trăm giảm hợp lệ: lớn hơn 0 và nhỏ hơn 100. |
 | UC-30 | Danh sách voucher hiển thị tổng lượt dùng, số lượt đã dùng và trạng thái. |
 | UC-31 | Có nhiều khuyến mãi theo hóa đơn đủ điều kiện thì lấy mức giảm lớn nhất. |
@@ -226,13 +223,11 @@ Mỗi dòng là một giả định đang có trong mục *Notes* của UC, ch�
 | UC-31 | Đơn bị hủy hoặc bị từ chối thì hoàn cả lượt khuyến mãi theo hóa đơn. |
 | UC-32 | Tên nhà cung cấp là bắt buộc và không trùng. |
 | UC-32 | Danh sách có phân trang và tìm theo tên. |
-| UC-32 | Có trạng thái "Đang hợp tác" / "Ngừng hợp tác"; nhà cung cấp đã có phiếu nhập không xóa được, chỉ ngừng hợp tác. |
+| UC-32 | Nhà cung cấp đã có phiếu nhập không xóa được, chỉ ngừng hợp tác; chưa có phiếu nhập thì xóa hẳn được. |
 | UC-33 | Phiếu nhập có trạng thái: Nháp → Đã xác nhận | Đã hủy; chỉ sửa và hủy được khi còn "Nháp". |
 | UC-33 | Mỗi biến thể chỉ xuất hiện một dòng trong một phiếu. |
 | UC-33 | Danh sách phiếu nhập lọc được theo trạng thái và nhà cung cấp. |
-| UC-34 | Phiếu lưu thời điểm xác nhận và Nhân viên xác nhận. |
 | UC-35 | Cộng tồn chạy trong cùng transaction với cập nhật trạng thái đơn. |
-| UC-35 | Đơn được đánh dấu đã cộng lại tồn kho để không cộng hai lần. |
 | UC-35 | Biến thể hoặc sản phẩm đã ngừng bán vẫn được cộng lại tồn kho. |
 | UC-35 | Khi lỗi, Trang giả lập vận chuyển nhận lỗi và có thể gửi lại. |
 | UC-36 | Danh sách trên trang giả lập gồm: mã đơn, người nhận, số điện thoại, địa chỉ, người gửi, số tiền thu khi giao với đơn COD. |
@@ -243,7 +238,7 @@ Mỗi dòng là một giả định đang có trong mục *Notes* của UC, ch�
 | UC-38 | UC thuộc catalog-context. |
 | UC-38 | Nút tim có trên cả thẻ sản phẩm và trang chi tiết. |
 | UC-38 | Khách vãng lai bấm tim thì được yêu cầu đăng nhập; sau đăng nhập quay lại trang đang xem, không tự lưu sản phẩm. |
-| UC-38 | Danh sách yêu thích sắp xếp mới thêm nhất trước, có phân trang. |
+| UC-38 | Danh sách yêu thích sắp xếp mới thêm nhất trước (theo thứ tự thêm; ERD không có cột thời gian riêng), có phân trang. |
 | UC-38 | Sản phẩm ngừng bán vẫn ở danh sách, hiển thị nhãn "Ngừng bán" và không mở được trang chi tiết. |
 | UC-39 | Danh sách tồn kho có phân trang; mỗi dòng gồm tên sản phẩm, màu, size, số lượng tồn. |
 | UC-39 | Tìm theo tên sản phẩm và lọc theo danh mục. |

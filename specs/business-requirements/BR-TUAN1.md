@@ -119,6 +119,7 @@ Khách tìm và xem được sản phẩm cùng tình trạng còn/hết hàng t
 - Sắp xếp ưu tiên sản phẩm mới nhất (đã chốt 15/11/2026).
 - Giá bán chỉ thay đổi theo size; cùng size khác màu thì cùng giá (đã chốt 15/11/2026). ERD hiện để giá ở biến thể (`variant_sell_price`), cần điều chỉnh hoặc đảm bảo đồng bộ.
 - Ảnh sản phẩm (gallery) gắn theo sản phẩm, không theo màu (đã chốt 15/11/2026).
+- Bảng size dùng chung cho cả cửa hàng, nội dung cố định (đã chốt 15/11/2026).
 - Wishlist: Khách hàng thả tim để lưu sản phẩm vào danh sách yêu thích; mỗi sản phẩm chỉ có 1 lần trong danh sách của một tài khoản (đã chốt 15/11/2026, theo ERD).
 
 ### Open Questions
@@ -178,6 +179,8 @@ Nhân viên tạo được 3 loại khuyến mãi; khi đặt hàng, hệ thốn
 - Mỗi khuyến mãi có số lượng được áp dụng và số lượng thực tế đã dùng. Khuyến mãi theo sản phẩm không áp dụng giới hạn số lượng; có hiệu lực cho đến khi Nhân viên bấm kết thúc chương trình (đã chốt 15/11/2026).
 - Khuyến mãi theo hóa đơn và voucher có giá trị đơn tối thiểu; voucher chỉ giới hạn tổng lượt dùng, không giới hạn số lần mỗi khách (theo ERD).
 - Mỗi sản phẩm thuộc tối đa 1 khuyến mãi theo sản phẩm; mỗi đơn áp tối đa 1 khuyến mãi theo hóa đơn hoặc voucher (theo ERD).
+- Khuyến mãi đã tạo không được sửa, chỉ có thể ngừng để các đơn sau không được áp. Khi tạo khuyến mãi, hệ thống hiển thị popup để Nhân viên xác nhận (đã chốt 15/11/2026).
+- Khuyến mãi không có tên. Danh sách khuyến mãi (cả 3 loại) lọc được theo khoảng thời gian để Nhân viên tra cứu (đã chốt 15/11/2026).
 
 ### Open Questions
 - [x] Mức giảm tính theo phần trăm, theo số tiền, hay cả hai? Có mức giảm tối đa không? → Theo phần trăm, không có mức tối đa (đã chốt 15/11/2026).
@@ -206,6 +209,7 @@ Nhân viên nhập hàng từ nhà cung cấp; hàng của đơn giao không th�
 - Ngưỡng tồn kho thấp lấy từ cấu hình hard-code.
 - Khi xác nhận phiếu nhập, giá vốn được tính lại theo phương án bình quân gia quyền (xem Constraints của BR-007).
 - Đơn giao không thành công: hệ thống tự cộng lại số lượng vào tồn kho, không cần Nhân viên thao tác; giá vốn không đổi.
+- Nhà cung cấp có trạng thái Đang hợp tác / Ngừng hợp tác (đã chốt 15/11/2026).
 
 ### Open Questions
 - [x] Có xem được danh sách tồn kho theo biến thể ngoài dashboard không? → Có, Nhân viên quản lý hàng hóa nên xem được tồn kho (đã chốt 15/11/2026).
@@ -278,3 +282,4 @@ Xem được các chỉ số kinh doanh chính của cửa hàng trên một das
 - v6 (2026-11-15): chốt đăng ký đủ email và SĐT; Admin chỉ quản lý tài khoản và gán vai trò cho tài khoản; bộ trạng thái đơn; hủy/từ chối đơn cộng lại tồn kho và hoàn lượt voucher; hai mức giảm bằng nhau thì ưu tiên voucher; chỉ Nhân viên xem dashboard
 - v7 (2026-11-15): làm rõ Admin chỉ gán vai trò (Nhân viên ↔ Admin) cho tài khoản, không tạo vai trò mới
 - v8 (2026-11-15): đối chiếu ERD — khuyến mãi giảm theo %, số lượng áp dụng; giá theo size; gallery theo sản phẩm; wishlist vào phạm vi, review để giai đoạn 2; lọc và sắp xếp trang danh mục; trang thông tin cố định; Nhân viên xem tồn kho; bàn giao vận chuyển; trang giả lập không cần đăng nhập; bỏ chỉ số hiệu quả khuyến mãi
+- v9 (2026-11-15): theo data model v1 — bảng size chung; khuyến mãi không sửa, chỉ ngừng, tạo có popup xác nhận; nhà cung cấp có trạng thái hợp tác; khuyến mãi không có tên, lọc được theo khoảng thời gian

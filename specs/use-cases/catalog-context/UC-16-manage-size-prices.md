@@ -20,7 +20,7 @@ Nhân viên mở mục Giá bán của một sản phẩm.
 1. Hệ thống hiển thị các size của sản phẩm và giá bán hiện tại của từng size.
 2. Nhân viên nhập hoặc sửa giá bán cho từng size.
 3. Hệ thống kiểm tra giá là số nguyên VND lớn hơn 0 và lưu.
-4. Giá mới áp dụng cho mọi màu của size đó và hiển thị ngay trên storefront.
+4. Hệ thống ghi cùng giá đó vào `variant_sell_price` của mọi biến thể cùng sản phẩm và cùng size (mọi màu của size đó), trong cùng một transaction; giá mới hiển thị ngay trên storefront.
 
 ## Alternative Flows
 - **2a. Size chưa có giá:** hệ thống đánh dấu size đó "Chưa có giá"; sản phẩm chưa thể chuyển Đang bán (UC-14, E3).
@@ -29,7 +29,7 @@ Nhân viên mở mục Giá bán của một sản phẩm.
 - **E1. Giá không hợp lệ (để trống, ≤ 0, không phải số nguyên):** hệ thống không lưu và báo lỗi tại size tương ứng.
 
 ## Postconditions
-- Mỗi size có đúng một giá bán hiện hành.
+- Mỗi size có đúng một giá bán hiện hành; mọi biến thể cùng sản phẩm và cùng size có cùng `variant_sell_price`.
 
 ## Acceptance Criteria
 
@@ -43,12 +43,18 @@ Given: sản phẩm A có biến thể Đỏ×M và Xanh×M, giá size M = 320.0
 When: người dùng chọn Đỏ×M rồi Xanh×M trên trang chi tiết
 Then: cả hai đều hiển thị 320.000đ
 
-### AC-3: Giá không hợp lệ
+### AC-3: Đặt giá ghi cho mọi biến thể cùng size
+Given: sản phẩm A có biến thể Đỏ×M, Xanh×M và Đỏ×L
+When: Nhân viên đặt giá size M = 320.000đ và lưu
+Then: biến thể Đỏ×M và Xanh×M đều có giá bán 320.000đ
+And: giá của biến thể Đỏ×L không đổi
+
+### AC-4: Giá không hợp lệ
 Given: Nhân viên đang sửa giá
 When: Nhân viên nhập giá size S = 0 và lưu
 Then: hệ thống không lưu và báo "Giá bán phải lớn hơn 0"
 
-### AC-4: Đổi giá không ảnh hưởng đơn đã tạo
+### AC-5: Đổi giá không ảnh hưởng đơn đã tạo
 Given: đơn hàng X đã đặt sản phẩm A size M với giá 320.000đ
 When: Nhân viên đổi giá size M thành 350.000đ
 Then: đơn hàng X vẫn giữ giá 320.000đ
@@ -61,10 +67,10 @@ And: đơn mới đặt sau đó dùng giá 350.000đ
 
 ## Notes
 - Tiền là số nguyên VND (AGENTS.md).
-- Lệch với ERD: ERD hiện để `variant_sell_price` ở biến thể (màu × size). Cần điều chỉnh ERD (ví dụ lưu giá theo sản phẩm × size) hoặc đảm bảo đồng bộ giá cho mọi màu cùng size khi lưu — developer quyết định thiết kế.
 
 ### Quyết định đã chốt
 - Giá bán theo size; mọi màu cùng size dùng chung một giá (đã chốt 15/11/2026).
+- Giữ `variant_sell_price` ở biến thể theo ERD: khi Nhân viên đặt giá cho một size, hệ thống ghi cùng giá cho mọi biến thể cùng sản phẩm và cùng size (đã chốt 15/11/2026, theo data model v1 — ưu tiên ERD). Không còn lệch ERD.
 
 ### Giả định [GD]
 - Đổi giá không ảnh hưởng đơn hàng đã tạo.
@@ -73,3 +79,4 @@ And: đơn mới đặt sau đó dùng giá 350.000đ
 ## History
 - v1 (2026-11-15): initial
 - v2 (2026-11-15): chốt giá theo size, mọi màu cùng size chung giá; ghi chú lệch ERD (`variant_sell_price`)
+- v3 (2026-11-15): theo data model v1 — giữ `variant_sell_price`, đặt giá theo size ghi cho mọi biến thể cùng size; thêm AC-3

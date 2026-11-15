@@ -23,7 +23,7 @@ Nhân viên mở trang quản lý đơn hàng trong khu vực quản trị.
 5. Đơn chờ Nhân viên bàn giao cho vận chuyển (UC-40); đơn chưa xuất hiện trên Trang giả lập vận chuyển.
 
 ## Alternative Flows
-- **3a. Từ chối đơn:** Nhân viên bấm "Từ chối" và nhập lý do `[GD]` → trong cùng một transaction, hệ thống chuyển đơn sang "Bị từ chối", cộng lại tồn kho, hoàn lượt của voucher hoặc khuyến mãi theo hóa đơn `[GD]` đã áp cho đơn, và lưu lịch sử trạng thái đơn. Khách thấy trạng thái "Bị từ chối" và lý do trong UC-21.
+- **3a. Từ chối đơn:** Nhân viên bấm "Từ chối", không nhập lý do → trong cùng một transaction, hệ thống chuyển đơn sang "Bị từ chối", cộng lại tồn kho, hoàn lượt của voucher hoặc khuyến mãi theo hóa đơn `[GD]` đã áp cho đơn, và lưu lịch sử trạng thái đơn. Hệ thống không lưu lý do; khách chỉ thấy trạng thái "Bị từ chối" trong UC-21.
 - **3b. Đơn QR đã thanh toán bị từ chối:** hệ thống lưu ý Nhân viên rằng khách đã thanh toán; việc hoàn tiền làm ngoài hệ thống.
 
 ## Exceptions
@@ -45,8 +45,9 @@ And: lịch sử trạng thái đơn ghi "Chưa xử lý → Đã xác nhận" k
 
 ### AC-2: Từ chối đơn
 Given: đơn "Chưa xử lý" có "Đỏ / M" số lượng 2, tồn kho "Đỏ / M" là 3, đơn dùng voucher còn 9 lượt
-When: Nhân viên từ chối đơn với lý do "Sai địa chỉ"
-Then: đơn chuyển sang "Bị từ chối" và lưu lý do
+When: Nhân viên bấm "Từ chối"
+Then: đơn chuyển sang "Bị từ chối"
+And: hệ thống không yêu cầu nhập lý do và không lưu lý do
 And: tồn kho "Đỏ / M" là 5
 And: voucher còn 10 lượt
 
@@ -91,10 +92,10 @@ Then: danh sách chỉ hiển thị 3 đơn "Chưa xử lý"
 - Admin chỉ quản lý tài khoản và gán vai trò cho tài khoản; mọi thao tác vận hành cửa hàng do Nhân viên thực hiện (đã chốt 15/11/2026).
 - Xác nhận đơn chỉ chuyển đơn sang "Đã xác nhận"; đơn chỉ lên Trang giả lập vận chuyển khi Nhân viên bấm "Bàn giao vận chuyển" (UC-40) (đã chốt 15/11/2026).
 - Mỗi lần đơn đổi trạng thái, hệ thống lưu lịch sử: trạng thái cũ, trạng thái mới, nguồn thay đổi, người đổi (nếu có), thời điểm (theo ERD).
+- Từ chối đơn không cần nhập lý do; hệ thống không lưu lý do (ERD không có cột này); khách chỉ thấy trạng thái "Bị từ chối" (đã chốt 15/11/2026).
 
 ### Giả định [GD]
 - UC này gồm cả xem danh sách đơn, có phân trang và lọc theo trạng thái.
-- Từ chối đơn bắt buộc nhập lý do; khách xem được lý do.
 - Không cho xác nhận đơn QR khi chưa thanh toán.
 - Từ chối đơn cũng hoàn lượt của khuyến mãi theo hóa đơn đã áp (voucher đã chốt).
 
@@ -102,3 +103,4 @@ Then: danh sách chỉ hiển thị 3 đơn "Chưa xử lý"
 - v1 (2026-11-15): initial
 - v2 (2026-11-15): chốt bộ trạng thái đơn, cộng lại tồn kho và hoàn lượt voucher khi từ chối, phạm vi quyền của Admin
 - v3 (2026-11-15): xác nhận đơn không còn tự đưa lên trang giả lập (bàn giao qua UC-40); thêm lưu lịch sử trạng thái đơn (theo ERD); hoàn lượt khuyến mãi theo hóa đơn khi từ chối
+- v4 (2026-11-15): bỏ lý do từ chối đơn (không nhập, không lưu) theo data model v1

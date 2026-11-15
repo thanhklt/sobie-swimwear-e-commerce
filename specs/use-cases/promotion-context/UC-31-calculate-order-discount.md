@@ -130,6 +130,7 @@ And: nguồn mức giảm không phải X
 - Mọi loại khuyến mãi giảm theo phần trăm; không có mức giảm tối đa (đã chốt 15/11/2026, theo ERD).
 - Mỗi đơn áp tối đa một khuyến mãi theo hóa đơn hoặc voucher; khuyến mãi theo sản phẩm ghi theo từng dòng đơn (theo ERD).
 - Khuyến mãi theo hóa đơn và voucher chỉ hợp lệ khi tạm tính ≥ giá trị đơn tối thiểu và còn lượt (số lượng đã dùng < số lượng được áp dụng); voucher không giới hạn số lần mỗi khách (đã chốt 15/11/2026, theo ERD).
+- Khuyến mãi đã tạo không được sửa, chỉ có thể ngừng (đã chốt 15/11/2026). Vì vậy mỗi dòng đơn chỉ lưu đơn giá gốc theo size (`order_detail_unit_price`) và khuyến mãi theo sản phẩm đã áp (`order_detail_product_promotion_id`); đơn giá sau giảm = đơn giá gốc × (100% − phần trăm của khuyến mãi đó), làm tròn `ROUND_HALF_UP`, luôn ổn định sau khi đặt (theo data model v1).
 
 **Giả định [GD]**
 - Có nhiều khuyến mãi theo hóa đơn đủ điều kiện thì lấy mức giảm lớn nhất.
@@ -141,3 +142,4 @@ And: nguồn mức giảm không phải X
 - v1 (2026-11-15): initial
 - v2 (2026-11-15): chốt ưu tiên voucher khi hai mức giảm bằng nhau, hoàn lượt voucher khi hủy/từ chối
 - v3 (2026-11-15): giảm theo phần trăm, giá trị đơn tối thiểu cho voucher, lượt áp dụng cho khuyến mãi theo hóa đơn, mỗi đơn tối đa một khuyến mãi (theo ERD)
+- v4 (2026-11-15): ghi rõ dòng đơn lưu đơn giá gốc và khuyến mãi theo sản phẩm; đơn giá sau giảm ổn định vì khuyến mãi không sửa được (theo data model v1)

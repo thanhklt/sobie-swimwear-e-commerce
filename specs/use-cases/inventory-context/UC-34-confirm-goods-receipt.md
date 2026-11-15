@@ -24,7 +24,7 @@ Hàng đã về kho; Nhân viên chọn "Xác nhận" trên một phiếu nhập
    2. Tính tồn sau khi nhập = tồn hiện tại + số lượng nhập.
    3. Tính `Giá vốn mới = (Giá trị tồn hiện tại + Tiền nhập lô này) / Tồn sau khi nhập`, với tiền nhập lô này = số lượng nhập × giá nhập; làm tròn `ROUND_HALF_UP` về số nguyên VND.
    4. Cập nhật tồn kho và giá vốn của biến thể.
-4. Hệ thống chuyển phiếu sang "Đã xác nhận", ghi thời điểm và Nhân viên xác nhận `[GD]`.
+4. Hệ thống chuyển phiếu sang "Đã xác nhận".
 5. Hệ thống commit transaction.
 
 ## Alternative Flows
@@ -84,15 +84,14 @@ And: phiếu vẫn ở trạng thái "Nháp"
 - Công thức giá vốn, cách làm tròn và giá vốn theo biến thể đã chốt trong BR-TUAN1 (Constraints của BR-007).
 - Cộng tồn và cập nhật giá vốn trong cùng một transaction.
 - Tồn kho không bao giờ âm (BR-005).
-- ERD hiện chưa có cột giá vốn ở biến thể; cần bổ sung để lưu giá vốn bình quân gia quyền. ERD cũng chưa có cột thời điểm và người xác nhận phiếu (xem giả định bên dưới).
+- ERD hiện chưa có cột giá vốn ở biến thể; cần bổ sung để lưu giá vốn bình quân gia quyền.
 
 **Quyết định đã chốt**
 - Bổ sung cột giá vốn ở biến thể trong ERD để lưu giá vốn bình quân gia quyền (đã chốt 15/11/2026).
 - Nhân viên xem được tồn kho theo biến thể ngoài dashboard (đã chốt 15/11/2026) — xem UC-39.
-
-**Giả định [GD]**
-- Phiếu lưu thời điểm xác nhận và Nhân viên xác nhận.
+- Không lưu người và thời điểm xác nhận phiếu nhập (đã chốt 15/11/2026).
 
 ## History
 - v1 (2026-11-15): initial
 - v2 (2026-11-15): chốt bổ sung cột giá vốn ở biến thể trong ERD; câu hỏi xem tồn kho chuyển sang UC-39
+- v3 (2026-11-15): chốt không lưu người và thời điểm xác nhận phiếu nhập

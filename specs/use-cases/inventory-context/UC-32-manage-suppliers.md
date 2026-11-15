@@ -20,11 +20,11 @@ Nhân viên mở màn hình quản lý nhà cung cấp để xem, thêm, sửa h
 2. Nhân viên chọn "Thêm nhà cung cấp".
 3. Nhân viên nhập tên, số điện thoại, email, địa chỉ.
 4. Hệ thống kiểm tra dữ liệu hợp lệ và tên chưa tồn tại `[GD]`.
-5. Hệ thống lưu nhà cung cấp ở trạng thái "Đang hợp tác" `[GD]`.
+5. Hệ thống lưu nhà cung cấp ở trạng thái "Đang hợp tác".
 
 ## Alternative Flows
 - **2a. Sửa nhà cung cấp:** Nhân viên sửa thông tin; hệ thống kiểm tra như bước 4 rồi lưu. Phiếu nhập đã có vẫn tham chiếu đúng nhà cung cấp.
-- **2b. Ngừng hợp tác:** nhà cung cấp chuyển sang "Ngừng hợp tác", không chọn được khi lập phiếu nhập mới; dữ liệu cũ giữ nguyên `[GD]`.
+- **2b. Ngừng hợp tác:** nhà cung cấp chuyển sang "Ngừng hợp tác", không chọn được khi lập phiếu nhập mới; dữ liệu cũ giữ nguyên.
 - **2c. Xóa nhà cung cấp chưa có phiếu nhập:** hệ thống xóa hẳn `[GD]`.
 
 ## Exceptions
@@ -71,16 +71,18 @@ Then: hệ thống từ chối xóa và gợi ý chuyển sang "Ngừng hợp t�
 
 ## Notes
 - Áp dụng constraint cache danh sách (BR-TUAN1, Constraints chung) cho danh sách nhà cung cấp.
-- ERD hiện chỉ có cột tên nhà cung cấp; cần bổ sung cột số điện thoại, email, địa chỉ (và trạng thái nếu giả định trạng thái được chốt).
+- ERD hiện chỉ có cột tên nhà cung cấp; cần bổ sung cột số điện thoại, email, địa chỉ và trạng thái (`supplier_status`).
 
 **Quyết định đã chốt**
 - Thông tin nhà cung cấp gồm: tên, số điện thoại, email, địa chỉ (đã chốt 15/11/2026, bổ sung so với ERD).
+- Nhà cung cấp có trạng thái "Đang hợp tác" / "Ngừng hợp tác"; chỉ nhà cung cấp "Đang hợp tác" được chọn khi lập phiếu nhập (đã chốt 15/11/2026; ERD sẽ thêm cột `supplier_status`).
 
 **Giả định [GD]**
 - Tên nhà cung cấp là bắt buộc và không trùng.
 - Danh sách có phân trang và tìm theo tên.
-- Có trạng thái "Đang hợp tác" / "Ngừng hợp tác"; nhà cung cấp đã có phiếu nhập không xóa được, chỉ ngừng hợp tác.
+- Nhà cung cấp đã có phiếu nhập không xóa được, chỉ ngừng hợp tác; chưa có phiếu nhập thì xóa hẳn được.
 
 ## History
 - v1 (2026-11-15): initial
 - v2 (2026-11-15): chốt thông tin nhà cung cấp gồm tên, SĐT, email, địa chỉ; ghi chú ERD cần bổ sung cột
+- v3 (2026-11-15): chốt trạng thái nhà cung cấp Đang hợp tác / Ngừng hợp tác (ERD thêm cột `supplier_status`)

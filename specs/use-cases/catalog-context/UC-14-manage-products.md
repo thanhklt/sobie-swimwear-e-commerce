@@ -19,7 +19,7 @@ Nhân viên mở mục Sản phẩm trong khu vực quản trị.
 ## Main Flow
 1. Hệ thống hiển thị danh sách sản phẩm có phân trang, tìm theo tên, kèm trạng thái Đang bán / Ngừng bán `[GD]`.
 2. Nhân viên chọn "Thêm sản phẩm".
-3. Nhân viên nhập thông tin: tên, mô tả, 1 danh mục, 1 giới tính, bộ sưu tập (có thể nhiều), bộ ảnh (gallery) có thứ tự hiển thị, bảng size `[GD]`. Tên, danh mục và giới tính là bắt buộc `[GD]`.
+3. Nhân viên nhập thông tin: tên, mô tả, 1 danh mục, 1 giới tính, bộ sưu tập (có thể nhiều), bộ ảnh (gallery) có thứ tự hiển thị. Tên, danh mục và giới tính là bắt buộc `[GD]`. Không nhập bảng size: cửa hàng dùng một bảng size chung cố định.
 4. Hệ thống kiểm tra dữ liệu hợp lệ và lưu sản phẩm ở trạng thái Ngừng bán `[GD]`.
 5. Nhân viên thêm biến thể (UC-15) và giá theo size (UC-16), rồi chuyển sản phẩm sang Đang bán.
 
@@ -113,11 +113,11 @@ Then: trang chi tiết sản phẩm A hiển thị ảnh Y trước ảnh X
 - Admin chỉ quản lý tài khoản và gán vai trò cho tài khoản; mọi thao tác vận hành cửa hàng do Nhân viên thực hiện (đã chốt 15/11/2026).
 - Sản phẩm gồm tên, mô tả, trạng thái, 1 danh mục, 1 giới tính, nhiều bộ sưu tập, bộ ảnh (gallery) gắn theo sản phẩm có thứ tự hiển thị (theo ERD, đã chốt 15/11/2026).
 - Đánh giá sản phẩm (review) để giai đoạn 2, không làm trong MVP (đã chốt 15/11/2026).
+- Bảng size không phải trường của sản phẩm; cả cửa hàng dùng một bảng size chung, nội dung cố định (hard-code như trang thông tin) (đã chốt 15/11/2026).
 
 ### Giả định [GD]
 - Sản phẩm có 2 trạng thái: Đang bán, Ngừng bán; sản phẩm mới tạo ở trạng thái Ngừng bán.
 - Tên, danh mục, giới tính là trường bắt buộc.
-- Bảng size là một trường của sản phẩm (ERD chưa có trường này).
 - Chỉ chuyển Đang bán khi đã có biến thể và mọi size đã có giá.
 - Không xóa sản phẩm đã có trong đơn hàng hoặc phiếu nhập.
 
@@ -125,3 +125,4 @@ Then: trang chi tiết sản phẩm A hiển thị ảnh Y trước ảnh X
 - v1 (2026-11-15): initial
 - v2 (2026-11-15): chốt chỉ Nhân viên quản lý sản phẩm
 - v3 (2026-11-15): theo ERD — thông tin sản phẩm gồm 1 danh mục, 1 giới tính, nhiều bộ sưu tập, gallery có thứ tự; review để giai đoạn 2; thêm AC-10 → AC-12
+- v4 (2026-11-15): chốt bảng size chung cố định, bỏ bảng size khỏi thông tin sản phẩm

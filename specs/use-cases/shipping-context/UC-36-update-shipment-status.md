@@ -37,39 +37,38 @@ Người demo mở trang giả lập vận chuyển và bấm "Đã giao" hoặc
 ## Acceptance Criteria
 
 ### AC-1: Trang không cần đăng nhập
-Given: người demo chưa đăng nhập
-When: người demo mở trang giả lập vận chuyển
-Then: trang hiển thị danh sách đơn đang vận chuyển, không chuyển tới trang đăng nhập
+Given: Người demo chưa đăng nhập  
+When: Người demo mở trang giả lập vận chuyển  
+Then: Trang hiển thị danh sách đơn đang vận chuyển, không chuyển tới trang đăng nhập  
 
 ### AC-2: Chỉ hiển thị đơn đang giao
-Given: đơn DH001 ở "Đang giao", đơn DH002 ở "Đã xác nhận", đơn DH003 ở "Chưa xử lý"
-When: người demo mở trang giả lập vận chuyển
-Then: danh sách chỉ có DH001
-And: thông tin người gửi lấy từ cấu hình hard-code của cửa hàng
+Given: Đơn DH001 ở "Đang giao", đơn DH002 ở "Đã xác nhận", đơn DH003 ở "Chưa xử lý"  
+When: Người demo mở trang giả lập vận chuyển  
+Then: Danh sách chỉ có DH001  
+And: Thông tin người gửi lấy từ cấu hình hard-code của cửa hàng  
 
 ### AC-3: Đã giao
-Given: đơn DH001 ở trạng thái "Đang giao"
-When: người demo bấm "Đã giao" cho DH001
-Then: đơn DH001 chuyển sang "Giao thành công"
-And: hệ thống tự xuất hóa đơn cho DH001 (UC-26)
-And: DH001 không còn trong danh sách của trang giả lập
+Given: Đơn DH001 ở trạng thái "Đang giao"  
+When: Người demo bấm "Đã giao" cho DH001  
+Then: Đơn DH001 chuyển sang "Giao thành công"  
+And: Hệ thống tự xuất hóa đơn cho DH001 (UC-26) và DH001 không còn trong danh sách của trang giả lập  
 
 ### AC-4: Giao không thành công
-Given: đơn DH001 ở trạng thái "Đang giao", gồm 2 sản phẩm biến thể "Đỏ-M"
-When: người demo bấm "Giao không thành công"
-Then: đơn DH001 chuyển sang "Giao không thành công"
-And: tồn kho biến thể "Đỏ-M" được cộng lại 2 (UC-35)
+Given: Đơn DH001 ở trạng thái "Đang giao", gồm 2 sản phẩm biến thể "Đỏ-M"  
+When: Người demo bấm "Giao không thành công"  
+Then: Đơn DH001 chuyển sang "Giao không thành công"  
+And: Tồn kho biến thể "Đỏ-M" được cộng lại 2 (UC-35)
 
 ### AC-5: Bấm lại cho đơn đã cập nhật
-Given: đơn DH001 đã chuyển sang "Giao thành công"
-When: trang giả lập gửi cập nhật "Giao không thành công" cho DH001
-Then: hệ thống từ chối
-And: đơn giữ trạng thái "Giao thành công"
+Given: Đơn DH001 đã chuyển sang "Giao thành công"  
+When: Trang giả lập gửi cập nhật "Giao không thành công" cho DH001  
+Then: Hệ thống từ chối  
+And: Đơn giữ trạng thái "Giao thành công"  
 
 ### AC-6: Lưu lịch sử trạng thái
-Given: đơn DH001 ở trạng thái "Đang giao"
-When: người demo bấm "Đã giao"
-Then: lịch sử trạng thái đơn ghi "Đang giao → Giao thành công", nguồn là Trang giả lập vận chuyển
+Given: Đơn DH001 ở trạng thái "Đang giao"  
+When: Người demo bấm "Đã giao"  
+Then: Lịch sử trạng thái đơn ghi "Đang giao → Giao thành công", nguồn là Trang giả lập vận chuyển
 
 ## Dependencies
 - **Upstream UC:** UC-40 Bàn giao đơn cho vận chuyển

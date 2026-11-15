@@ -40,45 +40,45 @@ Nhân viên mở trang dashboard trong khu vực quản trị.
 ## Acceptance Criteria
 
 ### AC-1: Doanh thu và lợi nhuận gộp
-Given: trong kỳ có 1 đơn "Giao thành công" gồm 2 cái "Áo bơi A – Đỏ – M", tiền hàng sau giảm 400.000đ, giá vốn 120.000đ/cái; và 1 đơn "Đã hủy" 300.000đ
-When: Nhân viên xem dashboard của kỳ đó
-Then: doanh thu = 400.000đ
-And: lợi nhuận gộp = 400.000 − 2 × 120.000 = 160.000đ
+Given: Trong kỳ có 1 đơn "Giao thành công" gồm 2 cái "Áo bơi A – Đỏ – M", tiền hàng sau giảm 400.000đ, giá vốn 120.000đ/cái; và 1 đơn "Đã hủy" 300.000đ  
+When: Nhân viên xem dashboard của kỳ đó  
+Then: Doanh thu = 400.000đ  
+And: Lợi nhuận gộp = 400.000 − (2 × 120.000) = 160.000đ
 
 ### AC-2: Số đơn theo trạng thái
-Given: trong kỳ có 3 đơn "Chưa xử lý", 2 đơn "Giao thành công", 1 đơn "Đã hủy"
-When: Nhân viên xem dashboard
-Then: số đơn hiển thị đúng 3, 2, 1 cho từng trạng thái, các trạng thái khác là 0
+Given: Trong kỳ có 3 đơn "Chưa xử lý", 2 đơn "Giao thành công", 1 đơn "Đã hủy"  
+When: Nhân viên xem dashboard  
+Then: Số đơn hiển thị đúng 3, 2, 1 cho từng trạng thái, các trạng thái khác là 0  
 
 ### AC-3: Sản phẩm bán chạy
-Given: các đơn "Giao thành công" trong kỳ bán 5 sản phẩm A, 8 sản phẩm B, 2 sản phẩm C
-When: Nhân viên xem dashboard
-Then: danh sách bán chạy theo thứ tự B, A, C kèm số lượng
+Given: Các đơn "Giao thành công" trong kỳ bán 5 sản phẩm A, 8 sản phẩm B, 2 sản phẩm C  
+When: Nhân viên xem dashboard  
+Then: Danh sách bán chạy theo thứ tự B, A, C kèm số lượng  
 
 ### AC-4: Tồn kho thấp
-Given: ngưỡng tồn kho thấp là 5; biến thể X tồn 3, biến thể Y tồn 5, biến thể Z tồn 6
-When: Nhân viên xem dashboard
-Then: danh sách tồn kho thấp gồm X và Y, không có Z
+Given: Ngưỡng tồn kho thấp là 5; biến thể X tồn 3, biến thể Y tồn 5, biến thể Z tồn 6  
+When: Nhân viên xem dashboard  
+Then: Danh sách tồn kho thấp gồm X và Y, không có Z  
 
 ### AC-5: Tiền nhập hàng theo nhà cung cấp
-Given: trong kỳ nhà cung cấp X có 2 phiếu "Đã xác nhận" tổng 5.000.000đ và 1 phiếu "Nháp" 1.000.000đ
-When: Nhân viên xem dashboard
-Then: tiền nhập của X = 5.000.000đ
+Given: Trong kỳ nhà cung cấp X có 2 phiếu "Đã xác nhận" tổng 5.000.000đ và 1 phiếu "Nháp" 1.000.000đ  
+When: Nhân viên xem dashboard  
+Then: Tiền nhập của X = 5.000.000đ
 
 ### AC-6: Kỳ không có dữ liệu
-Given: kỳ được chọn không có đơn và phiếu nhập nào
-When: Nhân viên xem dashboard
-Then: doanh thu, lợi nhuận gộp và tiền nhập hiển thị 0đ, các danh sách trống
+Given: Kỳ được chọn không có đơn và phiếu nhập nào  
+When: Nhân viên xem dashboard  
+Then: Doanh thu, lợi nhuận gộp và tiền nhập hiển thị 0đ, các danh sách trống  
 
 ### AC-7: Khoảng thời gian không hợp lệ
-Given: Nhân viên ở dashboard
-When: Nhân viên chọn ngày bắt đầu sau ngày kết thúc
-Then: hệ thống báo lỗi khoảng thời gian
+Given: Nhân viên ở dashboard  
+When: Nhân viên chọn ngày bắt đầu sau ngày kết thúc  
+Then: Hệ thống báo lỗi khoảng thời gian  
 
 ### AC-8: Vai trò không được phép
-Given: người dùng đăng nhập với vai trò Khách hàng hoặc Admin
-When: người dùng truy cập dashboard
-Then: hệ thống từ chối truy cập
+Given: Người dùng đăng nhập với vai trò Khách hàng hoặc Admin  
+When: Người dùng truy cập dashboard  
+Then: Hệ thống từ chối truy cập  
 
 ## Dependencies
 - **Upstream UC:** UC-19, UC-20, UC-23, UC-26, UC-31, UC-32, UC-34, UC-35, UC-36

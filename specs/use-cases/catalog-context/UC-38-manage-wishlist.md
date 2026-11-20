@@ -87,7 +87,7 @@ Then: sản phẩm A không xuất hiện trong danh sách của Y
 - **External Systems:** không có
 
 ## Notes
-- Áp dụng constraint cache danh sách (BR-TUAN1, Constraints chung).
+- Áp dụng constraint cache danh sách (BR-GIAIDOAN1, Constraints chung).
 
 ### Quyết định đã chốt
 - Wishlist là chức năng trong phạm vi MVP: khách thả tim để lưu sản phẩm vào một danh sách (đã chốt 15/11/2026).

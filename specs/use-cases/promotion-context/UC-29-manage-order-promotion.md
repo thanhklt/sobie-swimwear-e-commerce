@@ -98,7 +98,7 @@ And: không hiển thị Z
 
 ## Notes
 - Theo BR: hệ thống tự chọn mức giảm có lợi hơn cho khách giữa khuyến mãi theo hóa đơn và voucher (UC-31).
-- Áp dụng constraint cache danh sách (BR-TUAN1, Constraints chung) cho danh sách khuyến mãi.
+- Áp dụng constraint cache danh sách (BR-GIAIDOAN1, Constraints chung) cho danh sách khuyến mãi.
 
 **Quyết định đã chốt**
 - Giảm theo phần trăm; không có mức giảm tối đa; tiền làm tròn `ROUND_HALF_UP` về số nguyên VND (đã chốt 15/11/2026, theo ERD).
@@ -112,7 +112,7 @@ And: không hiển thị Z
 
 **Giả định [GD]**
 - Được phép có nhiều khuyến mãi theo hóa đơn cùng hiệu lực; UC-31 chọn cái giảm nhiều nhất trong số đủ điều kiện.
-- Đơn bị hủy hoặc bị từ chối thì hoàn lượt khuyến mãi theo hóa đơn (giảm số lượng đã dùng 1).
+- Đơn bị hủy thì hoàn lượt khuyến mãi theo hóa đơn (giảm số lượng đã dùng 1).
 - Phần trăm giảm hợp lệ: lớn hơn 0 và nhỏ hơn 100; số lượng được áp dụng ≥ 1.
 - Danh sách khuyến mãi hiển thị số lượng được áp dụng, số lượng đã dùng và trạng thái.
 
@@ -122,3 +122,4 @@ And: không hiển thị Z
 - v3 (2026-11-15): bỏ thao tác sửa khuyến mãi (chỉ ngừng); thêm popup xác nhận khi tạo
 - v4 (2026-11-15): bỏ tên khuyến mãi; thêm lọc danh sách theo khoảng thời gian (1c, AC-9)
 - v5 (2026-11-15): chốt quy tắc lọc theo thời gian (giao khoảng)
+- v6 (2026-11-20): đồng bộ BR-GIAIDOAN1 — bỏ "Bị từ chối" (Nhân viên chỉ còn "Hủy đơn")

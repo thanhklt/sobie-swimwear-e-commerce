@@ -1,6 +1,6 @@
 # Use case theo bounded context
 
-**Nguồn:** [BR-TUAN1.md](../business-requirements/BR-TUAN1.md) và ERD `sobin_erd_english_formatted.drawio` (source_of_true). Không dựa vào bộ UC cũ (đã loại bỏ).
+**Nguồn:** [BR-GIAIDOAN1.md](../business-requirements/BR-GIAIDOAN1.md) và ERD `sobin_erd_english_formatted.drawio` (source_of_true). Không dựa vào bộ UC cũ (đã loại bỏ).
 
 **Format:** *Template UC-XXX-Name.md* (Phụ lục A, SDD Ebook), bỏ Owner và Last updated. Mỗi UC ghi rõ BR liên quan, tác nhân (Actor) và Acceptance Criteria (Given/When/Then).
 
@@ -14,12 +14,12 @@
 | Tác nhân | Mô tả |
 |---|---|
 | Khách vãng lai | Người dùng chưa đăng nhập |
-| Khách hàng | Người tự đăng ký trên website để mua hàng |
+| Khách hàng | Người tự đăng ký trên website, hoặc được Admin tạo tài khoản, để mua hàng |
 | Nhân viên | Tài khoản nội bộ, thực hiện mọi thao tác vận hành cửa hàng |
-| Admin | Tài khoản nội bộ, chỉ quản lý tài khoản và gán vai trò (Nhân viên ↔ Admin) |
+| Admin | Tài khoản nội bộ, chỉ quản lý tài khoản: tạo tài khoản và đổi vai trò sang bất kỳ vai trò nào (Khách hàng, Nhân viên, Admin) |
 | Hệ thống | Tác vụ tự động (tự hủy đơn, tự xuất hóa đơn, tính mức giảm, tự cộng lại tồn kho) |
-| Trang giả lập vận chuyển | 1 trang, không cần đăng nhập; liệt kê đơn "Đang giao" với nút "Đã giao" / "Giao không thành công" |
-| Trang giả lập chuyển khoản | 1 trang, không cần đăng nhập; liệt kê đơn QR chưa thanh toán với nút "Xác nhận đã chuyển khoản" |
+| Trang giả lập vận chuyển | 1 trang, không cần đăng nhập; đơn "Chờ lấy hàng" có nút "Đã nhận hàng", đơn "Đang giao" có nút "Đã giao" / "Giao không thành công" |
+| SePay | Dịch vụ bên thứ 3 theo dõi biến động số dư tài khoản cửa hàng, gửi webhook về website khi nhận tiền (thay trang giả lập chuyển khoản, chốt 20/11/2026) |
 
 ## Bounded context `[GD]`
 
@@ -27,7 +27,7 @@
 |---|---|---|
 | [identity-context](identity-context/) | BR-001 | Tài khoản, đăng nhập, hồ sơ, quản lý tài khoản và vai trò |
 | [catalog-context](catalog-context/) | BR-002 | Trang bán hàng, sản phẩm, biến thể, giá, phân loại, danh sách yêu thích |
-| [checkout-context](checkout-context/) | BR-003, BR-006 (UC-25) | Giỏ hàng, đặt hàng, thanh toán COD/QR, vòng đời đơn, hóa đơn, xác nhận chuyển khoản |
+| [checkout-context](checkout-context/) | BR-003, BR-006 (UC-25) | Giỏ hàng, đặt hàng, thanh toán COD/QR, vòng đời đơn, hóa đơn, đối soát chuyển khoản qua webhook SePay |
 | [promotion-context](promotion-context/) | BR-004 | 3 loại khuyến mãi, tính mức giảm |
 | [inventory-context](inventory-context/) | BR-005 | Nhà cung cấp, phiếu nhập, tồn kho, giá vốn |
 | [shipping-context](shipping-context/) | BR-006 | Bàn giao vận chuyển, trang giả lập vận chuyển |
@@ -42,7 +42,7 @@
 | [UC-03](identity-context/UC-03-logout.md) | Đăng xuất `[GD]` | identity | BR-001 | Khách hàng, Nhân viên, Admin |
 | [UC-04](identity-context/UC-04-update-customer-profile.md) | Cập nhật hồ sơ khách hàng | identity | BR-001 | Khách hàng |
 | [UC-05](identity-context/UC-05-change-password.md) | Đổi mật khẩu | identity | BR-001 | Khách hàng; Nhân viên, Admin `[GD]` |
-| [UC-06](identity-context/UC-06-create-internal-account.md) | Tạo tài khoản nội bộ | identity | BR-001 | Admin |
+| [UC-06](identity-context/UC-06-create-account.md) | Admin tạo tài khoản (mọi vai trò) | identity | BR-001 | Admin |
 | [UC-07](identity-context/UC-07-edit-account.md) | Sửa tài khoản | identity | BR-001 | Admin |
 | [UC-08](identity-context/UC-08-lock-unlock-account.md) | Khóa và mở khóa tài khoản | identity | BR-001 | Admin |
 | [UC-09](catalog-context/UC-09-view-home-page.md) | Xem trang chủ | catalog | BR-002 | Khách vãng lai, Khách hàng |
@@ -58,10 +58,10 @@
 | [UC-19](checkout-context/UC-19-place-order-cod.md) | Đặt hàng thanh toán COD | checkout | BR-003 | Khách hàng |
 | [UC-20](checkout-context/UC-20-place-order-qr.md) | Đặt hàng thanh toán chuyển khoản QR | checkout | BR-003 | Khách hàng |
 | [UC-21](checkout-context/UC-21-track-order.md) | Theo dõi đơn hàng | checkout | BR-003 | Khách hàng |
-| [UC-22](checkout-context/UC-22-cancel-order.md) | Hủy đơn hàng | checkout | BR-003 | Khách hàng |
-| [UC-23](checkout-context/UC-23-confirm-or-reject-order.md) | Xác nhận hoặc từ chối đơn | checkout | BR-003 | Nhân viên |
+| [UC-22](checkout-context/UC-22-cancel-order.md) | Hủy đơn hàng | checkout | BR-003 | Khách hàng, Nhân viên |
+| [UC-23](checkout-context/UC-23-confirm-order.md) | Xác nhận đơn hàng | checkout | BR-003 | Nhân viên |
 | [UC-24](checkout-context/UC-24-auto-cancel-overdue-qr-order.md) | Tự hủy đơn chuyển khoản quá hạn | checkout | BR-003 | Hệ thống |
-| [UC-25](checkout-context/UC-25-confirm-bank-transfer.md) | Xác nhận chuyển khoản (trang giả lập) | checkout | BR-006 | Trang giả lập chuyển khoản |
+| [UC-25](checkout-context/UC-25-confirm-bank-transfer.md) | Tự đối soát chuyển khoản qua webhook SePay | checkout | BR-006 | SePay |
 | [UC-26](checkout-context/UC-26-issue-invoice.md) | Tự xuất hóa đơn | checkout | BR-003 | Hệ thống |
 | [UC-27](checkout-context/UC-27-view-invoice.md) | Xem hóa đơn | checkout | BR-003 | Khách hàng, Nhân viên |
 | [UC-28](promotion-context/UC-28-manage-product-promotion.md) | Quản lý khuyến mãi theo sản phẩm | promotion | BR-004 | Nhân viên |
@@ -78,25 +78,27 @@
 | [UC-39](inventory-context/UC-39-view-stock.md) | Xem tồn kho | inventory | BR-005 | Nhân viên |
 | [UC-40](shipping-context/UC-40-hand-over-to-shipping.md) | Bàn giao đơn cho vận chuyển | shipping | BR-006 | Nhân viên |
 
-## Trạng thái đơn dùng chung (đã chốt 15/11/2026)
+## Trạng thái đơn dùng chung (đã chốt 15/11/2026, cập nhật 20/11/2026)
 
 ```
-Chưa xử lý ──(UC-23 xác nhận)──► Đã xác nhận ──(UC-40 bàn giao)──► Đang giao ──(UC-36 "Đã giao")──► Giao thành công      (UC-26 tự xuất hóa đơn)
-    │                                                                    └──(UC-36)──────────────► Giao không thành công (UC-35 tự cộng lại tồn kho)
-    ├──► Đã hủy      (UC-22 khách hủy, UC-24 hệ thống tự hủy)
-    └──► Bị từ chối  (UC-23 Nhân viên từ chối)
+Chưa xử lý ──(UC-23 xác nhận)──► Đã xác nhận ──(UC-40 bàn giao)──► Chờ lấy hàng ──(UC-36 "Đã nhận hàng")──► Đang giao ──(UC-36 "Đã giao")──► Giao thành công      (UC-26 tự xuất hóa đơn)
+    │                                │                                  │                                          └──(UC-36)──────────────► Giao không thành công (UC-35 tự cộng lại tồn kho)
+    └────────────────────────────────┴──────────────────────────────────┴──► Đã hủy
+        UC-22: khách hủy khi "Chưa xử lý"; Nhân viên hủy (nhập lý do) khi "Chưa xử lý" / "Đã xác nhận" / "Chờ lấy hàng"
+        UC-24: hệ thống tự hủy đơn QR quá 24 giờ chưa thanh toán
 ```
-- Đơn QR có thêm trạng thái thanh toán: Chưa thanh toán → Đã thanh toán (UC-25).
+- Không còn thao tác "Từ chối" và trạng thái "Bị từ chối" (đã chốt 20/11/2026).
+- Đơn QR có thêm trạng thái thanh toán: Chưa thanh toán → Đã thanh toán, do hệ thống tự đối soát qua webhook SePay (UC-25).
 - Mỗi lần đơn đổi trạng thái, hệ thống lưu lịch sử thay đổi (theo ERD).
 
 ## Quyết định đã chốt (15/11/2026)
 
 | Chủ đề | Quyết định | UC |
 |---|---|---|
-| Trạng thái đơn | Bộ trạng thái như sơ đồ trên; Nhân viên bàn giao vận chuyển thì đơn sang "Đang giao" | UC-19 → UC-24, UC-36, UC-40 |
-| Hủy / từ chối đơn | Cộng lại tồn kho và hoàn lượt voucher | UC-22, UC-23, UC-24, UC-31 |
-| Phân quyền | Admin chỉ quản lý tài khoản và gán vai trò (Nhân viên ↔ Admin); Nhân viên vận hành cửa hàng; Admin không xem hóa đơn, dashboard | UC-02, UC-06, UC-07, UC-14, UC-23, UC-27, UC-37 |
-| Đổi vai trò | Có hiệu lực ngay; tài khoản đang đăng nhập bị đăng xuất | UC-07 |
+| Trạng thái đơn | Bộ trạng thái như sơ đồ trên; Nhân viên bàn giao vận chuyển thì đơn sang "Chờ lấy hàng", đơn vị vận chuyển bấm "Đã nhận hàng" thì sang "Đang giao" (cập nhật 20/11/2026) | UC-19 → UC-24, UC-36, UC-40 |
+| Hủy đơn | Cộng lại tồn kho và hoàn lượt voucher. Khách hủy khi "Chưa xử lý"; Nhân viên hủy đến trước khi vận chuyển nhận hàng, bắt buộc nhập lý do, khách không thấy lý do; không còn "Từ chối" (cập nhật 20/11/2026) | UC-22, UC-23, UC-24, UC-31 |
+| Phân quyền | Admin chỉ quản lý tài khoản (tạo được tài khoản mọi vai trò, dùng ngay không bắt buộc đổi mật khẩu — 20/11/2026) và gán vai trò (mọi vai trò); Nhân viên vận hành cửa hàng; Admin không xem hóa đơn, dashboard | UC-02, UC-06, UC-07, UC-14, UC-23, UC-27, UC-37 |
+| Đổi vai trò | Đổi được sang mọi vai trò, kể cả Khách hàng ↔ Nhân viên/Admin (20/11/2026); có hiệu lực ngay; tài khoản đang đăng nhập bị đăng xuất | UC-07 |
 | Tài khoản (ERD) | Account gồm email, SĐT (unique), mật khẩu, vai trò, trạng thái; không có username. Hồ sơ Customer / Employee / Admin gồm họ tên, ngày sinh, địa chỉ | UC-01, UC-02, UC-04, UC-06, UC-07 |
 | Đăng ký / đăng nhập | Đăng ký nhập đủ email và SĐT; đăng nhập bằng một trong hai | UC-01, UC-02 |
 | Trang danh mục | Lọc theo giới tính, size, danh mục, bộ sưu tập; sắp xếp mặc định mới nhất | UC-10 |
@@ -109,12 +111,16 @@ Chưa xử lý ──(UC-23 xác nhận)──► Đã xác nhận ──(UC-40 
 | Voucher (ERD) | Có giá trị đơn tối thiểu; chỉ giới hạn tổng lượt dùng | UC-30, UC-31 |
 | Nhà cung cấp | Gồm tên, SĐT, email, địa chỉ | UC-32 |
 | Tồn kho | Nhân viên xem được tồn kho theo biến thể | UC-39 |
-| Trang giả lập | Không cần đăng nhập, mỗi loại 1 trang | UC-25, UC-36 |
+| Trang giả lập | Chỉ còn trang giả lập vận chuyển, không cần đăng nhập, 1 trang (cập nhật 20/11/2026) | UC-36 |
+| Thanh toán chuyển khoản | Dùng chung 1 tài khoản; SePay gửi webhook, hệ thống tự đối soát; nội dung `SOBIE` + mã đơn; thừa tiền vẫn khớp, thiếu là không khớp, không cộng dồn; không khớp thì khách liên hệ cửa hàng (20/11/2026) | UC-20, UC-25 |
+| Mã đơn hàng | 8 ký tự ngẫu nhiên Crockford Base32, UNIQUE, trùng thì sinh lại (20/11/2026) | UC-20, UC-25 |
+| Phí vận chuyển | 1 biến môi trường cho mọi đơn, mặc định 12.000đ; demo bằng sản phẩm 2.000đ (20/11/2026) | UC-19, UC-20, UC-31 |
+| Hóa đơn | Tự xuất khi giao thành công; khách và Nhân viên chỉ xem (20/11/2026) | UC-26, UC-27 |
 | Hóa đơn (ERD) | Lưu snapshot thông tin đơn lúc xuất | UC-26 |
 | Dashboard | Bỏ chỉ số hiệu quả khuyến mãi | UC-37 |
 | Bảng size | Một bảng size chung, nội dung cố định | UC-12, UC-14 |
 | Giá theo size | Giữ `variant_sell_price`; đặt giá cho size thì ghi cùng giá cho mọi màu của size đó | UC-16 |
-| Từ chối đơn | Không nhập, không lưu lý do | UC-23 |
+| Từ chối đơn | Bỏ hẳn thao tác từ chối; Nhân viên dùng "Hủy đơn" có lý do (cập nhật 20/11/2026) | UC-22, UC-23 |
 | Lịch sử thanh toán | Đổi trạng thái thanh toán không ghi vào lịch sử trạng thái đơn | UC-25, UC-26 |
 | Sửa khuyến mãi | Khuyến mãi đã tạo không được sửa, chỉ ngừng; tạo có popup xác nhận | UC-28 → UC-31 |
 | Tra cứu khuyến mãi | Không có tên; danh sách lọc theo khoảng thời gian — hiện khuyến mãi có thời gian hiệu lực giao với khoảng chọn (kể cả một phần); chưa kết thúc thì tính đến hiện tại | UC-28, UC-29, UC-30 |
@@ -124,7 +130,7 @@ Chưa xử lý ──(UC-23 xác nhận)──► Đã xác nhận ──(UC-40 
 
 ## Data model
 
-Xem [data_model_v1.md](../entity-model/data_model_v1.md) — bám sát ERD, chỉ thay đổi 6 điểm đã chốt.
+Xem [data_model_v1.md](../entity-model/data_model_v1.md) — bám sát ERD, các điểm thay đổi đã chốt liệt kê ở mục 6 của file đó.
 
 ## Tổng hợp giả định `[GD]`
 
@@ -149,15 +155,15 @@ Mỗi dòng là một giả định đang có trong mục *Notes* của UC, ch�
 | UC-05 | Nhân viên và Admin cũng tự đổi được mật khẩu của mình. |
 | UC-05 | Mật khẩu mới tối thiểu 6 ký tự và phải khác mật khẩu hiện tại. |
 | UC-05 | Đổi mật khẩu không đăng xuất phiên hiện tại. |
-| UC-06 | Tạo account và hồ sơ Employee/Admin trong cùng một transaction. |
-| UC-06 | Admin đặt mật khẩu ban đầu cho tài khoản nội bộ; mật khẩu tối thiểu 6 ký tự. |
-| UC-06 | Admin chỉ tạo tài khoản Nhân viên hoặc Admin; tài khoản Khách hàng chỉ tạo qua đăng ký (UC-01). |
+| UC-06 | Tạo account và hồ sơ theo vai trò trong cùng một transaction. |
+| UC-06 | Admin đặt mật khẩu ban đầu cho tài khoản; mật khẩu tối thiểu 6 ký tự. |
 | UC-06 | Hệ thống có sẵn 1 tài khoản Admin khi khởi tạo. |
 | UC-07 | Việc xem và tìm danh sách tài khoản gộp vào UC này. |
 | UC-07 | Danh sách có phân trang; tìm theo họ tên, email hoặc số điện thoại. |
 | UC-07 | Admin sửa được thông tin mọi tài khoản. |
 | UC-07 | Admin không tự đổi vai trò của chính mình. |
-| UC-07 | Đổi vai trò Nhân viên ↔ Admin: tạo hồ sơ ở bảng của vai trò mới với cùng thông tin rồi xóa hồ sơ ở bảng cũ, cùng với đổi vai trò trên account, trong một transaction; lỗi thì hủy toàn bộ. |
+| UC-07 | Không cho đổi vai trò khiến hệ thống không còn Admin nào đang hoạt động. |
+| UC-07 | Đổi vai trò giữ nguyên thông tin cá nhân, đăng nhập, lịch sử đơn hàng, hóa đơn và lịch sử thao tác. |
 | UC-08 | Khóa tài khoản kết thúc ngay mọi phiên đăng nhập đang mở của tài khoản đó. |
 | UC-08 | Admin không tự khóa chính mình. |
 | UC-08 | Khóa và mở khóa áp dụng cho mọi vai trò (Khách hàng, Nhân viên, Admin). |
@@ -192,17 +198,19 @@ Mỗi dòng là một giả định đang có trong mục *Notes* của UC, ch�
 | UC-19 | Lượt đã dùng của khuyến mãi được chọn (voucher hoặc khuyến mãi theo hóa đơn) tăng khi tạo đơn. |
 | UC-19 | Các dòng đã đặt được xóa khỏi giỏ sau khi đặt thành công. |
 | UC-19 | Giá hoặc mức giảm thay đổi trước khi xác nhận thì tính lại và yêu cầu khách xác nhận lại. |
-| UC-20 | Nội dung chuyển khoản trong mã QR là mã đơn. |
 | UC-20 | Lượt đã dùng của khuyến mãi được chọn (voucher hoặc khuyến mãi theo hóa đơn) tăng khi tạo đơn; các dòng đã đặt được xóa khỏi giỏ. |
 | UC-20 | Khách xem lại được mã QR trong chi tiết đơn khi còn chưa thanh toán và chưa quá hạn; ẩn QR khi đơn đã thanh toán, đã hủy hoặc quá hạn. |
 | UC-21 | Danh sách đơn sắp xếp mới nhất trước, có phân trang. |
 | UC-22 | Hủy đơn cũng hoàn lượt của khuyến mãi theo hóa đơn đã áp (voucher đã chốt). |
+| UC-22 | Lý do hủy lưu ở `order_status_history_note`, tối đa 500 ký tự. |
 | UC-23 | UC này gồm cả xem danh sách đơn, có phân trang và lọc theo trạng thái. |
 | UC-23 | Không cho xác nhận đơn QR khi chưa thanh toán. |
-| UC-23 | Từ chối đơn cũng hoàn lượt của khuyến mãi theo hóa đơn đã áp (voucher đã chốt). |
 | UC-24 | Tác vụ chạy mỗi 5 phút. |
 | UC-24 | Tự hủy cũng hoàn lượt của khuyến mãi theo hóa đơn đã áp (voucher đã chốt). |
-| UC-25 | Gửi trùng xác nhận cho đơn đã thanh toán là idempotent. |
+| UC-25 | Mã đơn được tìm trong nội dung chuyển khoản không phân biệt vị trí, hoa thường. |
+| UC-25 | Mọi giao dịch đều lưu ở `bank_transaction`; không có màn hình cho Nhân viên xem giao dịch không khớp. |
+| UC-25 | Webhook không khớp vẫn trả thành công cho SePay. |
+| UC-25 | Công cụ gửi webhook mẫu dự phòng khi demo, chỉ bật ở dev/demo. |
 | UC-26 | Đơn COD được ghi nhận "Đã thanh toán" khi giao thành công. |
 | UC-26 | Lỗi tạo hóa đơn không làm thay đổi trạng thái giao của đơn; hệ thống thử lại. |
 | UC-27 | Nhân viên có trang danh sách hóa đơn, mới nhất trước, phân trang, tìm theo mã đơn hoặc mã hóa đơn. |
@@ -211,7 +219,7 @@ Mỗi dòng là một giả định đang có trong mục *Notes* của UC, ch�
 | UC-28 | Phần trăm giảm hợp lệ: lớn hơn 0 và nhỏ hơn 100. |
 | UC-28 | Danh sách khuyến mãi hiển thị trạng thái: sắp diễn ra, đang hiệu lực, đã kết thúc. |
 | UC-29 | Được phép có nhiều khuyến mãi theo hóa đơn cùng hiệu lực; UC-31 chọn cái giảm nhiều nhất trong số đủ điều kiện. |
-| UC-29 | Đơn bị hủy hoặc bị từ chối thì hoàn lượt khuyến mãi theo hóa đơn (giảm số lượng đã dùng 1). |
+| UC-29 | Đơn bị hủy thì hoàn lượt khuyến mãi theo hóa đơn (giảm số lượng đã dùng 1). |
 | UC-29 | Phần trăm giảm hợp lệ: lớn hơn 0 và nhỏ hơn 100; số lượng được áp dụng ≥ 1. |
 | UC-29 | Danh sách khuyến mãi hiển thị số lượng được áp dụng, số lượng đã dùng và trạng thái. |
 | UC-30 | Mã voucher không phân biệt hoa thường. |
@@ -220,7 +228,7 @@ Mỗi dòng là một giả định đang có trong mục *Notes* của UC, ch�
 | UC-31 | Có nhiều khuyến mãi theo hóa đơn đủ điều kiện thì lấy mức giảm lớn nhất. |
 | UC-31 | Mức giảm theo hóa đơn hoặc voucher tính trên tạm tính (đã gồm khuyến mãi theo sản phẩm), không áp vào phí vận chuyển, và không vượt quá tạm tính. |
 | UC-31 | Số tiền thay đổi giữa lúc xem và lúc xác nhận thì không tạo đơn, yêu cầu khách xác nhận lại. |
-| UC-31 | Đơn bị hủy hoặc bị từ chối thì hoàn cả lượt khuyến mãi theo hóa đơn. |
+| UC-31 | Đơn bị hủy thì hoàn cả lượt khuyến mãi theo hóa đơn. |
 | UC-32 | Tên nhà cung cấp là bắt buộc và không trùng. |
 | UC-32 | Danh sách có phân trang và tìm theo tên. |
 | UC-32 | Nhà cung cấp đã có phiếu nhập không xóa được, chỉ ngừng hợp tác; chưa có phiếu nhập thì xóa hẳn được. |
@@ -230,7 +238,7 @@ Mỗi dòng là một giả định đang có trong mục *Notes* của UC, ch�
 | UC-35 | Cộng tồn chạy trong cùng transaction với cập nhật trạng thái đơn. |
 | UC-35 | Biến thể hoặc sản phẩm đã ngừng bán vẫn được cộng lại tồn kho. |
 | UC-35 | Khi lỗi, Trang giả lập vận chuyển nhận lỗi và có thể gửi lại. |
-| UC-36 | Danh sách trên trang giả lập gồm: mã đơn, người nhận, số điện thoại, địa chỉ, người gửi, số tiền thu khi giao với đơn COD. |
+| UC-36 | Danh sách trên trang giả lập gồm: mã đơn, trạng thái, người nhận, số điện thoại, địa chỉ, người gửi, số tiền thu khi giao với đơn COD. |
 | UC-37 | Kỳ báo cáo mặc định là tháng hiện tại, chọn được khoảng thời gian. |
 | UC-37 | Doanh thu tính trên đơn "Giao thành công", tiền hàng sau giảm, không gồm phí vận chuyển. |
 | UC-37 | Sản phẩm bán chạy: top 10 theo số lượng bán từ đơn "Giao thành công". |
@@ -247,7 +255,7 @@ Mỗi dòng là một giả định đang có trong mục *Notes* của UC, ch�
 | UC-39 | Khách hàng và Admin không truy cập được màn hình tồn kho. |
 | UC-40 | Có thể bàn giao nhiều đơn một lúc; đơn không hợp lệ thì bỏ qua và báo lại. |
 
-## Câu hỏi mở (từ BR-TUAN1)
+## Câu hỏi mở (từ BR-GIAIDOAN1)
 
 - Chung: phạm vi constraint cache danh sách (danh sách phía khách hay cả trang quản trị; dữ liệu được phép cũ bao lâu).
 - Chung `[GD]`: cách gom In Scope thành 7 BR; Success Metric của từng BR suy ra từ metric tổng.

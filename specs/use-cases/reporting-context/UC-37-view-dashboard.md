@@ -21,7 +21,7 @@ Nhân viên mở trang dashboard trong khu vực quản trị.
 3. Hệ thống tính và hiển thị các chỉ số trong kỳ:
    1. **Doanh thu:** tổng tiền hàng sau giảm của các đơn "Giao thành công" trong kỳ, không gồm phí vận chuyển `[GD]`.
    2. **Lợi nhuận gộp:** doanh thu − giá vốn hàng bán (tổng số lượng bán × giá vốn) của cùng các đơn đó.
-   3. **Số đơn theo trạng thái:** số đơn tạo trong kỳ theo từng trạng thái (Chưa xử lý, Đã xác nhận, Đang giao, Giao thành công, Giao không thành công, Đã hủy, Bị từ chối).
+   3. **Số đơn theo trạng thái:** số đơn tạo trong kỳ theo từng trạng thái (Chưa xử lý, Đã xác nhận, Chờ lấy hàng, Đang giao, Giao thành công, Giao không thành công, Đã hủy).
    4. **Sản phẩm bán chạy:** top 10 sản phẩm theo số lượng bán của các đơn "Giao thành công" trong kỳ `[GD]`.
    5. **Tồn kho thấp:** các biến thể có tồn kho ≤ ngưỡng tồn kho thấp (hard-code) tại thời điểm xem `[GD]`.
    6. **Tiền nhập hàng theo nhà cung cấp:** tổng tiền các phiếu nhập "Đã xác nhận" trong kỳ, nhóm theo nhà cung cấp.
@@ -86,10 +86,10 @@ Then: hệ thống từ chối truy cập
 - **External Systems:** không có
 
 ## Notes
-- Lợi nhuận gộp = Doanh thu − Giá vốn hàng bán (SL bán × giá vốn); giá vốn theo bình quân gia quyền, tính riêng từng biến thể (BR-TUAN1, Constraints của BR-007).
+- Lợi nhuận gộp = Doanh thu − Giá vốn hàng bán (SL bán × giá vốn); giá vốn theo bình quân gia quyền, tính riêng từng biến thể (BR-GIAIDOAN1, Constraints của BR-007).
 - Cách lấy giá vốn tại thời điểm bán: BR ghi "chưa cần quan tâm", UC không đặc tả thêm.
 - Tiền tính bằng số nguyên VND; thời gian lưu UTC, hiển thị `Asia/Ho_Chi_Minh` (AGENTS.md).
-- Áp dụng constraint cache danh sách (BR-TUAN1, Constraints chung) cho các danh sách trên dashboard.
+- Áp dụng constraint cache danh sách (BR-GIAIDOAN1, Constraints chung) cho các danh sách trên dashboard.
 
 **Quyết định đã chốt**
 - Chỉ Nhân viên xem dashboard; Khách hàng và Admin không xem được (đã chốt 15/11/2026).
@@ -105,3 +105,4 @@ Then: hệ thống từ chối truy cập
 - v1 (2026-11-15): initial
 - v2 (2026-11-15): chốt chỉ Nhân viên xem dashboard
 - v3 (2026-11-15): bỏ chỉ số "Hiệu quả khuyến mãi" (chuyển Out of Scope)
+- v4 (2026-11-20): đồng bộ BR-GIAIDOAN1 — số đơn theo trạng thái: thêm "Chờ lấy hàng", bỏ "Bị từ chối"

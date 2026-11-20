@@ -99,7 +99,7 @@ And: không hiển thị "C3"
 
 ## Notes
 - Lượt dùng được trừ và hoàn theo quy tắc ở UC-31.
-- Áp dụng constraint cache danh sách (BR-TUAN1, Constraints chung) cho danh sách voucher.
+- Áp dụng constraint cache danh sách (BR-GIAIDOAN1, Constraints chung) cho danh sách voucher.
 
 **Quyết định đã chốt**
 - Giảm theo phần trăm; không có mức giảm tối đa; tiền làm tròn `ROUND_HALF_UP` về số nguyên VND (đã chốt 15/11/2026, theo ERD).

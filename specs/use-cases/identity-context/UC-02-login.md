@@ -77,7 +77,7 @@ When: khách đăng nhập thành công
 Then: khách được đưa quay lại bước đặt hàng
 
 ## Dependencies
-- **Upstream UC:** UC-01 Đăng ký tài khoản, UC-06 Tạo tài khoản nội bộ, UC-08 Khóa và mở khóa tài khoản
+- **Upstream UC:** UC-01 Đăng ký tài khoản, UC-06 Admin tạo tài khoản, UC-08 Khóa và mở khóa tài khoản
 - **Downstream UC:** UC-03 Đăng xuất, UC-04, UC-05, UC-18 Quản lý giỏ hàng, UC-19, UC-20 (đặt hàng cần đăng nhập)
 - **External Systems:** —
 
@@ -97,3 +97,4 @@ Then: khách được đưa quay lại bước đặt hàng
 - v1 (2026-11-15): initial
 - v2 (2026-11-15): chốt phạm vi quyền của Admin
 - v3 (2026-11-15): theo ERD — đăng nhập bằng email hoặc số điện thoại trên account, không có username
+- v4 (2026-11-20): đồng bộ BR-GIAIDOAN1 — UC-06 đổi tên thành "Admin tạo tài khoản"

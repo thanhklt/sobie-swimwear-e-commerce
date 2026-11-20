@@ -79,7 +79,7 @@ Then: danh sách có X và không có Y
 
 ## Notes
 - Phiếu nháp chưa làm thay đổi tồn kho hay giá vốn; chỉ UC-34 mới thay đổi.
-- Áp dụng constraint cache danh sách (BR-TUAN1, Constraints chung) cho danh sách phiếu nhập.
+- Áp dụng constraint cache danh sách (BR-GIAIDOAN1, Constraints chung) cho danh sách phiếu nhập.
 
 **Quyết định đã chốt**
 - Phiếu nhập lưu nhà cung cấp, Nhân viên lập phiếu, ngày tạo, trạng thái, tổng tiền; mỗi dòng chi tiết gồm biến thể, số lượng, đơn giá nhập thực tế, thành tiền (theo ERD).

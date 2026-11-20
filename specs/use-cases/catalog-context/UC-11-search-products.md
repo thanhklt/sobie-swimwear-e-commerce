@@ -70,8 +70,8 @@ Then: hệ thống không tìm kiếm và hiển thị "Vui lòng nhập từ kh
 - **External Systems:** không có
 
 ## Notes
-- Áp dụng constraint cache danh sách (BR-TUAN1, Constraints chung).
-- Out of Scope (BR-TUAN1): bộ lọc nâng cao.
+- Áp dụng constraint cache danh sách (BR-GIAIDOAN1, Constraints chung).
+- Out of Scope (BR-GIAIDOAN1): bộ lọc nâng cao.
 
 ### Giả định [GD]
 - Tìm kiếm không phân biệt hoa thường và dấu tiếng Việt.

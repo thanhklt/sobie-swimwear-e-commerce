@@ -122,8 +122,8 @@ Then: hệ thống hiển thị trang 2
 - **External Systems:** không có
 
 ## Notes
-- Áp dụng constraint cache danh sách (BR-TUAN1, Constraints chung).
-- Out of Scope (BR-TUAN1): mega menu, bộ lọc nâng cao (ngoài 4 tiêu chí giới tính, size, danh mục, bộ sưu tập), thêm nhanh vào giỏ từ thẻ sản phẩm.
+- Áp dụng constraint cache danh sách (BR-GIAIDOAN1, Constraints chung).
+- Out of Scope (BR-GIAIDOAN1): mega menu, bộ lọc nâng cao (ngoài 4 tiêu chí giới tính, size, danh mục, bộ sưu tập), thêm nhanh vào giỏ từ thẻ sản phẩm.
 
 ### Quyết định đã chốt
 - Lọc sản phẩm theo giới tính, size, danh mục, bộ sưu tập (đã chốt 15/11/2026).

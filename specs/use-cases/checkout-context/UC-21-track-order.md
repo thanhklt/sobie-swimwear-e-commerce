@@ -50,8 +50,8 @@ When: Nhân viên bàn giao đơn cho vận chuyển (UC-40), sau đó Trang gi�
 Then: khách mở lại chi tiết đơn lần lượt thấy trạng thái "Đang giao" rồi "Giao thành công"
 
 ### AC-4: Không xem được đơn của người khác
-Given: đơn DH0002 thuộc khách B
-When: khách A mở chi tiết DH0002
+Given: đơn 4HZP8W1N thuộc khách B
+When: khách A mở chi tiết 4HZP8W1N
 Then: hệ thống báo không tìm thấy đơn
 
 ### AC-5: Nút hủy chỉ hiện khi "Chưa xử lý"
@@ -60,15 +60,15 @@ When: khách mở chi tiết đơn
 Then: không có nút "Hủy đơn"
 
 ## Dependencies
-- **Upstream UC:** UC-19 Đặt hàng thanh toán COD, UC-20 Đặt hàng thanh toán chuyển khoản QR, UC-23 Xác nhận hoặc từ chối đơn, UC-40 Bàn giao đơn cho vận chuyển, UC-36 Cập nhật trạng thái giao hàng
+- **Upstream UC:** UC-19 Đặt hàng thanh toán COD, UC-20 Đặt hàng thanh toán chuyển khoản QR, UC-23 Xác nhận đơn hàng, UC-40 Bàn giao đơn cho vận chuyển, UC-36 Cập nhật trạng thái giao hàng
 - **Downstream UC:** UC-22 Hủy đơn hàng, UC-27 Xem hóa đơn
 - **External Systems:** Không có
 
 ## Notes
-- Áp dụng constraint cache danh sách (BR-TUAN1, Constraints chung). Trạng thái đơn hiển thị phải phản ánh cập nhật mới nhất từ trang giả lập.
+- Áp dụng constraint cache danh sách (BR-GIAIDOAN1, Constraints chung). Trạng thái đơn hiển thị phải phản ánh cập nhật mới nhất từ trang giả lập.
 
 ### Quyết định đã chốt
-- Trạng thái đơn: Chưa xử lý → Đã xác nhận → Đang giao → Giao thành công | Giao không thành công; Đã hủy; Bị từ chối (đã chốt 15/11/2026).
+- Trạng thái đơn: Chưa xử lý → Đã xác nhận → Chờ lấy hàng → Đang giao → Giao thành công | Giao không thành công; Đã hủy (đã chốt 15/11/2026, cập nhật 20/11/2026: thêm "Chờ lấy hàng", bỏ "Bị từ chối").
 
 ### Giả định [GD]
 - Danh sách đơn sắp xếp mới nhất trước, có phân trang.
@@ -77,3 +77,4 @@ Then: không có nút "Hủy đơn"
 - v1 (2026-11-15): initial
 - v2 (2026-11-15): chốt bộ trạng thái đơn
 - v3 (2026-11-15): "Đang giao" do Nhân viên bàn giao (UC-40), trang giả lập chỉ cập nhật kết quả giao (UC-36); sửa AC-3
+- v4 (2026-11-20): đồng bộ BR-GIAIDOAN1 — thêm trạng thái "Chờ lấy hàng", bỏ "Bị từ chối"; mã đơn ví dụ theo định dạng Crockford Base32

@@ -70,8 +70,8 @@ Then: trang vẫn hiển thị khung trang và thông báo lỗi, không hiển 
 - **External Systems:** không có
 
 ## Notes
-- Áp dụng constraint cache danh sách (BR-TUAN1, Constraints chung).
-- Out of Scope (BR-TUAN1): mega menu, thanh thông báo chạy, banner tùy chỉnh, thêm nhanh vào giỏ từ thẻ sản phẩm.
+- Áp dụng constraint cache danh sách (BR-GIAIDOAN1, Constraints chung).
+- Out of Scope (BR-GIAIDOAN1): mega menu, thanh thông báo chạy, banner tùy chỉnh, thêm nhanh vào giỏ từ thẻ sản phẩm.
 
 ### Giả định [GD]
 - Trang chủ gồm khối hàng mới và khối sản phẩm theo bộ sưu tập.

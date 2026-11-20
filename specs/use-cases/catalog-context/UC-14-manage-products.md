@@ -107,7 +107,7 @@ Then: trang chi tiết sản phẩm A hiển thị ảnh Y trước ảnh X
 - **External Systems:** không có
 
 ## Notes
-- Áp dụng constraint cache danh sách (BR-TUAN1, Constraints chung). Khi sản phẩm thay đổi, danh sách hiển thị trên storefront phải được làm mới theo chiến lược cache đã chốt.
+- Áp dụng constraint cache danh sách (BR-GIAIDOAN1, Constraints chung). Khi sản phẩm thay đổi, danh sách hiển thị trên storefront phải được làm mới theo chiến lược cache đã chốt.
 
 ### Quyết định đã chốt
 - Admin chỉ quản lý tài khoản và gán vai trò cho tài khoản; mọi thao tác vận hành cửa hàng do Nhân viên thực hiện (đã chốt 15/11/2026).

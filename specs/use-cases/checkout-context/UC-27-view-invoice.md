@@ -36,12 +36,12 @@ Khách hàng, Nhân viên
 ## Acceptance Criteria
 
 ### AC-1: Khách xem hóa đơn của mình
-Given: đơn DH0001 của khách A đã giao thành công và có hóa đơn
+Given: đơn 7K3M9Q2X của khách A đã giao thành công và có hóa đơn
 When: khách A bấm "Xem hóa đơn"
 Then: hệ thống hiển thị hóa đơn với đủ thông tin như bước 3
 
 ### AC-2: Khách không xem được hóa đơn của người khác
-Given: hóa đơn của đơn DH0002 thuộc khách B
+Given: hóa đơn của đơn 4HZP8W1N thuộc khách B
 When: khách A mở hóa đơn đó
 Then: hệ thống báo không tìm thấy hóa đơn
 
@@ -56,8 +56,8 @@ When: người xem gửi yêu cầu sửa hoặc xóa hóa đơn
 Then: hệ thống từ chối; hóa đơn không đổi
 
 ### AC-5: Đơn chưa giao thành công
-Given: đơn DH0003 đang "Đang giao"
-When: khách mở chi tiết DH0003
+Given: đơn B6TQ2R5D đang "Đang giao"
+When: khách mở chi tiết B6TQ2R5D
 Then: không có nút "Xem hóa đơn"
 
 ## Dependencies
@@ -66,8 +66,8 @@ Then: không có nút "Xem hóa đơn"
 - **External Systems:** Không có
 
 ## Notes
-- BR-TUAN1: khách và nhân viên chỉ xem hóa đơn (cần chốt).
-- Áp dụng constraint cache danh sách (BR-TUAN1, Constraints chung) cho danh sách hóa đơn của Nhân viên.
+- BR-GIAIDOAN1: khách và nhân viên chỉ xem hóa đơn (đã chốt 20/11/2026).
+- Áp dụng constraint cache danh sách (BR-GIAIDOAN1, Constraints chung) cho danh sách hóa đơn của Nhân viên.
 
 ### Quyết định đã chốt
 - Admin chỉ quản lý tài khoản và gán vai trò cho tài khoản; mọi thao tác vận hành cửa hàng do Nhân viên thực hiện (đã chốt 15/11/2026). Admin không xem hóa đơn.
@@ -78,3 +78,4 @@ Then: không có nút "Xem hóa đơn"
 ## History
 - v1 (2026-11-15): initial
 - v2 (2026-11-15): chốt Admin không xem hóa đơn
+- v3 (2026-11-20): đồng bộ BR-GIAIDOAN1 — chốt khách và Nhân viên chỉ xem hóa đơn; mã đơn ví dụ theo định dạng Crockford Base32

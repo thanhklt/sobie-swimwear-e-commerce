@@ -112,7 +112,7 @@ And: không hiển thị Z
 
 ## Notes
 - Theo BR: khuyến mãi theo sản phẩm giảm trực tiếp trên giá sản phẩm và hiển thị trên trang chi tiết sản phẩm; được tính cùng với mức giảm được chọn giữa khuyến mãi hóa đơn và voucher (UC-31).
-- Áp dụng constraint cache danh sách (BR-TUAN1, Constraints chung) cho danh sách khuyến mãi.
+- Áp dụng constraint cache danh sách (BR-GIAIDOAN1, Constraints chung) cho danh sách khuyến mãi.
 
 **Quyết định đã chốt**
 - Giảm theo phần trăm; không có mức giảm tối đa; tiền làm tròn `ROUND_HALF_UP` về số nguyên VND (đã chốt 15/11/2026, theo ERD).

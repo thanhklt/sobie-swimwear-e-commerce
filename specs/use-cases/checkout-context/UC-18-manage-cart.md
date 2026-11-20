@@ -87,9 +87,9 @@ Then: giỏ có dòng "Đỏ / M" số lượng 1
 - **External Systems:** Không có
 
 ## Notes
-- BR-TUAN1: khách chưa đăng nhập vẫn dùng được giỏ hàng, nhưng phải đăng nhập mới đặt hàng được.
+- BR-GIAIDOAN1: khách chưa đăng nhập vẫn dùng được giỏ hàng, nhưng phải đăng nhập mới đặt hàng được.
 - Thêm vào giỏ không giữ chỗ tồn kho; tồn kho chỉ bị trừ khi tạo đơn.
-- Áp dụng constraint cache danh sách (BR-TUAN1, Constraints chung).
+- Áp dụng constraint cache danh sách (BR-GIAIDOAN1, Constraints chung).
 
 ### Quyết định đã chốt
 - Giỏ của Khách hàng đã đăng nhập lưu trong DB; mỗi Khách hàng có 1 giỏ, mỗi biến thể chỉ có 1 dòng trong giỏ (theo ERD).

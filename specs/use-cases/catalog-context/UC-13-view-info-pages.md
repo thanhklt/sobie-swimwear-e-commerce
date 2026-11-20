@@ -56,7 +56,7 @@ Then: hệ thống hiển thị trang "Không tìm thấy trang"
 - **External Systems:** không có
 
 ## Notes
-- Out of Scope (BR-TUAN1): blog, trang cộng đồng, góp ý.
+- Out of Scope (BR-GIAIDOAN1): blog, trang cộng đồng, góp ý.
 
 ### Quyết định đã chốt
 - Nội dung trang giới thiệu, chính sách, FAQ cố định, không chỉnh sửa trên hệ thống; chỉ thông tin sản phẩm là sửa được (đã chốt 15/11/2026).

@@ -105,7 +105,7 @@ Then: sản phẩm A được thêm vào danh sách yêu thích (UC-38)
 ## Notes
 - Giá sau khuyến mãi theo sản phẩm lấy từ promotion-context (UC-28).
 - Tồn kho của biến thể lấy từ inventory-context.
-- Out of Scope (BR-TUAN1): đánh giá sản phẩm (để giai đoạn 2).
+- Out of Scope (BR-GIAIDOAN1): đánh giá sản phẩm (để giai đoạn 2).
 
 ### Quyết định đã chốt
 - Bộ ảnh (gallery) gắn theo sản phẩm, có thứ tự hiển thị; chọn màu không đổi ảnh (theo ERD, đã chốt 15/11/2026).

@@ -70,7 +70,7 @@ Then: hệ thống từ chối xóa và gợi ý chuyển sang "Ngừng hợp t�
 - **External Systems:** không có
 
 ## Notes
-- Áp dụng constraint cache danh sách (BR-TUAN1, Constraints chung) cho danh sách nhà cung cấp.
+- Áp dụng constraint cache danh sách (BR-GIAIDOAN1, Constraints chung) cho danh sách nhà cung cấp.
 - ERD hiện chỉ có cột tên nhà cung cấp; cần bổ sung cột số điện thoại, email, địa chỉ và trạng thái (`supplier_status`).
 
 **Quyết định đã chốt**

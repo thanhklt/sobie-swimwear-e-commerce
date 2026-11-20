@@ -36,30 +36,30 @@ Hệ thống
 ## Acceptance Criteria
 
 ### AC-1: Xuất hóa đơn khi giao thành công
-Given: đơn DH0001 "Đang giao", tổng thanh toán 480.000đ
-When: Trang giả lập vận chuyển cập nhật DH0001 sang "Giao thành công"
-Then: hệ thống tạo 1 hóa đơn cho DH0001 với tổng 480.000đ
+Given: đơn 7K3M9Q2X "Đang giao", tổng thanh toán 480.000đ
+When: Trang giả lập vận chuyển cập nhật 7K3M9Q2X sang "Giao thành công"
+Then: hệ thống tạo 1 hóa đơn cho 7K3M9Q2X với tổng 480.000đ
 And: hóa đơn có đủ tên sản phẩm, đơn giá gốc, đơn giá sau giảm, số lượng, tiền giảm, phí vận chuyển, tổng thanh toán, địa chỉ, người đặt, số điện thoại, email, phương thức thanh toán
 
 ### AC-2: Không xuất hóa đơn khi giao không thành công
-Given: đơn DH0002 "Đang giao"
-When: trang giả lập cập nhật DH0002 sang "Giao không thành công"
-Then: không có hóa đơn nào được tạo cho DH0002
+Given: đơn 4HZP8W1N "Đang giao"
+When: trang giả lập cập nhật 4HZP8W1N sang "Giao không thành công"
+Then: không có hóa đơn nào được tạo cho 4HZP8W1N
 
 ### AC-3: Không tạo trùng
-Given: đơn DH0001 đã có hóa đơn
-When: sự kiện "Giao thành công" của DH0001 được gửi lại
-Then: DH0001 vẫn chỉ có 1 hóa đơn
+Given: đơn 7K3M9Q2X đã có hóa đơn
+When: sự kiện "Giao thành công" của 7K3M9Q2X được gửi lại
+Then: 7K3M9Q2X vẫn chỉ có 1 hóa đơn
 
 ### AC-4: Hóa đơn không đổi khi dữ liệu gốc thay đổi
-Given: hóa đơn của DH0001 ghi đơn giá "Đỏ / M" là 250.000đ và tên sản phẩm "Áo bơi A"
+Given: hóa đơn của 7K3M9Q2X ghi đơn giá "Đỏ / M" là 250.000đ và tên sản phẩm "Áo bơi A"
 When: Nhân viên đổi giá size M thành 300.000đ và đổi tên sản phẩm thành "Áo bơi A mới"
-Then: hóa đơn của DH0001 vẫn ghi 250.000đ và "Áo bơi A"
+Then: hóa đơn của 7K3M9Q2X vẫn ghi 250.000đ và "Áo bơi A"
 
 ### AC-5: Đơn COD được ghi nhận đã thanh toán
-Given: đơn COD DH0003 "Đang giao"
-When: trang giả lập cập nhật DH0003 sang "Giao thành công"
-Then: DH0003 được ghi nhận "Đã thanh toán" và có hóa đơn
+Given: đơn COD B6TQ2R5D "Đang giao"
+When: trang giả lập cập nhật B6TQ2R5D sang "Giao thành công"
+Then: B6TQ2R5D được ghi nhận "Đã thanh toán" và có hóa đơn
 
 ## Dependencies
 - **Upstream UC:** UC-36 Cập nhật trạng thái giao hàng
@@ -67,7 +67,7 @@ Then: DH0003 được ghi nhận "Đã thanh toán" và có hóa đơn
 - **External Systems:** Không có
 
 ## Notes
-- BR-TUAN1: hóa đơn tự xuất khi giao thành công; khách và nhân viên chỉ xem (cần chốt).
+- BR-GIAIDOAN1: hóa đơn tự xuất khi giao thành công; khách và nhân viên chỉ xem (đã chốt 20/11/2026).
 - Không phải hóa đơn điện tử VAT (Out of Scope).
 - Tiền tính bằng số nguyên VND.
 
@@ -86,3 +86,4 @@ Then: DH0003 được ghi nhận "Đã thanh toán" và có hóa đơn
 - v1 (2026-11-15): initial
 - v2 (2026-11-15): chốt snapshot hóa đơn và mỗi đơn tối đa 1 hóa đơn (theo ERD); lưu lịch sử khi COD chuyển "Đã thanh toán"
 - v3 (2026-11-15): không ghi thay đổi trạng thái thanh toán vào lịch sử (theo data model v1); mã hóa đơn sinh từ `invoice_id`
+- v4 (2026-11-20): đồng bộ BR-GIAIDOAN1 — chốt khách và Nhân viên chỉ xem hóa đơn; mã đơn ví dụ theo định dạng Crockford Base32

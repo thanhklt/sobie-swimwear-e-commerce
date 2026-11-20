@@ -74,9 +74,9 @@ Then: biến thể X hiển thị tồn 30
 - **External Systems:** không có
 
 ## Notes
-- Áp dụng constraint cache danh sách (BR-TUAN1, Constraints chung); tồn kho hiển thị phải được làm mới khi tồn kho thay đổi (đặt hàng, hủy/từ chối đơn, xác nhận phiếu nhập, giao không thành công).
+- Áp dụng constraint cache danh sách (BR-GIAIDOAN1, Constraints chung); tồn kho hiển thị phải được làm mới khi tồn kho thay đổi (đặt hàng, hủy/từ chối đơn, xác nhận phiếu nhập, giao không thành công).
 - Tồn kho không bao giờ âm và không sửa tay; chỉ thay đổi qua các UC nghiệp vụ (BR-005).
-- Ngưỡng tồn kho thấp lấy từ cấu hình hard-code (BR-TUAN1, Constraints chung).
+- Ngưỡng tồn kho thấp lấy từ cấu hình hard-code (BR-GIAIDOAN1, Constraints chung).
 
 **Quyết định đã chốt**
 - Nhân viên quản lý hàng hóa nên xem được tồn kho theo biến thể ngoài dashboard (đã chốt 15/11/2026).

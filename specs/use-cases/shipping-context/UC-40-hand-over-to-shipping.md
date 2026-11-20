@@ -20,62 +20,63 @@ Nhân viên chọn một đơn "Đã xác nhận" trong trang quản lý đơn h
 1. Nhân viên mở trang quản lý đơn hàng và lọc các đơn "Đã xác nhận".
 2. Nhân viên chọn một đơn và bấm "Bàn giao vận chuyển".
 3. Hệ thống kiểm tra đơn vẫn ở "Đã xác nhận".
-4. Hệ thống chuyển đơn sang "Đang giao" và lưu lịch sử trạng thái đơn.
-5. Đơn xuất hiện trên Trang giả lập vận chuyển (UC-36); khách thấy trạng thái "Đang giao" khi theo dõi đơn (UC-21).
+4. Hệ thống chuyển đơn sang "Chờ lấy hàng" và lưu lịch sử trạng thái đơn.
+5. Đơn xuất hiện trên Trang giả lập vận chuyển (UC-36) với nút "Đã nhận hàng"; khách thấy trạng thái "Chờ lấy hàng" khi theo dõi đơn (UC-21).
+6. Khi đơn vị vận chuyển bấm "Đã nhận hàng" trên trang giả lập, đơn chuyển sang "Đang giao" (UC-36).
 
 ## Alternative Flows
 - **2a. Bàn giao nhiều đơn một lúc `[GD]`:** Nhân viên chọn nhiều đơn "Đã xác nhận" và bấm "Bàn giao vận chuyển"; hệ thống xử lý từng đơn như bước 3–5, đơn nào không hợp lệ thì bỏ qua và báo lại cho Nhân viên.
 
 ## Exceptions
-- **E1. Đơn không ở "Đã xác nhận":** đơn đang "Chưa xử lý", đã "Đang giao" hoặc đã ở trạng thái kết thúc — hệ thống từ chối, báo trạng thái hiện tại, đơn không đổi.
+- **E1. Đơn không ở "Đã xác nhận":** đơn đang "Chưa xử lý", đã "Chờ lấy hàng", "Đang giao" hoặc đã ở trạng thái kết thúc — hệ thống từ chối, báo trạng thái hiện tại, đơn không đổi.
 - **E2. Đơn không tồn tại:** hệ thống báo không tìm thấy đơn.
 
 ## Postconditions
-- Đơn ở trạng thái "Đang giao" và có trong danh sách của Trang giả lập vận chuyển.
-- Lịch sử trạng thái đơn có thêm 1 dòng: "Đã xác nhận → Đang giao", nguồn thay đổi, Nhân viên thực hiện, thời điểm.
+- Đơn ở trạng thái "Chờ lấy hàng" và có trong danh sách của Trang giả lập vận chuyển.
+- Lịch sử trạng thái đơn có thêm 1 dòng: "Đã xác nhận → Chờ lấy hàng", nguồn thay đổi, Nhân viên thực hiện, thời điểm.
 
 ## Acceptance Criteria
 
 ### AC-1: Bàn giao đơn thành công
-Given: đơn DH001 ở trạng thái "Đã xác nhận"
-When: Nhân viên bấm "Bàn giao vận chuyển" cho DH001
-Then: đơn DH001 chuyển sang "Đang giao"
-And: DH001 xuất hiện trên Trang giả lập vận chuyển
-And: lịch sử trạng thái đơn ghi "Đã xác nhận → Đang giao" kèm Nhân viên thực hiện
+Given: đơn 7K3M9Q2X ở trạng thái "Đã xác nhận"
+When: Nhân viên bấm "Bàn giao vận chuyển" cho 7K3M9Q2X
+Then: đơn 7K3M9Q2X chuyển sang "Chờ lấy hàng"
+And: 7K3M9Q2X xuất hiện trên Trang giả lập vận chuyển
+And: lịch sử trạng thái đơn ghi "Đã xác nhận → Chờ lấy hàng" kèm Nhân viên thực hiện
 
 ### AC-2: Đơn chưa xác nhận
-Given: đơn DH002 ở trạng thái "Chưa xử lý"
-When: Nhân viên bấm "Bàn giao vận chuyển" cho DH002
+Given: đơn 4HZP8W1N ở trạng thái "Chưa xử lý"
+When: Nhân viên bấm "Bàn giao vận chuyển" cho 4HZP8W1N
 Then: hệ thống từ chối và báo đơn đang "Chưa xử lý"
-And: DH002 không xuất hiện trên Trang giả lập vận chuyển
+And: 4HZP8W1N không xuất hiện trên Trang giả lập vận chuyển
 
 ### AC-3: Đơn đã bàn giao
-Given: đơn DH001 đã ở trạng thái "Đang giao"
-When: Nhân viên bấm "Bàn giao vận chuyển" cho DH001 lần nữa
-Then: hệ thống từ chối, đơn giữ trạng thái "Đang giao"
+Given: đơn 7K3M9Q2X đã ở trạng thái "Chờ lấy hàng"
+When: Nhân viên bấm "Bàn giao vận chuyển" cho 7K3M9Q2X lần nữa
+Then: hệ thống từ chối, đơn giữ trạng thái "Chờ lấy hàng"
 
 ### AC-4: Bàn giao nhiều đơn
-Given: đơn DH001 và DH003 ở "Đã xác nhận", đơn DH002 ở "Chưa xử lý"
+Given: đơn 7K3M9Q2X và B6TQ2R5D ở "Đã xác nhận", đơn 4HZP8W1N ở "Chưa xử lý"
 When: Nhân viên chọn cả 3 đơn và bấm "Bàn giao vận chuyển"
-Then: DH001 và DH003 chuyển sang "Đang giao"
-And: DH002 không đổi và hệ thống báo DH002 không được bàn giao
+Then: 7K3M9Q2X và B6TQ2R5D chuyển sang "Chờ lấy hàng"
+And: 4HZP8W1N không đổi và hệ thống báo 4HZP8W1N không được bàn giao
 
 ### AC-5: Khách thấy trạng thái mới
-Given: đơn DH001 của khách A ở "Đã xác nhận"
-When: Nhân viên bàn giao DH001
-Then: khách A mở chi tiết đơn thấy trạng thái "Đang giao"
+Given: đơn 7K3M9Q2X của khách A ở "Đã xác nhận"
+When: Nhân viên bàn giao 7K3M9Q2X
+Then: khách A mở chi tiết đơn thấy trạng thái "Chờ lấy hàng"
 
 ## Dependencies
-- **Upstream UC:** UC-23 Xác nhận hoặc từ chối đơn
-- **Downstream UC:** UC-36 Cập nhật trạng thái giao hàng, UC-21 Theo dõi đơn hàng
+- **Upstream UC:** UC-23 Xác nhận đơn hàng
+- **Downstream UC:** UC-36 Cập nhật trạng thái giao hàng, UC-21 Theo dõi đơn hàng, UC-22 Hủy đơn hàng (Nhân viên còn hủy được đơn "Chờ lấy hàng")
 - **External Systems:** Trang giả lập vận chuyển
 
 ## Notes
 - Thông tin người gửi hiển thị trên trang giả lập lấy từ cấu hình hard-code.
 
 ### Quyết định đã chốt
-- Nhân viên bấm "Bàn giao vận chuyển" cho đơn "Đã xác nhận" thì đơn sang "Đang giao" và xuất hiện trên Trang giả lập vận chuyển (đã chốt 15/11/2026).
-- Trạng thái đơn: Chưa xử lý → Đã xác nhận → Đang giao → Giao thành công | Giao không thành công; Đã hủy; Bị từ chối (đã chốt 15/11/2026).
+- Nhân viên bấm "Bàn giao vận chuyển" cho đơn "Đã xác nhận" thì đơn sang "Chờ lấy hàng" và xuất hiện trên Trang giả lập vận chuyển (đã chốt 15/11/2026; đổi đích từ "Đang giao" sang "Chờ lấy hàng" ngày 20/11/2026).
+- Trạng thái đơn: Chưa xử lý → Đã xác nhận → Chờ lấy hàng → Đang giao → Giao thành công | Giao không thành công; Đã hủy (đã chốt 15/11/2026, cập nhật 20/11/2026).
 - Admin chỉ quản lý tài khoản và gán vai trò cho tài khoản; mọi thao tác vận hành cửa hàng do Nhân viên thực hiện (đã chốt 15/11/2026).
 - Mỗi lần đơn đổi trạng thái, hệ thống lưu lịch sử: trạng thái cũ, trạng thái mới, nguồn thay đổi, người đổi (nếu có), thời điểm (theo ERD).
 
@@ -84,3 +85,4 @@ Then: khách A mở chi tiết đơn thấy trạng thái "Đang giao"
 
 ## History
 - v1 (2026-11-15): initial
+- v2 (2026-11-20): bàn giao chuyển đơn sang "Chờ lấy hàng" (không còn sang thẳng "Đang giao"); đơn vị vận chuyển bấm "Đã nhận hàng" mới sang "Đang giao" (UC-36)

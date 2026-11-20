@@ -81,7 +81,7 @@ And: phiếu vẫn ở trạng thái "Nháp"
 - **External Systems:** không có
 
 ## Notes
-- Công thức giá vốn, cách làm tròn và giá vốn theo biến thể đã chốt trong BR-TUAN1 (Constraints của BR-007).
+- Công thức giá vốn, cách làm tròn và giá vốn theo biến thể đã chốt trong BR-GIAIDOAN1 (Constraints của BR-007).
 - Cộng tồn và cập nhật giá vốn trong cùng một transaction.
 - Tồn kho không bao giờ âm (BR-005).
 - ERD hiện chưa có cột giá vốn ở biến thể; cần bổ sung để lưu giá vốn bình quân gia quyền.

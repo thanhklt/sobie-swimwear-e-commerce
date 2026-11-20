@@ -2,7 +2,7 @@
 
 ## Metadata
 - **ID:** UC-26
-- **Bounded Context:** checkout-context
+- **Module:** ordering
 - **Liên quan tới BR:** BR-003
 - **Status:** draft
 

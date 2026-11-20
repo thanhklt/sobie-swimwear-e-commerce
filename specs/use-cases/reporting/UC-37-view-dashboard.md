@@ -2,7 +2,7 @@
 
 ## Metadata
 - **ID:** UC-37
-- **Bounded Context:** reporting-context
+- **Module:** reporting
 - **Liên quan tới BR:** BR-007
 - **Status:** draft
 

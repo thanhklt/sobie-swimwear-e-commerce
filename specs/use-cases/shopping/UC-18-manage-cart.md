@@ -2,7 +2,7 @@
 
 ## Metadata
 - **ID:** UC-18
-- **Bounded Context:** checkout-context
+- **Module:** shopping
 - **Liên quan tới BR:** BR-003
 - **Status:** draft
 
@@ -23,8 +23,8 @@ Khách bấm "Thêm vào giỏ" trên trang chi tiết sản phẩm, hoặc mở
 5. Khách đổi số lượng hoặc xóa dòng; hệ thống cập nhật lại thành tiền và tạm tính.
 
 ## Alternative Flows
-- **2a. Khách vãng lai:** giỏ hàng lưu trên trình duyệt `[GD]`; khách vẫn thêm, sửa, xóa được như Khách hàng.
-- **2b. Khách vãng lai đăng nhập:** giỏ trên trình duyệt được gộp vào giỏ của tài khoản; dòng trùng biến thể thì cộng dồn nhưng không vượt tồn kho `[GD]`.
+- **2a. Khách vãng lai:** giỏ hàng lưu ở `localStorage` của trình duyệt; khách vẫn thêm, sửa, xóa được như Khách hàng.
+- **2b. Khách vãng lai đăng nhập:** giỏ trong `localStorage` được gộp vào giỏ của tài khoản; dòng trùng biến thể thì cộng dồn nhưng không vượt tồn kho `[GD]`.
 - **4a. Giá hoặc khuyến mãi đã thay đổi:** giỏ luôn hiển thị giá hiện tại, không giữ giá lúc thêm vào giỏ `[GD]`.
 
 ## Exceptions
@@ -93,13 +93,14 @@ Then: giỏ có dòng "Đỏ / M" số lượng 1
 
 ### Quyết định đã chốt
 - Giỏ của Khách hàng đã đăng nhập lưu trong DB; mỗi Khách hàng có 1 giỏ, mỗi biến thể chỉ có 1 dòng trong giỏ (theo ERD).
+- Giỏ của khách vãng lai lưu ở `localStorage` của trình duyệt (đã chốt 20/11/2026, data model v2, Q23d).
+- Giỏ không lưu giá; luôn hiển thị giá hiện tại, không giữ giá lúc thêm (đã chốt 20/11/2026, data model v2, Q26).
 
 ### Giả định [GD]
-- Giỏ của khách vãng lai lưu trên trình duyệt.
-- Khi đăng nhập, giỏ trình duyệt gộp vào giỏ tài khoản; dòng trùng cộng dồn nhưng không vượt tồn kho.
-- Giỏ hiển thị giá hiện tại, không giữ giá lúc thêm.
+- Khi đăng nhập, giỏ trong `localStorage` gộp vào giỏ tài khoản; dòng trùng cộng dồn nhưng không vượt tồn kho.
 - Dòng hết hàng/ngừng bán vẫn nằm trong giỏ nhưng không tính tiền và không đặt được.
 
 ## History
 - v1 (2026-11-15): initial
 - v2 (2026-11-15): giỏ của Khách hàng đăng nhập lưu trong DB, 1 dòng mỗi biến thể (theo ERD); thêm AC-8
+- v3 (2026-11-20): theo data model v2 — chốt giỏ khách vãng lai lưu ở `localStorage` (2a, 2b); chốt giỏ không lưu giá

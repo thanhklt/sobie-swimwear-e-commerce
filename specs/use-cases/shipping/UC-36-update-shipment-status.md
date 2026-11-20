@@ -2,7 +2,7 @@
 
 ## Metadata
 - **ID:** UC-36
-- **Bounded Context:** shipping-context
+- **Module:** shipping
 - **Liên quan tới BR:** BR-006
 - **Status:** draft
 

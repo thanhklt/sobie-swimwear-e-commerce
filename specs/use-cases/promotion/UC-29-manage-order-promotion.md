@@ -2,7 +2,7 @@
 
 ## Metadata
 - **ID:** UC-29
-- **Bounded Context:** promotion-context
+- **Module:** promotion
 - **Liên quan tới BR:** BR-004
 - **Status:** draft
 
@@ -26,17 +26,18 @@ Nhân viên mở màn hình quản lý khuyến mãi theo giá trị hóa đơn 
 
 ## Alternative Flows
 - **5a. Hủy tại popup xác nhận:** Nhân viên bấm "Hủy" → hệ thống không lưu, quay lại màn hình nhập với dữ liệu đã nhập.
-- **1a. Ngừng khuyến mãi:** Nhân viên chọn một khuyến mãi chưa kết thúc và bấm "Ngừng" → khuyến mãi hết hiệu lực ngay, không còn được xét trong UC-31 cho các đơn sau; đơn đã tạo không thay đổi.
-- **1b. Xem danh sách khuyến mãi:** Nhân viên xem danh sách khuyến mãi theo hóa đơn kèm số lượng được áp dụng, số lượng đã dùng và trạng thái `[GD]`. Danh sách không có thao tác sửa.
+- **1a. Ngừng khuyến mãi (kết thúc trước hạn):** Nhân viên chọn một khuyến mãi chưa kết thúc và bấm "Ngừng" → khuyến mãi chuyển trạng thái tắt, hết hiệu lực ngay, không còn được xét trong UC-31 cho các đơn sau; ngày kết thúc đã chọn khi tạo giữ nguyên; khuyến mãi không bật lại được; đơn đã tạo không thay đổi.
+- **1b. Xem danh sách khuyến mãi:** Nhân viên xem danh sách khuyến mãi theo hóa đơn kèm số lượng được áp dụng, số lượng đã dùng `[GD]` và trạng thái: "Sắp diễn ra" (chưa tới ngày bắt đầu), "Đang hiệu lực", "Đã kết thúc" (đã tới ngày kết thúc hoặc đã bị ngừng). Danh sách không có thao tác sửa.
 - **1c. Lọc theo khoảng thời gian:** Nhân viên chọn "từ ngày" và "đến ngày" → hệ thống chỉ hiển thị các khuyến mãi có thời gian hiệu lực giao với khoảng đã chọn (kể cả giao một phần).
 - **7a. Hết lượt:** số lượng đã dùng bằng số lượng được áp dụng → khuyến mãi không còn được xét trong UC-31 dù còn trong thời gian hiệu lực.
+- **7b. Hết hạn:** tới ngày kết thúc → khuyến mãi tự hết hiệu lực, chuyển "Đã kết thúc", không cần Nhân viên thao tác.
 
 ## Exceptions
 - **E1. Thiếu hoặc sai dữ liệu:** thiếu trường bắt buộc, giá trị đơn tối thiểu âm, phần trăm giảm không nằm trong khoảng lớn hơn 0 và nhỏ hơn 100 `[GD]`, số lượng được áp dụng nhỏ hơn 1 `[GD]`, hoặc ngày kết thúc không sau ngày bắt đầu → hệ thống báo lỗi theo từng trường, không hiển thị popup xác nhận, không lưu.
 
 ## Postconditions
 - Khuyến mãi được lưu sau khi Nhân viên xác nhận và được xét cho các đơn tạo trong thời gian hiệu lực, khi còn lượt.
-- Khuyến mãi đã tạo không thể sửa; chỉ có thể ngừng.
+- Khuyến mãi đã tạo không thể sửa; chỉ có thể ngừng. Khuyến mãi đã ngừng không bật lại được.
 
 ## Acceptance Criteria
 
@@ -74,6 +75,8 @@ Given: khuyến mãi X đang hiệu lực, đơn D đã được tạo với khu
 When: Nhân viên ngừng khuyến mãi X
 Then: đơn tạo sau đó không được xét khuyến mãi X
 And: số tiền giảm của đơn D giữ nguyên
+And: khuyến mãi X hiển thị "Đã kết thúc", ngày kết thúc vẫn là ngày đã chọn khi tạo
+And: khuyến mãi X không có thao tác bật lại
 
 ### AC-7: Hết lượt áp dụng
 Given: khuyến mãi X có số lượng được áp dụng 2 và đã dùng 2, vẫn trong thời gian hiệu lực
@@ -91,6 +94,12 @@ When: Nhân viên lọc danh sách từ 05/11 đến 25/11
 Then: danh sách hiển thị X và Y
 And: không hiển thị Z
 
+### AC-10: Trạng thái hiển thị
+Given: hôm nay 20/11; khuyến mãi P hiệu lực 25/11 → 30/11, Q hiệu lực 15/11 → 25/11, R hiệu lực 01/11 → 10/11, S hiệu lực 15/11 → 30/11 nhưng đã bị ngừng
+When: Nhân viên mở danh sách khuyến mãi theo hóa đơn
+Then: P hiển thị "Sắp diễn ra", Q hiển thị "Đang hiệu lực", R và S hiển thị "Đã kết thúc"
+And: đơn đặt hôm nay không được xét P, R, S
+
 ## Dependencies
 - **Upstream UC:** UC-02
 - **Downstream UC:** UC-31, UC-37
@@ -105,6 +114,9 @@ And: không hiển thị Z
 - Khuyến mãi theo hóa đơn có: loại (ORDER), phần trăm giảm, giá trị đơn tối thiểu, số lượng được áp dụng, số lượng đã dùng, ngày bắt đầu, ngày kết thúc, trạng thái (theo ERD).
 - Số lượng được áp dụng là số lượt tối đa; mỗi đơn được áp tính 1 lượt; hết lượt thì không còn được xét (đã chốt 15/11/2026).
 - Khuyến mãi đã tạo thì không được sửa; chỉ có thể ngừng để các đơn sau không được áp nữa; đơn đã tạo không đổi (đã chốt 15/11/2026).
+- Hết hiệu lực theo 2 cách: tới ngày kết thúc, hoặc Nhân viên ngừng trước hạn; ngừng trước hạn chỉ đổi trạng thái sang tắt, ngày kết thúc giữ nguyên (đã chốt 20/11/2026, data model v2, Q25, Q28).
+- Khuyến mãi đã ngừng không bật lại được; muốn áp lại thì tạo khuyến mãi mới (đã chốt 20/11/2026, data model v2, Q22).
+- Trạng thái hiển thị: Sắp diễn ra, Đang hiệu lực, Đã kết thúc — tính từ trạng thái bật / tắt và ngày bắt đầu / kết thúc, không lưu riêng (đã chốt 20/11/2026, data model v2, Q23c, Q27).
 - Khi tạo khuyến mãi, hệ thống hiển thị popup xác nhận; chỉ lưu khi Nhân viên bấm xác nhận (đã chốt 15/11/2026).
 - Khuyến mãi không có tên, nhận diện bằng mã khuyến mãi (theo ERD, đã chốt 15/11/2026).
 - Danh sách khuyến mãi lọc được theo khoảng thời gian để Nhân viên tra cứu (đã chốt 15/11/2026).
@@ -114,7 +126,7 @@ And: không hiển thị Z
 - Được phép có nhiều khuyến mãi theo hóa đơn cùng hiệu lực; UC-31 chọn cái giảm nhiều nhất trong số đủ điều kiện.
 - Đơn bị hủy thì hoàn lượt khuyến mãi theo hóa đơn (giảm số lượng đã dùng 1).
 - Phần trăm giảm hợp lệ: lớn hơn 0 và nhỏ hơn 100; số lượng được áp dụng ≥ 1.
-- Danh sách khuyến mãi hiển thị số lượng được áp dụng, số lượng đã dùng và trạng thái.
+- Danh sách khuyến mãi hiển thị số lượng được áp dụng và số lượng đã dùng.
 
 ## History
 - v1 (2026-11-15): initial
@@ -123,3 +135,4 @@ And: không hiển thị Z
 - v4 (2026-11-15): bỏ tên khuyến mãi; thêm lọc danh sách theo khoảng thời gian (1c, AC-9)
 - v5 (2026-11-15): chốt quy tắc lọc theo thời gian (giao khoảng)
 - v6 (2026-11-20): đồng bộ BR-GIAIDOAN1 — bỏ "Bị từ chối" (Nhân viên chỉ còn "Hủy đơn")
+- v7 (2026-11-20): theo data model v2 — ngừng trước hạn giữ ngày kết thúc, không bật lại (1a, AC-6); thêm 7b hết hạn; chốt trạng thái Sắp diễn ra / Đang hiệu lực / Đã kết thúc (1b, AC-10)

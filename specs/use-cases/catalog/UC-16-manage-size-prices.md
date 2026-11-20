@@ -2,7 +2,7 @@
 
 ## Metadata
 - **ID:** UC-16
-- **Bounded Context:** catalog-context
+- **Module:** catalog
 - **Liên quan tới BR:** BR-002
 - **Status:** draft
 

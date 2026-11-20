@@ -2,7 +2,7 @@
 
 ## Metadata
 - **ID:** UC-22
-- **Bounded Context:** checkout-context
+- **Module:** ordering
 - **Liên quan tới BR:** BR-003
 - **Status:** draft
 
@@ -125,10 +125,10 @@ Then: khách thấy trạng thái "Đã hủy" và không thấy lý do
 - Nhân viên hủy phải nhập lý do qua popup; khách không thấy lý do (đã chốt 20/11/2026).
 - Đơn bị hủy thì cộng lại tồn kho và hoàn lượt voucher (đã chốt 15/11/2026).
 - Mỗi lần đơn đổi trạng thái, hệ thống lưu lịch sử: trạng thái cũ, trạng thái mới, nguồn thay đổi, người đổi (nếu có), thời điểm (theo ERD).
+- Lý do hủy lưu ở cột ghi chú của lịch sử trạng thái đơn (`order_status_history_note`) (đã chốt 20/11/2026, data model v2, Q23e).
 
 ### Giả định [GD]
 - Hủy đơn cũng hoàn lượt của khuyến mãi theo hóa đơn đã áp (voucher đã chốt).
-- Lý do hủy lưu ở cột ghi chú của lịch sử trạng thái đơn (`order_status_history_note`).
 - Lý do hủy tối đa 500 ký tự.
 
 ## History
@@ -136,3 +136,4 @@ Then: khách thấy trạng thái "Đã hủy" và không thấy lý do
 - v2 (2026-11-15): chốt bộ trạng thái đơn, cộng lại tồn kho và hoàn lượt voucher khi hủy
 - v3 (2026-11-15): hoàn lượt khuyến mãi theo hóa đơn khi hủy; lưu lịch sử trạng thái đơn (theo ERD); thêm AC-3, AC-4
 - v4 (2026-11-20): thêm actor Nhân viên — hủy được đến trước khi đơn vị vận chuyển nhận hàng, bắt buộc nhập lý do qua popup, khách không thấy lý do; bỏ "Bị từ chối"; thêm AC-8 → AC-12
+- v5 (2026-11-20): theo data model v2 — chốt lý do hủy lưu ở `order_status_history_note`

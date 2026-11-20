@@ -2,7 +2,7 @@
 
 ## Metadata
 - **ID:** UC-25
-- **Bounded Context:** checkout-context
+- **Module:** payment
 - **Liên quan tới BR:** BR-006, BR-003
 - **Status:** draft
 

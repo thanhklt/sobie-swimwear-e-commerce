@@ -2,7 +2,7 @@
 
 ## Metadata
 - **ID:** UC-04
-- **Bounded Context:** identity-context
+- **Module:** identity
 - **Liên quan tới BR:** BR-001
 - **Status:** draft
 

@@ -111,12 +111,14 @@ Khách hàng tự đăng ký, đăng nhập và quản lý hồ sơ của mình;
 - Admin có toàn quyền tạo tài khoản với bất kỳ vai trò nào trong 3 vai trò cố định (Khách hàng, Nhân viên, Admin), không chỉ tài khoản nội bộ (đã chốt 20/11/2026).
 - `[GD]` Tài khoản do Admin tạo tuân theo cùng ràng buộc như khi khách tự đăng ký: bắt buộc đủ email và số điện thoại, không trùng với tài khoản khác; Admin đặt mật khẩu ban đầu.
 - Tài khoản do Admin tạo dùng được ngay, không bắt buộc đổi mật khẩu ở lần đăng nhập đầu (đã chốt 20/11/2026).
-- Admin đổi được vai trò của tài khoản sang bất kỳ vai trò nào trong 3 vai trò cố định, kể cả giữa Khách hàng và Nhân viên/Admin. Vai trò mới có hiệu lực ngay, tài khoản đang đăng nhập bị đăng xuất; thông tin cá nhân và thông tin đăng nhập giữ nguyên (đã chốt 20/11/2026).
-- `[GD]` Đổi vai trò giữ nguyên lịch sử đơn hàng, hóa đơn và lịch sử thao tác của tài khoản; Admin không tự đổi vai trò của mình; không cho đổi khiến hệ thống không còn Admin nào đang hoạt động.
+- Admin chỉ đổi được vai trò qua lại giữa Nhân viên và Admin. Không đổi Khách hàng sang Nhân viên / Admin và không đổi Nhân viên / Admin sang Khách hàng. Vai trò mới có hiệu lực ngay, tài khoản đang đăng nhập bị đăng xuất; thông tin cá nhân và thông tin đăng nhập giữ nguyên (đã chốt 20/11/2026, thay quyết định cho đổi sang mọi vai trò cùng ngày).
+- `[GD]` Đổi vai trò giữ nguyên lịch sử thao tác của tài khoản.
+- Admin được tự đổi vai trò và tự khóa tài khoản của mình. Hệ thống luôn có ít nhất 1 Admin đang hoạt động: không cho đổi vai trò hoặc khóa Admin đang hoạt động cuối cùng (đã chốt 20/11/2026).
 
 ### Open Questions
 
-- [X]  Admin đổi vai trò được giữa những vai trò nào? → Mọi vai trò: Khách hàng, Nhân viên, Admin, kể cả giữa Khách hàng và vai trò nội bộ; không dựa vào data model hiện tại (đã chốt 20/11/2026).
+- [X]  Admin đổi vai trò được giữa những vai trò nào? → Chỉ giữa Nhân viên và Admin; Khách hàng không đổi sang vai trò nội bộ và ngược lại (đã chốt lại 20/11/2026, thay câu trả lời "mọi vai trò" trước đó).
+- [X]  Admin có được tự khóa chính mình không? → Được, khi hệ thống còn Admin khác đang hoạt động (đã chốt 20/11/2026).
 - [X]  Tài khoản Khách hàng do Admin tạo có bắt buộc đổi mật khẩu ở lần đăng nhập đầu không? → Không, dùng được ngay như tài khoản khách tự đăng ký (đã chốt 20/11/2026).
 - [X]  Admin được tạo tài khoản với vai trò nào? → Mọi vai trò: Khách hàng, Nhân viên, Admin (đã chốt 20/11/2026).
 - [X]  Khi đăng ký, khách phải nhập cả email và số điện thoại, hay chỉ cần một trong hai? → Đăng ký bắt buộc nhập đủ cả hai; đăng nhập bằng một trong hai (đã chốt 15/11/2026).
@@ -236,10 +238,14 @@ Nhân viên tạo được 3 loại khuyến mãi; khi đặt hàng, hệ thốn
 - Mức giảm theo hóa đơn và mức giảm theo voucher bằng nhau thì ưu tiên voucher (đã chốt 15/11/2026).
 - Mọi loại khuyến mãi giảm theo phần trăm; không có mức giảm tối đa (đã chốt 15/11/2026, theo ERD).
 - Mỗi khuyến mãi có số lượng được áp dụng và số lượng thực tế đã dùng. Khuyến mãi theo sản phẩm không áp dụng giới hạn số lượng; có hiệu lực cho đến khi Nhân viên bấm kết thúc chương trình (đã chốt 15/11/2026).
+- Khuyến mãi theo sản phẩm chỉ có tạo rồi kết thúc: không có ngày bắt đầu, ngày kết thúc; có hiệu lực ngay khi tạo và hết hiệu lực khi Nhân viên bấm kết thúc chương trình. Mỗi khuyến mãi theo sản phẩm gắn đúng 1 sản phẩm (đã chốt 20/11/2026).
+- Khuyến mãi theo hóa đơn và voucher có thời điểm bắt đầu và thời điểm kết thúc do Nhân viên chọn khi tạo. Hết hiệu lực khi tới thời điểm kết thúc, hoặc khi Nhân viên bấm kết thúc trước hạn; kết thúc trước hạn vẫn giữ nguyên thời điểm kết thúc đã chọn (đã chốt 20/11/2026).
+- Trạng thái hiển thị của khuyến mãi: Sắp diễn ra (chỉ hóa đơn và voucher, chưa tới thời điểm bắt đầu), Đang hiệu lực, Đã kết thúc (đã chốt 20/11/2026).
+- Khuyến mãi đã kết thúc không bật lại được; muốn áp lại thì tạo khuyến mãi mới (đã chốt 20/11/2026).
 - Khuyến mãi theo hóa đơn và voucher có giá trị đơn tối thiểu; voucher chỉ giới hạn tổng lượt dùng, không giới hạn số lần mỗi khách (theo ERD).
 - Mỗi sản phẩm thuộc tối đa 1 khuyến mãi theo sản phẩm; mỗi đơn áp tối đa 1 khuyến mãi theo hóa đơn hoặc voucher (theo ERD).
 - Khuyến mãi đã tạo không được sửa, chỉ có thể ngừng để các đơn sau không được áp. Khi tạo khuyến mãi, hệ thống hiển thị popup để Nhân viên xác nhận (đã chốt 15/11/2026).
-- Khuyến mãi không có tên. Danh sách khuyến mãi (cả 3 loại) lọc được theo khoảng thời gian để Nhân viên tra cứu (đã chốt 15/11/2026).
+- Khuyến mãi không có tên. Danh sách khuyến mãi theo hóa đơn và voucher lọc được theo khoảng thời gian để Nhân viên tra cứu (đã chốt 15/11/2026); khuyến mãi theo sản phẩm không lọc theo khoảng thời gian vì không có ngày bắt đầu / kết thúc (đã chốt 20/11/2026).
 
 ### Open Questions
 
@@ -415,3 +421,5 @@ Xem được các chỉ số kinh doanh chính của cửa hàng trên một das
 - v14 (2026-11-20): bỏ thao tác "Từ chối đơn" và trạng thái "Bị từ chối", Nhân viên chỉ có nút "Hủy đơn"; tiền tố nội dung chuyển khoản là `SOBIE`; mã đơn hàng sinh ngẫu nhiên không trùng (chờ chốt cách sinh)
 - v15 (2026-11-20): chốt mã đơn hàng 8 ký tự ngẫu nhiên Crockford Base32, UNIQUE, sinh lại khi trùng
 - v16 (2026-11-20): Admin đổi được vai trò sang mọi vai trò (gồm Khách hàng ↔ Nhân viên/Admin)
+- v17 (2026-11-20): theo data model v2 — khuyến mãi theo sản phẩm chỉ có tạo rồi kết thúc, gắn đúng 1 sản phẩm; khuyến mãi theo hóa đơn và voucher có thời điểm bắt đầu / kết thúc, kết thúc sớm giữ nguyên thời điểm kết thúc; trạng thái hiển thị Sắp diễn ra / Đang hiệu lực / Đã kết thúc; khuyến mãi đã kết thúc không bật lại; BR-001: Admin được tự đổi vai trò, luôn còn ít nhất 1 Admin đang hoạt động; khuyến mãi theo sản phẩm không lọc theo khoảng thời gian
+- v18 (2026-11-20): BR-001 — chỉ đổi vai trò giữa Nhân viên và Admin (thay v16: không còn đổi Khách hàng ↔ Nhân viên/Admin); Admin được tự khóa chính mình khi còn Admin khác đang hoạt động

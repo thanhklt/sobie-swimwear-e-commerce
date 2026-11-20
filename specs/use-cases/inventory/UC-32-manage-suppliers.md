@@ -2,7 +2,7 @@
 
 ## Metadata
 - **ID:** UC-32
-- **Bounded Context:** inventory-context
+- **Module:** inventory
 - **Liên quan tới BR:** BR-005
 - **Status:** draft
 

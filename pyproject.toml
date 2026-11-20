@@ -1,0 +1,12 @@
+[project]
+name = "sobie-swimwear-e-commerce"
+version = "0.1.0"
+description = "Website bán đồ bơi Sobie — modular monolith"
+readme = "README.md"
+requires-python = ">=3.11"
+# Chưa khai báo thư viện: framework web, ORM, pydantic-settings, pytest sẽ thêm khi chốt stack.
+dependencies = []
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

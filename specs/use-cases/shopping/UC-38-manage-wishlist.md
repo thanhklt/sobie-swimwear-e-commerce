@@ -2,7 +2,7 @@
 
 ## Metadata
 - **ID:** UC-38
-- **Bounded Context:** catalog-context `[GD]`
+- **Module:** shopping
 - **Liên quan tới BR:** BR-002
 - **Status:** draft
 
@@ -94,7 +94,7 @@ Then: sản phẩm A không xuất hiện trong danh sách của Y
 - Mỗi sản phẩm chỉ xuất hiện 1 lần trong danh sách của một tài khoản (theo ERD: unique account + product).
 
 ### Giả định [GD]
-- UC thuộc catalog-context.
+- UC thuộc module shopping (cùng giỏ hàng), đã chốt 20/11/2026.
 - Nút tim có trên cả thẻ sản phẩm và trang chi tiết.
 - Khách vãng lai bấm tim thì được yêu cầu đăng nhập; sau đăng nhập quay lại trang đang xem, không tự lưu sản phẩm.
 - Danh sách yêu thích sắp xếp mới thêm nhất trước (theo thứ tự thêm; ERD không có cột thời gian riêng), có phân trang.

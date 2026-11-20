@@ -2,7 +2,7 @@
 
 ## Metadata
 - **ID:** UC-12
-- **Bounded Context:** catalog-context
+- **Module:** catalog
 - **Liên quan tới BR:** BR-002
 - **Status:** draft
 
@@ -103,8 +103,8 @@ Then: sản phẩm A được thêm vào danh sách yêu thích (UC-38)
 - **External Systems:** không có
 
 ## Notes
-- Giá sau khuyến mãi theo sản phẩm lấy từ promotion-context (UC-28).
-- Tồn kho của biến thể lấy từ inventory-context.
+- Giá sau khuyến mãi theo sản phẩm lấy từ module promotion (UC-28).
+- Tồn kho của biến thể lấy từ module inventory (bảng `inventory.stock`).
 - Out of Scope (BR-GIAIDOAN1): đánh giá sản phẩm (để giai đoạn 2).
 
 ### Quyết định đã chốt

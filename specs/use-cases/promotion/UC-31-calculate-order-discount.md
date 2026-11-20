@@ -2,7 +2,7 @@
 
 ## Metadata
 - **ID:** UC-31
-- **Bounded Context:** promotion-context
+- **Module:** promotion
 - **Liên quan tới BR:** BR-004
 - **Status:** draft
 

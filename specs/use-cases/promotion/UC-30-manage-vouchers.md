@@ -2,7 +2,7 @@
 
 ## Metadata
 - **ID:** UC-30
-- **Bounded Context:** promotion-context
+- **Module:** promotion
 - **Liên quan tới BR:** BR-004
 - **Status:** draft
 
@@ -26,9 +26,10 @@ Nhân viên mở màn hình quản lý voucher để tạo hoặc ngừng một 
 
 ## Alternative Flows
 - **5a. Hủy tại popup xác nhận:** Nhân viên bấm "Hủy" → hệ thống không lưu, quay lại màn hình nhập với dữ liệu đã nhập.
-- **1a. Ngừng voucher:** Nhân viên chọn một voucher chưa kết thúc và bấm "Ngừng" → voucher hết hiệu lực ngay, khách nhập mã sẽ bị báo không hợp lệ `[GD]`; đơn đã tạo không thay đổi.
-- **1b. Xem danh sách voucher:** Nhân viên xem danh sách voucher kèm tổng lượt dùng, số lượt đã dùng và trạng thái `[GD]`. Danh sách không có thao tác sửa.
+- **1a. Ngừng voucher (kết thúc trước hạn):** Nhân viên chọn một voucher chưa kết thúc và bấm "Ngừng" → voucher chuyển trạng thái tắt, hết hiệu lực ngay, khách nhập mã sẽ bị báo không hợp lệ `[GD]`; ngày kết thúc đã chọn khi tạo giữ nguyên; voucher không bật lại được; đơn đã tạo không thay đổi.
+- **1b. Xem danh sách voucher:** Nhân viên xem danh sách voucher kèm tổng lượt dùng, số lượt đã dùng `[GD]` và trạng thái: "Sắp diễn ra" (chưa tới ngày bắt đầu), "Đang hiệu lực", "Đã kết thúc" (đã tới ngày kết thúc hoặc đã bị ngừng). Danh sách không có thao tác sửa.
 - **1c. Lọc theo khoảng thời gian:** Nhân viên chọn "từ ngày" và "đến ngày" → hệ thống chỉ hiển thị các voucher có thời gian hiệu lực giao với khoảng đã chọn (kể cả giao một phần).
+- **7a. Hết hạn:** tới ngày kết thúc → voucher tự hết hiệu lực, chuyển "Đã kết thúc", không cần Nhân viên thao tác.
 
 ## Exceptions
 - **E1. Trùng mã:** mã voucher đã tồn tại (không phân biệt hoa thường `[GD]`) → hệ thống báo lỗi, không lưu.
@@ -36,7 +37,7 @@ Nhân viên mở màn hình quản lý voucher để tạo hoặc ngừng một 
 
 ## Postconditions
 - Voucher được lưu sau khi Nhân viên xác nhận và dùng được cho các đơn tạo trong thời gian hiệu lực, khi còn lượt và đạt giá trị đơn tối thiểu.
-- Voucher đã tạo không thể sửa; chỉ có thể ngừng.
+- Voucher đã tạo không thể sửa; chỉ có thể ngừng. Voucher đã ngừng không bật lại được.
 
 ## Acceptance Criteria
 
@@ -79,6 +80,8 @@ Given: voucher "SUMMER10" đang hiệu lực, đơn D đã được tạo với 
 When: Nhân viên ngừng voucher, sau đó khách nhập "SUMMER10" khi đặt hàng
 Then: hệ thống báo voucher không hợp lệ
 And: số tiền giảm của đơn D giữ nguyên
+And: voucher "SUMMER10" hiển thị "Đã kết thúc", ngày kết thúc vẫn là ngày đã chọn khi tạo
+And: voucher "SUMMER10" không có thao tác bật lại
 
 ### AC-8: Một khách dùng nhiều lần
 Given: voucher "SUMMER10" còn lượt, khách K đã dùng "SUMMER10" ở một đơn trước
@@ -91,6 +94,12 @@ Given: voucher "A1" hiệu lực 01/11 → 10/11, voucher "B2" hiệu lực 20/1
 When: Nhân viên lọc danh sách từ 05/11 đến 25/11
 Then: danh sách hiển thị "A1" và "B2"
 And: không hiển thị "C3"
+
+### AC-10: Trạng thái hiển thị
+Given: hôm nay 20/11; voucher "P1" hiệu lực 25/11 → 30/11, "Q1" hiệu lực 15/11 → 25/11, "R1" hiệu lực 01/11 → 10/11
+When: Nhân viên mở danh sách voucher, sau đó khách nhập "P1" khi đặt hàng hôm nay
+Then: "P1" hiển thị "Sắp diễn ra", "Q1" hiển thị "Đang hiệu lực", "R1" hiển thị "Đã kết thúc"
+And: hệ thống báo "P1" chưa đến thời gian hiệu lực (UC-31 E2)
 
 ## Dependencies
 - **Upstream UC:** UC-02
@@ -106,6 +115,9 @@ And: không hiển thị "C3"
 - Voucher (loại CODE) có: mã duy nhất, phần trăm giảm, giá trị đơn tối thiểu, tổng lượt dùng (số lượng được áp dụng), số lượt đã dùng, ngày bắt đầu, ngày kết thúc, trạng thái (theo ERD).
 - Voucher chỉ giới hạn tổng lượt dùng; không giới hạn số lần mỗi khách (đã chốt 15/11/2026).
 - Voucher đã tạo thì không được sửa (kể cả mã, phần trăm, giá trị đơn tối thiểu, tổng lượt dùng, thời gian); chỉ có thể ngừng để các đơn sau không được áp nữa; đơn đã tạo không đổi (đã chốt 15/11/2026).
+- Hết hiệu lực theo 2 cách: tới ngày kết thúc, hoặc Nhân viên ngừng trước hạn; ngừng trước hạn chỉ đổi trạng thái sang tắt, ngày kết thúc giữ nguyên (đã chốt 20/11/2026, data model v2, Q25, Q28).
+- Voucher đã ngừng không bật lại được; muốn áp lại thì tạo voucher mới (đã chốt 20/11/2026, data model v2, Q22).
+- Trạng thái hiển thị: Sắp diễn ra, Đang hiệu lực, Đã kết thúc — tính từ trạng thái bật / tắt và ngày bắt đầu / kết thúc, không lưu riêng (đã chốt 20/11/2026, data model v2, Q23c, Q27).
 - Khi tạo voucher, hệ thống hiển thị popup xác nhận; chỉ lưu khi Nhân viên bấm xác nhận (đã chốt 15/11/2026).
 - Danh sách voucher lọc được theo khoảng thời gian để Nhân viên tra cứu (đã chốt 15/11/2026).
 - Lọc theo khoảng thời gian: hiển thị voucher có thời gian hiệu lực giao với khoảng đã chọn, kể cả giao một phần (đã chốt 15/11/2026).
@@ -113,7 +125,7 @@ And: không hiển thị "C3"
 **Giả định [GD]**
 - Mã voucher không phân biệt hoa thường.
 - Phần trăm giảm hợp lệ: lớn hơn 0 và nhỏ hơn 100.
-- Danh sách voucher hiển thị tổng lượt dùng, số lượt đã dùng và trạng thái.
+- Danh sách voucher hiển thị tổng lượt dùng và số lượt đã dùng.
 
 ## History
 - v1 (2026-11-15): initial
@@ -121,3 +133,4 @@ And: không hiển thị "C3"
 - v3 (2026-11-15): bỏ thao tác sửa voucher (chỉ ngừng); thêm popup xác nhận khi tạo
 - v4 (2026-11-15): thêm lọc danh sách theo khoảng thời gian (1c, AC-9)
 - v5 (2026-11-15): chốt quy tắc lọc theo thời gian (giao khoảng)
+- v6 (2026-11-20): theo data model v2 — ngừng trước hạn giữ ngày kết thúc, không bật lại (1a, AC-7); thêm 7a hết hạn; chốt trạng thái Sắp diễn ra / Đang hiệu lực / Đã kết thúc (1b, AC-10)

@@ -2,7 +2,7 @@
 
 ## Metadata
 - **ID:** UC-15
-- **Bounded Context:** catalog-context
+- **Module:** catalog
 - **Liên quan tới BR:** BR-002
 - **Status:** draft
 
@@ -73,7 +73,7 @@ Then: biến thể bị xóa khỏi sản phẩm
 - **External Systems:** không có
 
 ## Notes
-- Tồn kho của biến thể chỉ thay đổi qua inventory-context (xác nhận phiếu nhập, đặt/hủy đơn, giao không thành công). Tồn kho không bao giờ âm (BR-005).
+- Tồn kho của biến thể chỉ thay đổi qua module inventory (bảng `inventory.stock`, không còn cột tồn kho ở `catalog.variant`) (xác nhận phiếu nhập, đặt/hủy đơn, giao không thành công). Tồn kho không bao giờ âm (BR-005).
 - Giá vốn tính riêng cho từng biến thể (BR-007).
 
 ### Giả định [GD]

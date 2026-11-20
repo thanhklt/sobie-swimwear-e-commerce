@@ -1,0 +1,883 @@
+// =====================================================================
+// Soobin Swimwear — Data Model v2 (DBML)
+// Nguồn : ERD vẽ tay (ảnh chụp, 20/11/2026), review theo BR-GIAIDOAN1 v16
+//         và các quyết định đã chốt trong UC / entities_model_v1.
+// Render: dán vào https://dbdiagram.io hoặc chạy `npx @dbml/cli dbml2sql`.
+//
+// Ký hiệu trong note:
+//   [SUA] sửa so với ERD trong ảnh
+//   [MOI] cột / bảng mới so với ERD trong ảnh
+//   [BO]  đã bỏ khỏi ERD trong ảnh (ghi trong note của bảng)
+//   [KEY] sửa theo quy tắc khóa uuid / mã tự nhiên
+//   [RBAC] phân quyền theo vai trò
+//   [GD]  giả định của agent, chờ developer quyết định
+//
+// Quy ước chung:
+//   - Tiền: số nguyên VND -> numeric(12,0) (map sang Decimal), ROUND_HALF_UP.
+//   - Phần trăm giảm: numeric(5,2), 0 < x < 100.
+//   - Thời gian: timestamptz, lưu UTC.
+//   - Khóa chính (đã chốt):
+//       * Mọi bảng dùng khóa chính uuid, tên cột có hậu tố _key,
+//         default gen_random_uuid(). Mọi khóa ngoại cũng là uuid, hậu tố _key.
+//       * Bảng nối product_collection dùng PK ghép từ 2 khóa ngoại;
+//         3 bảng con của promotion dùng promotion_key làm PK + FK.
+//   - Mã tự nhiên (đã chốt): 9 bảng supplier, customer, employee, admin,
+//     product, variant, goods_receipt, promotion, invoice có thêm cột <x>_id
+//     varchar, NOT NULL, UNIQUE — hệ thống tự cấp, không cho sửa.
+//     Phần "4 số" là bộ đếm chung cho cả bảng, tăng dần 0001 -> 0002 -> ...
+//     (không đếm lại theo ngày hay theo họ tên). Trường hợp vượt 9999: chưa xử lý.
+//       * Nhân viên : NV-<HỌ TÊN>-<YYYYMMDD ngày sinh>-<4 số>
+//       * Admin     : AD-<HỌ TÊN>-<YYYYMMDD ngày sinh>-<4 số>
+//       * Khách hàng: KH-<YYYYMMDD ngày đăng ký>-<4 số>
+//       * NCC       : NCC-<4 số>
+//       * Sản phẩm  : SP-<4 số>
+//       * Biến thể  : <mã SP>-<MÀU>-<SIZE> (không có bộ đếm)
+//       * Phiếu nhập: PN-<4 số>
+//       * Khuyến mãi: KM-<4 số> (cả 3 loại dùng chung bộ đếm)
+//       * Hóa đơn   : HD-<order_code> (không có bộ đếm, 1 đơn 1 hóa đơn)
+//     <HỌ TÊN>, <MÀU>, <SIZE>: bỏ dấu (Đ -> D), viết hoa, bỏ khoảng trắng.
+//   - Module (đã chốt 20/11/2026): 1 module = 1 schema PostgreSQL = 1 TableGroup
+//     = 1 thư mục specs/use-cases/<module>/ = 1 package app/modules/<module>/.
+//       identity  : role, account, customer, employee, admin
+//       catalog   : category, collection, gender, size, color, product,
+//                   product_collection, variant, gallery
+//       shopping  : cart, cart_item, wishlist, wishlist_item
+//       ordering  : payment (phương thức), order, order_detail,
+//                   order_status_history, invoice
+//       payment   : bank_transaction
+//       promotion : promotion, product_promotion, order_promotion, code_promotion
+//       inventory : supplier, goods_receipt, goods_receipt_detail, stock
+//       shipping, reporting: không có bảng.
+//     Khóa ngoại giữa 2 schema vẫn khai báo ở DB để giữ toàn vẹn dữ liệu, nhưng code
+//     của module chỉ đọc / ghi bảng của chính nó; cần dữ liệu module khác thì gọi
+//     service công khai của module đó (AGENTS.md).
+// =====================================================================
+
+Project soobin_swimwear {
+  database_type: 'PostgreSQL'
+  Note: '''
+  # Soobin Swimwear — data model v2
+
+  Review ERD vẽ tay theo BR-GIAIDOAN1 v16. Danh sách thay đổi và câu hỏi mở
+  nằm ở cuối file (mục CHANGELOG và OPEN QUESTIONS).
+  '''
+}
+
+// ---------------------------------------------------------------------
+// GIÁ TRỊ TRẠNG THÁI — varchar + CHECK, không dùng PostgreSQL enum (đã chốt Q23a)
+// Mỗi cột ghi ràng buộc CHECK trong note; bảng dưới là nghĩa của từng mã.
+// ---------------------------------------------------------------------
+//  account.account_status              ACTIVE Hoạt động | LOCKED Bị khóa
+//  product.product_status              ACTIVE Đang bán | INACTIVE Ngừng bán
+//  variant.variant_status              ACTIVE Đang bán | INACTIVE Ngừng bán riêng biến thể này (Q8)
+//  supplier.supplier_status            ACTIVE Đang hợp tác | INACTIVE Ngừng hợp tác
+//  goods_receipt.goods_receipt_status  DRAFT Nháp | CONFIRMED Đã xác nhận | CANCELLED Đã hủy
+//  promotion.promotion_type            PRODUCT Theo sản phẩm | ORDER Theo hóa đơn | CODE Voucher
+//  promotion.promotion_status          ENABLED Bật | DISABLED Tắt
+//  order.order_status,                 PENDING Chưa xử lý | CONFIRMED Đã xác nhận |
+//  order_status_history.from/to_value  AWAITING_PICKUP Chờ lấy hàng | SHIPPING Đang giao |
+//                                      DELIVERED Giao thành công | DELIVERY_FAILED Giao không thành công |
+//                                      CANCELLED Đã hủy
+//  order.order_payment_status          UNPAID Chưa thanh toán | PAID Đã thanh toán
+//  order_status_history.source         CUSTOMER | EMPLOYEE | SYSTEM | SHIPPING_SIMULATOR
+//  bank_transaction.match_status       MATCHED Khớp | UNMATCHED Không khớp
+
+// ---------------------------------------------------------------------
+// 1. IDENTITY — vai trò, tài khoản và hồ sơ (BR-001)
+// ---------------------------------------------------------------------
+
+Table identity.role {
+  role_key  uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
+  role_code varchar(50)  [not null, unique, note: 'customer | employee | admin — code dùng để kiểm tra quyền']
+  role_name varchar(100) [not null, unique, note: 'Khách hàng | Nhân viên | Admin — tên hiển thị']
+
+  Note: '''
+  [RBAC] Bảng vai trò. Seed sẵn 3 dòng cố định; không có chức năng tạo / sửa /
+  xóa vai trò (BR: Out of Scope "Tạo vai trò mới hoặc cấu hình quyền").
+  Chưa có bảng permission: quyền của từng vai trò kiểm tra theo role_code
+  trong code (ví dụ chỉ employee xem dashboard, chỉ admin quản lý tài khoản).
+  Khi cần, thêm identity.permission và identity.role_permission (N-N) mà không đổi bảng này.
+  '''
+}
+
+Table identity.account {
+  account_key           uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
+  account_role_key      uuid [not null, note: '[RBAC] mỗi tài khoản đúng 1 vai trò (đã chốt Q17)']
+  account_email         varchar(255) [not null, unique, note: '[MOI] chuyển từ hồ sơ lên account; đăng nhập bằng email']
+  account_phone_number  varchar(20)  [not null, unique, note: '[MOI] chuyển từ hồ sơ lên account; đăng nhập bằng SĐT']
+  account_hash_password varchar(255) [not null]
+  account_status        varchar(20) [not null, default: 'ACTIVE', note: '[MOI] chuyển từ hồ sơ lên account (khóa / mở khóa). CHECK IN (ACTIVE, LOCKED)']
+
+  indexes {
+    account_role_key
+  }
+  Note: '''
+  Chỉ giữ thông tin đăng nhập (BR-001, chốt 15/11/2026).
+  [BO] account_username — BR: không có username riêng.
+  [RBAC] Vai trò lấy từ identity.role qua account_role_key. Hồ sơ phải khớp vai trò:
+  role customer có customer, employee có employee, admin có admin (service kiểm tra).
+  Đổi vai trò: chỉ giữa employee và admin (BR-001, chốt 20/11/2026); không đổi
+  customer <-> employee / admin. Cập nhật account_role_key + tạo hồ sơ ở bảng của
+  vai trò mới (cấp mã mới NV-... <-> AD-..., đã chốt Q16) + xóa hồ sơ cũ, cùng 1
+  transaction; phiên đang đăng nhập bị đăng xuất (BR-001).
+  Admin được tự khóa chính mình khi còn Admin khác đang hoạt động.
+  Quy tắc (service, đã chốt Q23b, Q24): Admin được tự đổi vai trò của mình; ràng
+  buộc duy nhất là hệ thống luôn có ít nhất 1 Admin đang hoạt động (role admin +
+  account_status = ACTIVE). Chặn mọi thao tác làm mất Admin ACTIVE cuối cùng:
+  đổi vai trò của Admin đó sang vai trò khác, hoặc khóa (LOCKED) tài khoản đó.
+  Kiểm tra trong cùng transaction, khóa các dòng account Admin (SELECT ... FOR UPDATE)
+  để 2 thao tác đồng thời không cùng vượt qua kiểm tra.
+  '''
+}
+
+Ref: identity.account.account_role_key > identity.role.role_key [delete: restrict]
+
+Table identity.customer {
+  customer_key           uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
+  customer_id            varchar(20) [not null, unique, note: '[KEY] mã tự nhiên, hệ thống cấp, không sửa (đã chốt Q14): KH-<YYYYMMDD ngày đăng ký>-<4 số, bộ đếm chung cả bảng>, ví dụ KH-20261120-0001']
+  customer_account_key   uuid [not null, unique, note: '[KEY] 1 account - 1 hồ sơ']
+  customer_name          varchar(255) [not null]
+  customer_date_of_birth date
+  customer_house_number  varchar(255)
+  customer_ward          varchar(100)
+  customer_city          varchar(255)
+  customer_country       varchar(100)
+
+  Note: '''
+  Hồ sơ Khách hàng: họ tên, ngày sinh, địa chỉ (BR-001). Ngày sinh, địa chỉ
+  bổ sung sau khi đăng ký (UC-01, UC-04).
+  [BO] customer_email, customer_status — đã có ở account.
+  [BO] customer_phone_number — SĐT của khách là account_phone_number (đã chốt Q5);
+  khi đặt hàng, SĐT nhận hàng mặc định lấy từ account và chụp vào order.
+  '''
+}
+
+Table identity.employee {
+  employee_key           uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
+  employee_id            varchar(100) [not null, unique, note: '[KEY] mã tự nhiên, hệ thống cấp, không sửa (đã chốt): NV-<HỌ TÊN>-<YYYYMMDD ngày sinh>-<4 số, bộ đếm chung cả bảng>. Ví dụ NV-NGUYENVANAN-19990105-0001']
+  employee_account_key   uuid [not null, unique, note: '[KEY] 1 account - 1 hồ sơ']
+  employee_name          varchar(255) [not null]
+  employee_date_of_birth date [not null, note: '[SUA] NOT NULL vì mã dùng ngày sinh']
+  employee_house_number  varchar(255)
+  employee_ward          varchar(100)
+  employee_city          varchar(255)
+  employee_country       varchar(100)
+
+  Note: '''
+  Hồ sơ Nhân viên, schema auth (đã chốt Q9).
+  [BO] employee_email, employee_phone_number, employee_status — đã có ở account.
+  Mã giữ nguyên khi sửa họ tên / ngày sinh (mã không cho sửa).
+  '''
+}
+
+Table identity.admin {
+  admin_key           uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
+  admin_id            varchar(100) [not null, unique, note: '[KEY] mã tự nhiên, hệ thống cấp, không sửa (đã chốt): AD-<HỌ TÊN>-<YYYYMMDD ngày sinh>-<4 số, bộ đếm chung cả bảng>. Ví dụ AD-TRANTHIBINH-19950312-0001']
+  admin_account_key   uuid [not null, unique, note: '[KEY] 1 account - 1 hồ sơ']
+  admin_name          varchar(255) [not null]
+  admin_date_of_birth date [not null, note: '[SUA] NOT NULL vì mã dùng ngày sinh']
+  admin_house_number  varchar(255)
+  admin_ward          varchar(100)
+  admin_city          varchar(255)
+  admin_country       varchar(100)
+
+  Note: '''
+  Hồ sơ Admin, schema auth (đã chốt Q9).
+  [BO] admin_email, admin_phone_number, admin_status — đã có ở account.
+  Mã giữ nguyên khi sửa họ tên / ngày sinh (mã không cho sửa).
+  '''
+}
+
+Ref: identity.customer.customer_account_key - identity.account.account_key [delete: restrict]
+Ref: identity.employee.employee_account_key - identity.account.account_key [delete: restrict]
+Ref: identity.admin.admin_account_key - identity.account.account_key [delete: restrict]
+
+// ---------------------------------------------------------------------
+// 2. CATALOG — sản phẩm, biến thể (BR-002); wishlist ở cuối mục thuộc module SHOPPING
+// ---------------------------------------------------------------------
+
+Table catalog.category {
+  category_key  uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
+  category_name varchar(255) [not null, unique]
+}
+
+Table catalog.collection {
+  collection_key  uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
+  collection_name varchar(255) [not null, unique]
+}
+
+Table catalog.gender {
+  gender_key  uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
+  gender_name varchar(50) [not null, unique]
+}
+
+Table catalog.size {
+  size_key  uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
+  size_name varchar(50) [not null, unique]
+}
+
+Table catalog.color {
+  color_key  uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
+  color_name varchar(50) [not null, unique]
+}
+
+Table catalog.product {
+  product_key                uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
+  product_id                 varchar(10) [not null, unique, note: '[KEY] mã tự nhiên, hệ thống cấp, không sửa (đã chốt): SP-<4 số tăng dần>, ví dụ SP-0001']
+  product_name               varchar(255) [not null]
+  product_description        text
+  product_total_score_review numeric(3,2) [not null, default: 0, note: 'Giữ theo ERD; review là giai đoạn 2, chưa dùng ở MVP']
+  product_status             varchar(20) [not null, default: 'INACTIVE', note: 'CHECK IN (ACTIVE, INACTIVE)']
+  product_created_at         timestamptz [not null, default: `now()`, note: '[MOI] sắp xếp mặc định "mới nhất" (BR-002, đã chốt Q6); updated_at đổi mỗi lần sửa nên không dùng được']
+  product_updated_at         timestamptz [not null, default: `now()`]
+  product_category_key       uuid [not null, note: '[KEY]']
+  product_gender_key         uuid [not null, note: '[KEY]']
+
+  Note: '''
+  [BO] product_supplier_id (đã chốt Q1) — BR không gắn sản phẩm với 1 nhà cung cấp;
+  nhà cung cấp gắn với phiếu nhập (dashboard "tiền nhập theo NCC" lấy từ
+  goods_receipt). Giữ FK này sẽ chặn nhập cùng sản phẩm từ NCC khác.
+  Chỉ chuyển ACTIVE khi đã có biến thể và mọi size đã có giá (UC-14).
+  '''
+}
+
+Ref: catalog.product.product_category_key > catalog.category.category_key [delete: restrict]
+Ref: catalog.product.product_gender_key > catalog.gender.gender_key [delete: restrict]
+
+Table catalog.product_collection {
+  product_collection_product_key    uuid [not null]
+  product_collection_collection_key uuid [not null, note: '[KEY]']
+
+  indexes {
+    (product_collection_product_key, product_collection_collection_key) [pk]
+  }
+}
+
+Ref: catalog.product_collection.product_collection_product_key > catalog.product.product_key [delete: cascade]
+Ref: catalog.product_collection.product_collection_collection_key > catalog.collection.collection_key [delete: restrict]
+
+Table catalog.variant {
+  variant_key         uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
+  variant_id          varchar(60) [not null, unique, note: '[KEY] mã tự nhiên (SKU), hệ thống cấp, không sửa (đã chốt Q20): <mã SP>-<MÀU>-<SIZE>, ví dụ SP-0001-XANHDUONG-M']
+  variant_product_key uuid [not null]
+  variant_size_key    uuid [not null, note: '[KEY]']
+  variant_color_key   uuid [not null, note: '[KEY]']
+  variant_sell_price  numeric(12,0) [note: 'NULL = size chưa có giá. Giá theo size: ghi cùng giá cho mọi biến thể cùng product + size (UC-16, chốt 15/11/2026). CHECK > 0']
+  variant_status      varchar(20) [not null, default: 'ACTIVE', note: 'CHECK IN (ACTIVE, INACTIVE) — INACTIVE: ngừng bán riêng biến thể này']
+
+  indexes {
+    (variant_product_key, variant_size_key, variant_color_key) [unique, note: '[MOI] mỗi tổ hợp màu x size 1 biến thể']
+    (variant_product_key, variant_size_key) [note: 'hỗ trợ cập nhật giá theo size']
+  }
+  Note: '''
+  [SUA] Tồn kho và giá vốn (variant_quantity, variant_cost_price) chuyển sang
+  inventory.stock (đã chốt 20/11/2026): chỉ module inventory ghi 2 giá trị này.
+  '''
+}
+
+Ref: catalog.variant.variant_product_key > catalog.product.product_key [delete: restrict]
+Ref: catalog.variant.variant_size_key > catalog.size.size_key [delete: restrict]
+Ref: catalog.variant.variant_color_key > catalog.color.color_key [delete: restrict]
+
+Table catalog.gallery {
+  gallery_key         uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
+  gallery_product_key uuid [not null]
+  gallery_order_no    int  [not null]
+  gallery_url         varchar(500) [not null]
+
+  indexes {
+    (gallery_product_key, gallery_order_no) [unique]
+  }
+  Note: 'Ảnh gắn theo sản phẩm, không theo màu (BR-002).'
+}
+
+Ref: catalog.gallery.gallery_product_key > catalog.product.product_key [delete: cascade]
+
+Table shopping.wishlist {
+  wishlist_key          uuid [pk, default: `gen_random_uuid()`, note: '[KEY] int -> uuid']
+  wishlist_customer_key uuid [not null, unique, note: '1 khách 1 wishlist']
+
+  Note: 'Danh sách yêu thích của khách, cấu trúc giống cart / cart_item (đã chốt Q11).'
+}
+
+Ref: shopping.wishlist.wishlist_customer_key - identity.customer.customer_key [delete: cascade]
+
+Table shopping.wishlist_item {
+  wishlist_item_key          uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
+  wishlist_item_wishlist_key uuid [not null, note: '[SUA] trỏ tới wishlist (đã chốt Q11)']
+  wishlist_item_product_key  uuid [not null]
+
+  indexes {
+    (wishlist_item_wishlist_key, wishlist_item_product_key) [unique, note: '[MOI] mỗi sản phẩm 1 lần / danh sách yêu thích (BR-002)']
+  }
+}
+
+Ref: shopping.wishlist_item.wishlist_item_wishlist_key > shopping.wishlist.wishlist_key [delete: cascade]
+Ref: shopping.wishlist_item.wishlist_item_product_key > catalog.product.product_key [delete: cascade]
+
+// ---------------------------------------------------------------------
+// 3. INVENTORY — nhà cung cấp, phiếu nhập, tồn kho (BR-005)
+// ---------------------------------------------------------------------
+
+Table inventory.supplier {
+  supplier_key          uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
+  supplier_id           varchar(10) [not null, unique, note: '[KEY] mã tự nhiên, hệ thống cấp, không sửa (đã chốt): NCC-<4 số tăng dần>, ví dụ NCC-0001']
+  supplier_name         varchar(255) [not null]
+  supplier_phone_number varchar(20)  [not null, note: '[MOI] UC-32']
+  supplier_email        varchar(255) [note: '[MOI] UC-32']
+  supplier_address      varchar(255) [note: '[MOI] UC-32']
+  supplier_status       varchar(20) [not null, default: 'ACTIVE', note: '[MOI] Đang hợp tác / Ngừng hợp tác (BR-005). CHECK IN (ACTIVE, INACTIVE)']
+}
+
+Table inventory.goods_receipt {
+  goods_receipt_key          uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
+  goods_receipt_id           varchar(10) [not null, unique, note: '[KEY][MOI] mã phiếu nhập, hệ thống cấp, không sửa (đã chốt Q21): PN-<4 số, bộ đếm chung cả bảng>, ví dụ PN-0001']
+  goods_receipt_final_price  numeric(12,0) [not null, default: 0, note: 'Tổng tiền phiếu = SUM(detail.total_price)']
+  goods_receipt_status       varchar(20) [not null, default: 'DRAFT', note: 'CHECK IN (DRAFT, CONFIRMED, CANCELLED)']
+  goods_receipt_created_date timestamptz [not null, default: `now()`]
+  goods_receipt_supplier_key uuid [not null]
+  goods_receipt_account_key  uuid [not null, note: '[SUA] Nhân viên lập phiếu — trỏ tới account thay vì employee (đã chốt Q13), đổi vai trò không mất liên kết']
+
+  Note: '''
+  Xác nhận phiếu: cộng stock_quantity và tính lại stock_cost_price trong
+  cùng 1 transaction (BR-005). Không lưu người / thời điểm xác nhận (đã chốt).
+  '''
+}
+
+Ref: inventory.goods_receipt.goods_receipt_supplier_key > inventory.supplier.supplier_key [delete: restrict]
+Ref: inventory.goods_receipt.goods_receipt_account_key > identity.account.account_key [delete: restrict]
+
+Table inventory.goods_receipt_detail {
+  goods_receipt_detail_key               uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
+  goods_receipt_detail_goods_receipt_key uuid [not null, note: '[KEY]']
+  goods_receipt_detail_variant_key       uuid [not null]
+  goods_receipt_detail_quantity          int  [not null, note: 'CHECK > 0']
+  goods_receipt_detail_unit_price        numeric(12,0) [not null, note: 'Giá nhập thực tế. CHECK >= 0']
+  goods_receipt_detail_total_price       numeric(12,0) [not null, note: '= quantity x unit_price']
+
+  indexes {
+    (goods_receipt_detail_goods_receipt_key, goods_receipt_detail_variant_key) [unique, note: '[MOI] mỗi biến thể 1 dòng / phiếu']
+  }
+}
+
+Ref: inventory.goods_receipt_detail.goods_receipt_detail_goods_receipt_key > inventory.goods_receipt.goods_receipt_key [delete: cascade]
+Ref: inventory.goods_receipt_detail.goods_receipt_detail_variant_key > catalog.variant.variant_key [delete: restrict]
+
+Table inventory.stock {
+  stock_key         uuid [pk, default: `gen_random_uuid()`, note: '[KEY][MOI]']
+  stock_variant_key uuid [not null, unique, note: '[MOI] 1 biến thể - 1 dòng tồn kho; tạo cùng lúc tạo biến thể (catalog gọi service của inventory)']
+  stock_quantity    int  [not null, default: 0, note: '[MOI] chuyển từ variant_quantity. CHECK >= 0 — tồn kho không bao giờ âm (BR-005)']
+  stock_cost_price  numeric(12,0) [not null, default: 0, note: '[MOI] chuyển từ variant_cost_price. Giá vốn bình quân gia quyền theo biến thể (BR-005, BR-007)']
+
+  Note: '''
+  [MOI] Tồn kho và giá vốn theo biến thể (đã chốt 20/11/2026). Chỉ module inventory
+  ghi bảng này; module khác gọi service công khai của inventory:
+    - Xác nhận phiếu nhập (UC-34): cộng stock_quantity, tính lại stock_cost_price
+      = (giá trị tồn hiện tại + tiền nhập lô) / tồn sau nhập; tồn = 0 thì bằng giá nhập.
+    - Đặt hàng (ordering): trừ tồn trong cùng transaction tạo đơn; đọc stock_cost_price
+      để chụp vào order_detail_cost_price.
+    - Hủy đơn / giao không thành công (UC-22, UC-24, UC-35): cộng lại tồn, giá vốn không đổi.
+    - Trang bán hàng (catalog), giỏ hàng (shopping), dashboard (reporting): chỉ đọc tồn.
+  Trừ tồn dùng UPDATE ... SET stock_quantity = stock_quantity - :n
+  WHERE stock_quantity >= :n để không âm khi nhiều đơn đặt cùng lúc.
+  '''
+}
+
+Ref: inventory.stock.stock_variant_key - catalog.variant.variant_key [delete: restrict]
+
+// ---------------------------------------------------------------------
+// 4. PROMOTION — khuyến mãi (BR-004)
+// ---------------------------------------------------------------------
+
+Table promotion.promotion {
+  promotion_key         uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
+  promotion_id          varchar(10) [not null, unique, note: '[KEY][MOI] mã khuyến mãi, hệ thống cấp, không sửa (đã chốt Q21): KM-<4 số, bộ đếm chung cho cả 3 loại>, ví dụ KM-0001. Khuyến mãi không có tên nên nhận diện bằng mã này (UC-28); voucher còn có code_promotion_code để khách nhập']
+  promotion_type        varchar(20) [not null, note: 'CHECK IN (PRODUCT, ORDER, CODE)']
+  promotion_quantity    int [note: 'Số lượng được áp dụng. NULL với PRODUCT (không giới hạn); NOT NULL, > 0 với ORDER / CODE']
+  promotion_used_amount int [not null, default: 0, note: 'CHECK 0 <= used_amount <= quantity. Hủy đơn thì trừ lại']
+  promotion_start_date  timestamptz [note: '[SUA] Thời điểm bắt đầu do Nhân viên chọn khi tạo. NULL với PRODUCT (không có khái niệm ngày bắt đầu, Q29); NOT NULL với ORDER / CODE (Q25)']
+  promotion_end_date    timestamptz [note: '[SUA] Thời điểm kết thúc dự kiến do Nhân viên chọn khi tạo. NULL với PRODUCT (Q29); NOT NULL, > start_date với ORDER / CODE (Q25). Kết thúc sớm vẫn giữ nguyên giá trị này (Q28)']
+  promotion_status      varchar(20) [not null, default: 'ENABLED', note: '[SUA] trạng thái bật / tắt của khuyến mãi (đã chốt Q7). CHECK IN (ENABLED, DISABLED)']
+
+  Note: '''
+  Supertype. Không có tên; không được sửa, chỉ ngừng; tạo có popup xác nhận
+  (BR-004). Mọi loại giảm theo %, không có mức giảm tối đa.
+
+  CHECK theo loại:
+    promotion_type = PRODUCT  -> start_date IS NULL AND end_date IS NULL AND quantity IS NULL
+    promotion_type IN (ORDER, CODE) -> start_date, end_date, quantity NOT NULL
+                                       AND end_date > start_date AND quantity > 0
+
+  PRODUCT — chỉ có tạo rồi kết thúc (đã chốt Q29):
+    Có hiệu lực ngay khi tạo; hết hiệu lực khi Nhân viên bấm "Kết thúc chương trình"
+    (status = DISABLED). Không lưu thời điểm tạo / kết thúc (đã chốt Q30).
+    Được áp khi: status = ENABLED.
+    Trạng thái hiển thị: ENABLED -> "Đang hiệu lực"; DISABLED -> "Đã kết thúc".
+
+  ORDER / CODE — có thời điểm bắt đầu và kết thúc (đã chốt Q25):
+    Hết hiệu lực theo 2 cách:
+      1. Hết hạn: now >= end_date (không cần thao tác, status vẫn ENABLED).
+      2. Nhân viên bấm kết thúc trước hạn: status = DISABLED; end_date giữ nguyên
+         (đã chốt Q28).
+    Được áp khi: status = ENABLED và start_date <= now < end_date và used_amount < quantity.
+    Trạng thái hiển thị (đã chốt Q23c, Q27):
+      DISABLED hoặc now >= end_date -> "Đã kết thúc";
+      now < start_date               -> "Sắp diễn ra";
+      còn lại                        -> "Đang hiệu lực".
+
+  Trạng thái hiển thị tính ra, không lưu thành cột (Q23c).
+  DISABLED là trạng thái cuối: không bật lại được, muốn áp lại thì tạo khuyến mãi mới
+  (đã chốt Q22). Service chỉ cho chuyển ENABLED -> DISABLED, không có chiều ngược lại.
+
+  Lọc danh sách theo khoảng thời gian [từ, đến] (BR-004, đã chốt Q30):
+    ORDER / CODE: hiện khuyến mãi có [start_date, end_date] giao với khoảng chọn,
+                  kể cả giao một phần.
+    PRODUCT:      không lọc theo thời gian (không có ngày bắt đầu / kết thúc).
+  '''
+}
+
+Table promotion.product_promotion {
+  promotion_key                         uuid [pk, note: '[SUA] PK đồng thời FK -> promotion (1-1)']
+  product_promotion_product_key         uuid [not null, note: 'Sản phẩm được áp dụng — mỗi khuyến mãi theo sản phẩm gắn đúng 1 sản phẩm (theo ERD ảnh, đã chốt Q2)']
+  product_promotion_discount_percentage numeric(5,2) [not null, note: 'CHECK > 0 AND < 100']
+
+  indexes {
+    product_promotion_product_key
+  }
+  Note: '''
+  1 khuyến mãi theo sản phẩm = 1 sản phẩm (đã chốt Q2). Muốn giảm cho nhiều
+  sản phẩm thì tạo nhiều khuyến mãi. 1 sản phẩm có nhiều khuyến mãi theo thời
+  gian (giữ lịch sử), nhưng tối đa 1 khuyến mãi chưa kết thúc (BR-004):
+  kiểm tra ở service trong transaction tạo khuyến mãi, khóa dòng product
+  (SELECT ... FOR UPDATE) để chống tạo trùng đồng thời.
+  '''
+}
+
+Table promotion.order_promotion {
+  promotion_key                       uuid [pk, note: '[SUA] PK đồng thời FK -> promotion (1-1)']
+  order_promotion_discount_percentage numeric(5,2)  [not null, note: 'CHECK > 0 AND < 100']
+  order_promotion_thresh_price        numeric(12,0) [not null, note: 'Giá trị đơn tối thiểu']
+}
+
+Table promotion.code_promotion {
+  promotion_key                      uuid [pk, note: '[SUA] PK đồng thời FK -> promotion (1-1)']
+  code_promotion_code                varchar(50)   [not null, unique]
+  code_promotion_discount_percentage numeric(5,2)  [not null, note: 'CHECK > 0 AND < 100']
+  code_promotion_thresh_price        numeric(12,0) [not null, note: 'Giá trị đơn tối thiểu']
+
+  Note: 'Voucher: chỉ giới hạn tổng lượt (promotion_quantity), không giới hạn mỗi khách.'
+}
+
+Ref: promotion.product_promotion.promotion_key - promotion.promotion.promotion_key [delete: cascade]
+Ref: promotion.order_promotion.promotion_key - promotion.promotion.promotion_key [delete: cascade]
+Ref: promotion.code_promotion.promotion_key - promotion.promotion.promotion_key [delete: cascade]
+Ref: promotion.product_promotion.product_promotion_product_key > catalog.product.product_key [delete: restrict]
+
+// ---------------------------------------------------------------------
+// 5. SHOPPING (giỏ hàng), ORDERING (đơn, hóa đơn), PAYMENT (webhook SePay) — BR-003, BR-006
+// ---------------------------------------------------------------------
+
+Table shopping.cart {
+  cart_key          uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
+  cart_customer_key uuid [not null, unique, note: 'Mỗi khách 1 giỏ']
+
+  Note: 'Chỉ khách đã đăng nhập có giỏ trong DB; giỏ của khách vãng lai lưu ở localStorage của trình duyệt (đã chốt Q23d).'
+}
+
+Ref: shopping.cart.cart_customer_key - identity.customer.customer_key [delete: cascade]
+
+Table shopping.cart_item {
+  cart_item_key         uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
+  cart_item_cart_key    uuid [not null, note: '[KEY]']
+  cart_item_variant_key uuid [not null]
+  cart_item_quantity    int  [not null, default: 1, note: 'CHECK > 0']
+
+  indexes {
+    (cart_item_cart_key, cart_item_variant_key) [unique, note: '[MOI] mỗi biến thể 1 dòng trong giỏ']
+  }
+  Note: 'Không lưu giá; luôn hiển thị giá hiện tại (đã chốt Q26).'
+}
+
+Ref: shopping.cart_item.cart_item_cart_key > shopping.cart.cart_key [delete: cascade]
+Ref: shopping.cart_item.cart_item_variant_key > catalog.variant.variant_key [delete: cascade]
+
+Table ordering.payment {
+  payment_key  uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
+  payment_name varchar(100) [not null, unique, note: 'COD | QR']
+}
+
+Table ordering.order {
+  order_key                    uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
+  order_code                   varchar(8) [not null, unique, note: '[MOI] 8 ký tự Crockford Base32, CHECK ~ ^[0-9A-HJKMNP-TV-Z]{8}$; nội dung CK = SOBIE + order_code (BR-006)']
+  order_account_key            uuid [not null, note: '[MOI] người đặt (tài khoản vai trò Khách hàng). Tham chiếu account, cùng cách với goods_receipt và order_status_history']
+  order_payment_key            uuid [not null, note: '[MOI] COD | QR — ERD có đường quan hệ nhưng thiếu cột FK']
+  order_order_promotion_key    uuid [note: '[SUA] KM theo hóa đơn đã áp. NULL nếu không áp']
+  order_code_promotion_key     uuid [note: '[MOI] voucher đã áp. CHECK không đồng thời có order_order_promotion_key']
+  order_customer_name          varchar(255) [not null, note: 'Snapshot thông tin nhận hàng']
+  order_customer_phone_number  varchar(20)  [not null]
+  order_customer_house_number  varchar(255) [not null]
+  order_customer_ward          varchar(100) [not null]
+  order_customer_city          varchar(255) [not null]
+  order_customer_country       varchar(100) [not null]
+  order_discount_amount        numeric(12,0) [not null, default: 0, note: '[MOI] tiền giảm từ KM hóa đơn hoặc voucher (hiển thị trên hóa đơn)']
+  order_shipping_fee           numeric(12,0) [not null, note: 'Lấy từ biến môi trường lúc đặt, mặc định 12.000đ']
+  order_total_price            numeric(12,0) [not null, note: '= tạm tính (sau KM sản phẩm) - discount_amount + shipping_fee']
+  order_payment_status         varchar(20) [not null, default: 'UNPAID', note: 'CHECK IN (UNPAID, PAID)']
+  order_status                 varchar(20) [not null, default: 'PENDING', note: 'CHECK IN (PENDING, CONFIRMED, AWAITING_PICKUP, SHIPPING, DELIVERED, DELIVERY_FAILED, CANCELLED)']
+  order_created_date           timestamptz [not null, default: `now()`, note: 'Hạn thanh toán QR = created_date + 24h']
+  order_updated_date           timestamptz [not null, default: `now()`]
+
+  indexes {
+    (order_account_key, order_created_date)
+    (order_status, order_created_date) [note: 'job tự hủy đơn QR quá 24h, danh sách đơn của Nhân viên']
+  }
+  Note: '''
+  Mỗi đơn tối đa 1 KM theo hóa đơn HOẶC 1 voucher (BR-004):
+  CHECK (order_order_promotion_key IS NULL OR order_code_promotion_key IS NULL).
+  [SUA] ERD trong ảnh chỉ có order_promotion_id -> order_promotion nên không
+  ghi được voucher. Tách 2 FK để DB tự đảm bảo đúng loại khuyến mãi.
+  Trừ tồn, kiểm tra / tăng lượt khuyến mãi và tạo đơn trong cùng 1 transaction.
+  Hủy đơn: cộng lại tồn + trả lượt khuyến mãi; giao không thành công: cộng lại tồn.
+  '''
+}
+
+Ref: ordering.order.order_account_key > identity.account.account_key [delete: restrict]
+Ref: ordering.order.order_payment_key > ordering.payment.payment_key [delete: restrict]
+Ref: ordering.order.order_order_promotion_key > promotion.order_promotion.promotion_key [delete: restrict]
+Ref: ordering.order.order_code_promotion_key > promotion.code_promotion.promotion_key [delete: restrict]
+
+Table ordering.order_detail {
+  order_detail_key                   uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
+  order_detail_order_key             uuid [not null, note: '[KEY]']
+  order_detail_variant_key           uuid [not null]
+  order_detail_quantity              int  [not null, note: 'CHECK > 0']
+  order_detail_unit_price            numeric(12,0) [not null, note: 'Đơn giá gốc theo size lúc đặt']
+  order_detail_product_promotion_key uuid [note: '[KEY] KM sản phẩm áp cho dòng. Giá sau giảm = unit_price x (1 - %), ROUND_HALF_UP; ổn định vì KM không được sửa']
+  order_detail_cost_price            numeric(12,0) [not null, note: '[MOI] (đã chốt Q3) giá vốn của biến thể lúc bán — để lợi nhuận gộp quá khứ không đổi khi nhập lô mới (BR-007)']
+
+  indexes {
+    (order_detail_order_key, order_detail_variant_key) [unique]
+  }
+}
+
+Ref: ordering.order_detail.order_detail_order_key > ordering.order.order_key [delete: cascade]
+Ref: ordering.order_detail.order_detail_variant_key > catalog.variant.variant_key [delete: restrict]
+Ref: ordering.order_detail.order_detail_product_promotion_key > promotion.product_promotion.promotion_key [delete: restrict]
+
+Table ordering.order_status_history {
+  order_status_history_key            uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
+  order_status_history_order_key      uuid [not null, note: '[KEY]']
+  order_status_history_from_value     varchar(20) [note: 'NULL ở bản ghi tạo đơn. CHECK cùng tập giá trị với order_status']
+  order_status_history_to_value       varchar(20) [not null, note: 'CHECK cùng tập giá trị với order_status']
+  order_status_history_source         varchar(20) [not null, note: 'CHECK IN (CUSTOMER, EMPLOYEE, SYSTEM, SHIPPING_SIMULATOR)']
+  order_status_history_note           text [note: '[MOI] lý do hủy do Nhân viên nhập (bắt buộc khi Nhân viên hủy); chỉ Nhân viên xem (BR-003; vị trí lưu đã chốt Q23e)']
+  order_status_history_changed_by_key uuid [note: '[KEY] đổi từ changed_by. Account thực hiện; NULL khi nguồn là SYSTEM hoặc SHIPPING_SIMULATOR']
+  order_status_history_changed_time   timestamptz [not null, default: `now()`]
+
+  indexes {
+    (order_status_history_order_key, order_status_history_changed_time)
+  }
+  Note: 'Ghi mọi lần đổi order_status; đổi order_payment_status không ghi vào đây (đã chốt).'
+}
+
+Ref: ordering.order_status_history.order_status_history_order_key > ordering.order.order_key [delete: cascade]
+Ref: ordering.order_status_history.order_status_history_changed_by_key > identity.account.account_key [delete: restrict]
+
+Table ordering.invoice {
+  invoice_key           uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
+  invoice_id            varchar(11) [not null, unique, note: '[KEY][MOI] mã hóa đơn, hệ thống cấp, không sửa (đã chốt Q21): HD-<order_code>, ví dụ HD-7K3M9Q2X; dùng để tìm hóa đơn (UC-27)']
+  invoice_order_key     uuid [not null, unique, note: 'Mỗi đơn tối đa 1 hóa đơn']
+  invoice_created_date  timestamptz [not null, default: `now()`, note: '[SUA] thay invoice_payment_date: thời điểm xuất = lúc đơn chuyển DELIVERED']
+  invoice_snapshot_json jsonb [not null, note: '[MOI] (đã chốt Q4) chụp tên SP, màu, size, đơn giá gốc / sau giảm, SL, tiền giảm, phí ship, tổng, người nhận, email, phương thức TT — để hóa đơn không đổi khi sản phẩm bị sửa']
+
+  Note: 'Tự xuất khi đơn sang "Giao thành công"; chỉ xem, không sửa / xuất lại (BR-003).'
+}
+
+Ref: ordering.invoice.invoice_order_key - ordering.order.order_key [delete: restrict]
+
+Table payment.bank_transaction {
+  bank_transaction_key            uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
+  bank_transaction_provider_id    varchar(100) [not null, unique, note: 'Mã giao dịch SePay (id của hệ thống ngoài, không phải khóa) — chống xử lý trùng webhook']
+  bank_transaction_gateway        varchar(100) [note: 'Tên ngân hàng']
+  bank_transaction_account_number varchar(50)  [note: 'Tài khoản nhận']
+  bank_transaction_amount         numeric(12,0) [not null, note: 'Số tiền vào']
+  bank_transaction_content        text [note: 'Nội dung chuyển khoản']
+  bank_transaction_reference_code varchar(100)
+  bank_transaction_time           timestamptz [note: 'Thời điểm giao dịch tại ngân hàng']
+  bank_transaction_received_time  timestamptz [not null, default: `now()`, note: 'Thời điểm website nhận webhook']
+  bank_transaction_match_status   varchar(20) [not null, note: 'CHECK IN (MATCHED, UNMATCHED)']
+  bank_transaction_order_key      uuid [note: '[KEY] NULL khi không khớp được đơn']
+  bank_transaction_raw_payload    jsonb [note: 'Payload webhook gốc']
+
+  Note: '''
+  [MOI] Thiếu trong ERD ảnh. Cần để chống xử lý trùng theo mã giao dịch và
+  lưu mọi giao dịch (khớp hoặc không) để đối chiếu (BR-006; danh sách cột [GD]).
+  MATCHED khi nội dung chứa SOBIE + order_code của đơn QR PENDING, UNPAID,
+  còn hạn 24h và amount >= order_total_price. Mỗi giao dịch xét riêng.
+  Ghi giao dịch + cập nhật order_payment_status trong cùng 1 transaction.
+  '''
+}
+
+Ref: payment.bank_transaction.bank_transaction_order_key > ordering.order.order_key [delete: restrict]
+
+// ---------------------------------------------------------------------
+// TABLE GROUPS (theo module — đã chốt 20/11/2026; shipping, reporting không có bảng)
+// ---------------------------------------------------------------------
+
+TableGroup identity {
+  identity.role
+  identity.account
+  identity.customer
+  identity.employee
+  identity.admin
+}
+
+TableGroup catalog {
+  catalog.category
+  catalog.collection
+  catalog.gender
+  catalog.size
+  catalog.color
+  catalog.product
+  catalog.product_collection
+  catalog.variant
+  catalog.gallery
+}
+
+TableGroup shopping {
+  shopping.cart
+  shopping.cart_item
+  shopping.wishlist
+  shopping.wishlist_item
+}
+
+TableGroup ordering {
+  ordering.payment
+  ordering.order
+  ordering.order_detail
+  ordering.order_status_history
+  ordering.invoice
+}
+
+TableGroup payment {
+  payment.bank_transaction
+}
+
+TableGroup promotion {
+  promotion.promotion
+  promotion.product_promotion
+  promotion.order_promotion
+  promotion.code_promotion
+}
+
+TableGroup inventory {
+  inventory.supplier
+  inventory.goods_receipt
+  inventory.goods_receipt_detail
+  inventory.stock
+}
+
+// =====================================================================
+// CHANGELOG so với ERD vẽ tay
+// ---------------------------------------------------------------------
+//  #  | Bảng                     | Thay đổi                                                     | Căn cứ
+//  1  | auth.account             | Bỏ account_username; thêm email, phone (UNIQUE), status       | BR-001 (chốt 15/11)
+//  2  | customer/employee/admin  | Bỏ email, phone, status (đã ở account); account_id UNIQUE     | BR-001
+//  3  | account - hồ sơ          | Quan hệ 1-N -> 1-1                                            | BR-001
+//  4  | inventory.product        | Bỏ product_supplier_id; thêm product_created_at               | [GD] BR-002, BR-005
+//  5  | inventory.variant        | Thêm variant_cost_price; UNIQUE(product, size, color)         | BR-005, BR-007
+//  6  | inventory.supplier       | Thêm phone, email, address, status                            | UC-32, BR-005
+//  7  | promotion.*_promotion    | PK riêng -> PK = FK promotion (quan hệ 1-1 với supertype)     | Thiết kế supertype
+//  8  | product_promotion        | Bỏ product_id; thêm bảng nối product_promotion_product        | [GD] UC-28
+//  9  | sale.order               | Thêm order_code, account_id, payment_id, discount_amount      | BR-003, BR-006
+// 10  | sale.order               | order_promotion_id -> 2 FK: order_promotion / code_promotion  | BR-004 (ghi được voucher)
+// 11  | sale.order_detail        | Thêm order_detail_cost_price                                  | [GD] BR-007
+// 12  | sale.order_status_history| Thêm note (lý do hủy); changed_by FK account                  | BR-003
+// 13  | sale.invoice             | invoice_payment_date -> invoice_created_date; UNIQUE order;   | BR-003
+//     |                          | thêm snapshot_json                                            | [GD]
+// 14  | sale.bank_transaction    | Bảng mới                                                      | BR-006
+// 15  | sale.cart, cart_item,    | Thêm UNIQUE (1 giỏ/khách, 1 dòng/biến thể, 1 lần/sản phẩm)    | BR-002, BR-003
+//     | wishlist_item            |                                                               |
+// 16  | Tiền                     | numeric(12,0) — số nguyên VND                                 | BR-007, AGENTS.md
+//
+// v2.1 — Developer chỉnh: bỏ account_role_name; thêm customer.wishlist;
+//        wishlist_item trỏ tới customer; goods_receipt trỏ tới employee.
+//
+// v2.1 — Khóa kép key / id (theo yêu cầu developer)
+//  #  | Bảng / cột                                       | Thay đổi
+// 17  | supplier, customer, employee, admin,             | Thêm <x>_key uuid làm PK (default gen_random_uuid());
+//     | product, variant                                 | <x>_id đổi từ int tự tăng thành varchar mã tự nhiên, NOT NULL, UNIQUE
+// 18  | product_collection.product_collection_product_id | -> product_collection_product_key uuid (cả PK ghép)
+// 19  | variant.variant_product_id                       | -> variant_product_key uuid (cả 2 index)
+// 20  | gallery.gallery_product_id                       | -> gallery_product_key uuid (cả index)
+// 21  | wishlist.wishlist_customer_key                   | int -> uuid, thêm NOT NULL, UNIQUE; FK trỏ customer_key
+// 22  | wishlist_item.*_customer_id, *_product_id        | -> wishlist_item_customer_key, wishlist_item_product_key uuid
+// 23  | goods_receipt.*_supplier_id, *_employee_id       | -> goods_receipt_supplier_key, goods_receipt_employee_key uuid
+// 24  | goods_receipt_detail.*_variant_id                | -> goods_receipt_detail_variant_key uuid
+// 25  | product_promotion_product.product_id             | -> product_key uuid (cả PK ghép, index)
+// 26  | cart.cart_customer_id                            | -> cart_customer_key uuid
+// 27  | cart_item.cart_item_variant_id                   | -> cart_item_variant_key uuid
+// 28  | order_detail.order_detail_variant_id             | -> order_detail_variant_key uuid
+// 29  | TableGroup catalog_context                       | Thêm customer.wishlist
+//
+// v2.2 — RBAC, mã tự nhiên, wishlist (theo yêu cầu developer)
+//  #  | Bảng / cột                                       | Thay đổi
+// 30  | auth.role                                        | Bảng mới: role_id, role_code, role_name; seed 3 vai trò cố định
+// 31  | auth.account.account_role_id                     | Cột mới, FK -> auth.role (N-1); thay cho account_role_name đã bỏ
+// 32  | Enum auth.account_role                           | Bỏ (thay bằng bảng auth.role)
+// 33  | employee.employee_id                             | varchar(80), mã NV-<Tên>-<ngày sinh>, hệ thống cấp, không sửa
+// 34  | employee.employee_date_of_birth                  | Thêm NOT NULL (mã dùng ngày sinh)
+// 35  | admin.admin_id, admin.admin_date_of_birth        | varchar(80), đề xuất AD-<Tên>-<ngày sinh>; ngày sinh NOT NULL [GD]
+// 36  | customer_id, supplier_id, product_id, variant_id | Ghi đề xuất định dạng mã [GD] vào note; variant_id varchar(60)
+// 37  | wishlist_item.wishlist_item_customer_key         | -> wishlist_item_wishlist_key int, FK -> customer.wishlist (Q11)
+// 38  | TableGroup identity_context                      | Thêm auth.role
+//
+// v2.3 — Mọi khóa là uuid hậu tố _key, chốt mã tự nhiên, phiếu nhập -> account
+//  #  | Bảng / cột                                       | Thay đổi
+// 39  | Mọi bảng còn lại (role, account, category,       | PK int <x>_id -> uuid <x>_key, default gen_random_uuid()
+//     | collection, gender, size, color, gallery,        |
+//     | wishlist, wishlist_item, goods_receipt,          |
+//     | goods_receipt_detail, promotion, cart,           |
+//     | cart_item, payment, order, order_detail,         |
+//     | order_status_history, invoice, bank_transaction) |
+// 40  | 3 bảng con promotion, product_promotion_product  | promotion_id -> promotion_key uuid
+// 41  | Mọi khóa ngoại                                   | int *_id -> uuid *_key, ví dụ account_role_id -> account_role_key,
+//     |                                                  | customer_account_id -> customer_account_key,
+//     |                                                  | product_category_id -> product_category_key,
+//     |                                                  | variant_size_id / color_id -> variant_size_key / color_key,
+//     |                                                  | order_payment_id -> order_payment_key,
+//     |                                                  | order_order_promotion_id -> order_order_promotion_key, ...
+// 42  | order_status_history.changed_by                  | -> order_status_history_changed_by_key uuid
+// 43  | goods_receipt.goods_receipt_employee_key         | -> goods_receipt_account_key, FK -> auth.account (Q13)
+// 44  | employee.employee_id, admin.admin_id             | varchar(100), mã NV / AD-<HỌ TÊN>-<YYYYMMDD>-<4 số tăng dần>
+// 45  | admin.admin_date_of_birth                        | NOT NULL (đã chốt, mã dùng ngày sinh)
+// 46  | supplier.supplier_id, product.product_id         | varchar(10), mã NCC-<4 số> / SP-<4 số>
+// 47  | variant.variant_id                               | Ví dụ đổi theo mã SP mới: SP-0001-XANHDUONG-M [GD]
+// 48  | bank_transaction_provider_id                     | Giữ tên _id: đây là mã của SePay, không phải khóa trong DB
+//
+// v2.4 — Chốt Q6, Q14, Q18, Q20, Q21
+//  #  | Bảng / cột                                       | Thay đổi
+// 49  | goods_receipt.goods_receipt_id                   | Cột mới varchar(10) NOT NULL UNIQUE, mã PN-<4 số>
+// 50  | promotion.promotion_id                           | Cột mới varchar(10) NOT NULL UNIQUE, mã KM-<4 số> (chung 3 loại)
+// 51  | invoice.invoice_id                               | Cột mới varchar(11) NOT NULL UNIQUE, mã HD-<order_code>
+// 52  | customer.customer_id                             | Chốt mã KH-<YYYYMMDD ngày đăng ký>-<4 số> (bỏ [GD])
+// 53  | variant.variant_id                               | Chốt SKU <mã SP>-<MÀU>-<SIZE> (bỏ [GD])
+// 54  | product.product_created_at                       | Chốt giữ cột để sắp xếp "mới nhất" (bỏ [GD])
+// 55  | Quy ước mã tự nhiên (header)                     | Bộ đếm 4 số chung cho cả bảng; vượt 9999 chưa xử lý; 9 bảng có mã
+//
+// v2.5 — Chốt Q1, Q3, Q4, Q5, Q7, Q8
+//  #  | Bảng / cột                                       | Thay đổi
+// 56  | Enum promotion.promotion_status                  | UPCOMING / ACTIVE / ENDED -> ENABLED (bật) / DISABLED (tắt)
+// 57  | promotion.promotion_status                       | default ENABLED; trạng thái hiển thị (sắp diễn ra / đang hiệu lực /
+//     |                                                  | đã kết thúc) tính từ status + start_date + end_date
+// 58  | Enum inventory.variant_status                    | Chốt nghĩa: ngừng bán riêng từng biến thể (bỏ [GD])
+// 59  | product, order_detail, invoice, customer (note)  | Bỏ [GD] cho product_supplier_id (bỏ), order_detail_cost_price,
+//     |                                                  | invoice_snapshot_json, SĐT khách nằm ở account
+//
+// v2.6 — Chốt Q2, Q9, Q22
+//  #  | Bảng / cột                                       | Thay đổi
+// 60  | promotion.product_promotion_product              | Bỏ bảng nối (quay về cách của ERD ảnh)
+// 61  | promotion.product_promotion                      | Thêm product_promotion_product_key uuid NOT NULL, FK -> product (N-1);
+//     |                                                  | mỗi khuyến mãi theo sản phẩm gắn đúng 1 sản phẩm
+// 62  | promotion (note)                                 | DISABLED là trạng thái cuối, không bật lại; muốn áp lại thì tạo mới
+// 63  | Schema bảng hồ sơ                                | Giữ auth.admin, auth.employee, customer.customer (bỏ [GD])
+//
+// v2.7 — Chốt Q23 a–e
+//  #  | Bảng / cột                                       | Thay đổi
+// 64  | Toàn bộ Enum                                     | Bỏ 11 khối Enum; thay bằng bảng giá trị (comment) đầu file
+// 65  | 12 cột trạng thái / loại                         | Kiểu enum -> varchar(20) + CHECK IN (...) ghi trong note:
+//     |                                                  | account_status, product_status, variant_status, supplier_status,
+//     |                                                  | goods_receipt_status, promotion_type, promotion_status,
+//     |                                                  | order_payment_status, order_status, order_status_history
+//     |                                                  | from_value / to_value / source, bank_transaction_match_status
+// 66  | account (note)                                   | Admin được tự đổi vai trò; chỉ ràng buộc luôn còn ít nhất 1 Admin
+// 67  | promotion (note)                                 | Trạng thái hiển thị chỉ còn Đang hiệu lực / Đã kết thúc, tính ra
+// 68  | cart (note)                                      | Giỏ khách vãng lai lưu ở localStorage
+// 69  | order_status_history_note                        | Chốt vị trí lưu lý do hủy (bỏ [GD])
+//
+// v2.8 — Chốt Q24, Q25, Q26
+//  #  | Bảng / cột                                       | Thay đổi
+// 70  | account (note)                                   | Luôn còn ít nhất 1 Admin ACTIVE: chặn đổi vai trò và chặn khóa
+//     |                                                  | Admin ACTIVE cuối cùng
+// 71  | promotion.promotion_end_date                     | NULL được -> NOT NULL; CHECK end_date > start_date
+// 72  | promotion (note)                                 | 2 cách hết hiệu lực: hết hạn theo end_date, hoặc Nhân viên kết thúc sớm
+// 73  | cart_item (note)                                 | Chốt giỏ không lưu giá (bỏ [GD])
+//
+// v2.9 — Chốt Q27, Q28, Q29
+//  #  | Bảng / cột                                       | Thay đổi
+// 74  | promotion.promotion_start_date / end_date        | NOT NULL -> cho NULL; CHECK: NULL với PRODUCT, NOT NULL với ORDER / CODE
+// 75  | promotion.promotion_end_date                     | Kết thúc sớm giữ nguyên end_date (không ghi đè)
+// 76  | promotion.promotion_created_at                   | Cột mới [GD]: thời điểm tạo, dùng để lọc PRODUCT theo thời gian
+// 77  | promotion.promotion_ended_at                     | Cột mới [GD]: thời điểm Nhân viên bấm kết thúc
+// 78  | promotion (note)                                 | Tách quy tắc PRODUCT (tạo -> kết thúc) và ORDER / CODE (bắt đầu ->
+//     |                                                  | kết thúc); thêm lại "Sắp diễn ra" cho ORDER / CODE
+//
+// v2.10 — Chốt Q30
+//  #  | Bảng / cột                                       | Thay đổi
+// 79  | promotion.promotion_created_at, _ended_at        | Bỏ 2 cột thêm ở mục 76, 77
+// 80  | promotion (note)                                 | Khuyến mãi PRODUCT không lọc theo khoảng thời gian; chỉ ORDER / CODE lọc
+//
+// v2.11 — Đổi vai trò và tự khóa (BR-001 v18)
+//  #  | Bảng / cột                                       | Thay đổi
+// 81  | account (note)                                   | Chỉ đổi vai trò employee <-> admin; không đổi customer <-> nội bộ;
+//     |                                                  | Admin tự khóa được khi còn Admin khác đang hoạt động
+//
+// v2.12 — Tổ chức theo 9 module (đã chốt 20/11/2026)
+//  #  | Bảng / cột                                       | Thay đổi
+// 82  | Schema                                           | 1 schema = 1 module: auth -> identity; customer.customer -> identity;
+//     |                                                  | customer.wishlist* -> shopping; inventory.{category, collection, gender,
+//     |                                                  | size, color, product, product_collection, variant, gallery} -> catalog;
+//     |                                                  | sale.cart* -> shopping; sale.{payment, order, order_detail,
+//     |                                                  | order_status_history, invoice} -> ordering;
+//     |                                                  | sale.bank_transaction -> payment.bank_transaction
+// 83  | inventory.stock                                  | Bảng mới: stock_key, stock_variant_key (UNIQUE, FK variant),
+//     |                                                  | stock_quantity, stock_cost_price
+// 84  | catalog.variant                                  | Bỏ variant_quantity, variant_cost_price (chuyển sang inventory.stock)
+// 85  | TableGroup                                       | Đổi từ 5 nhóm context sang 7 nhóm module (shipping, reporting không có bảng)
+//
+// OPEN QUESTIONS [GD]
+//  Q1. [ĐÃ CHỐT] Bỏ product_supplier_id.
+//  Q2. [ĐÃ CHỐT] Mỗi khuyến mãi theo sản phẩm gắn đúng 1 sản phẩm (cách của ERD ảnh).
+//      UC-28 đã sửa cho khớp (v6).
+//  Q3. [ĐÃ CHỐT] Lưu order_detail_cost_price.
+//  Q4. [ĐÃ CHỐT] Lưu invoice_snapshot_json.
+//  Q5. [ĐÃ CHỐT] SĐT khách là account_phone_number; không thêm SĐT vào bảng customer.
+//  Q6. [ĐÃ CHỐT] Giữ product_created_at để sắp xếp "mới nhất".
+//  Q7. [ĐÃ CHỐT] promotion_status là cờ bật / tắt.
+//  Q8. [ĐÃ CHỐT] variant_status = ngừng bán từng biến thể.
+//  Q9. [ĐÃ CHỐT, thay bởi v2.12] Schema theo module: identity.admin, identity.employee,
+//      identity.customer.
+//  Q10. [ĐÃ CHỐT] Mã do hệ thống cấp, không sửa; NV / AD-<HỌ TÊN>-<YYYYMMDD>-<4 số>; NCC-<4 số>; SP-<4 số>.
+//  Q11. [ĐÃ CHỐT] wishlist_item trỏ tới wishlist; wishlist_key đổi sang uuid.
+//  Q12. [ĐÃ CHỐT] RBAC: bảng auth.role + account.account_role_key; chưa có bảng permission.
+//  Q13. [ĐÃ CHỐT] goods_receipt trỏ tới account_key.
+//  Q14. [ĐÃ CHỐT] Mã khách hàng KH-<YYYYMMDD ngày đăng ký>-<4 số>.
+//  Q15. [ĐÃ CHỐT] Chấp nhận mã chứa ngày sinh.
+//  Q16. [ĐÃ CHỐT] Đổi vai trò thì cấp mã mới theo bảng hồ sơ mới.
+//  Q17. [ĐÃ CHỐT] Mỗi tài khoản 1 vai trò (FK account -> role).
+//  Q18. [ĐÃ CHỐT] Bộ đếm 4 số đếm chung cho cả bảng.
+//  Q19. [HOÃN] Trường hợp vượt 9999 chưa xử lý.
+//  Q20. [ĐÃ CHỐT] SKU biến thể <mã SP>-<MÀU>-<SIZE>.
+//  Q21. [ĐÃ CHỐT] Thêm mã tự nhiên cho hóa đơn (HD-<order_code>), phiếu nhập (PN-<4 số>),
+//       khuyến mãi (KM-<4 số>).
+//  Q22. [ĐÃ CHỐT] Khuyến mãi đã tắt không bật lại được; chỉ tạo khuyến mãi mới.
+//  Q23. a. [ĐÃ CHỐT] varchar + CHECK.
+//       b. [ĐÃ CHỐT] Admin được tự đổi vai trò; hệ thống luôn có ít nhất 1 Admin.
+//       c. [ĐÃ CHỐT] Trạng thái hiển thị chỉ có Đang hiệu lực / Đã kết thúc, tính ra, không lưu.
+//       d. [ĐÃ CHỐT] Giỏ khách vãng lai lưu ở localStorage.
+//       e. [ĐÃ CHỐT] Lý do hủy lưu ở order_status_history_note.
+//       f. Danh sách cột của bank_transaction — đang giải thích cho developer.
+//  Q24. [ĐÃ CHỐT] Luôn còn ít nhất 1 Admin đang hoạt động (ACTIVE).
+//  Q25. [ĐÃ CHỐT] Tạo khuyến mãi chọn thời điểm bắt đầu và kết thúc; hết hiệu lực khi hết hạn
+//       hoặc Nhân viên kết thúc sớm.
+//  Q26. [ĐÃ CHỐT] Giỏ không lưu giá, luôn hiển thị giá hiện tại.
+//  Q27. [ĐÃ CHỐT] Có trạng thái "Sắp diễn ra" (cho ORDER / CODE chưa tới start_date).
+//  Q28. [ĐÃ CHỐT] Kết thúc sớm giữ nguyên end_date, chỉ đổi status = DISABLED.
+//  Q29. [ĐÃ CHỐT] Khuyến mãi theo sản phẩm chỉ có tạo rồi kết thúc, không có ngày bắt đầu /
+//       kết thúc. BR-004, UC-28, UC-29, UC-30, README use case đã cập nhật.
+//  Q30. [ĐÃ CHỐT] Không thêm promotion_created_at / promotion_ended_at; khuyến mãi theo sản phẩm
+//       không lọc theo khoảng thời gian.
+//  Q31. [ĐÃ CHỐT] Bảng ordering.payment (danh sách phương thức COD / QR) thuộc module ordering,
+//       giữ tên payment (không đổi thành payment_method). Module payment chỉ xử lý giao dịch
+//       tiền vào (SePay).
+// =====================================================================

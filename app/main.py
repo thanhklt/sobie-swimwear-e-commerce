@@ -2,3 +2,37 @@
 
 Module: identity, catalog, shopping, ordering, payment, promotion, inventory, shipping, reporting.
 """
+
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+
+from app.shared.web.session import (
+    SessionAccessError,
+    SessionMiddleware,
+    session_access_error,
+)
+
+version = "v1"
+
+
+@asynccontextmanager
+async def life_span(app: FastAPI):
+    print("Server is starting")
+    yield
+    print("Shutdown the server")
+
+
+app = FastAPI(
+    title="sobie-swimwear-e-commerce",
+    description="Trang web thương mại điện tử bán đồ bơi của sobie",
+    version=version,
+    lifespan=life_span,
+)
+app.add_middleware(SessionMiddleware)
+app.add_exception_handler(SessionAccessError, session_access_error)
+
+
+@app.get("/")
+def root():
+    return {"message": "Welcome to the Sobie Swimwear E-commerce API"}

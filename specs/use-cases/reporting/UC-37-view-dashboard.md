@@ -89,7 +89,8 @@ Then: hệ thống từ chối truy cập
 - Lợi nhuận gộp = Doanh thu − Giá vốn hàng bán (SL bán × giá vốn); giá vốn theo bình quân gia quyền, tính riêng từng biến thể (BR-GIAIDOAN1, Constraints của BR-007).
 - Cách lấy giá vốn tại thời điểm bán: BR ghi "chưa cần quan tâm", UC không đặc tả thêm.
 - Tiền tính bằng số nguyên VND; thời gian lưu UTC, hiển thị `Asia/Ho_Chi_Minh` (AGENTS.md).
-- Áp dụng constraint cache danh sách (BR-GIAIDOAN1, Constraints chung) cho các danh sách trên dashboard.
+- Theo constraint cache (BR-GIAIDOAN1, Constraints chung — Cache): dashboard không cache — truy vấn trực tiếp Database và trả `Cache-Control: no-store` như mọi trang của portal quản trị (đã chốt 21/11/2026).
+- "Sản phẩm bán chạy" ở đây khác khối bán chạy trên trang chủ (UC-09): dashboard tính theo kỳ báo cáo, chỉ đơn "Giao thành công", top 10.
 
 **Quyết định đã chốt**
 - Chỉ Nhân viên xem dashboard; Khách hàng và Admin không xem được (đã chốt 15/11/2026).
@@ -106,3 +107,5 @@ Then: hệ thống từ chối truy cập
 - v2 (2026-11-15): chốt chỉ Nhân viên xem dashboard
 - v3 (2026-11-15): bỏ chỉ số "Hiệu quả khuyến mãi" (chuyển Out of Scope)
 - v4 (2026-11-20): đồng bộ BR-GIAIDOAN1 — số đơn theo trạng thái: thêm "Chờ lấy hàng", bỏ "Bị từ chối"
+- v5 (2026-11-21): chốt dashboard không cache phía server; phân biệt với khối bán chạy trang chủ
+- v6 (2026-11-21): theo BR-GIAIDOAN1 v22 — trang dashboard trả `no-store` thay cho `private, no-cache` + `ETag`

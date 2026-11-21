@@ -20,9 +20,9 @@ Xây dựng website bán đồ bơi online cho một cửa hàng giả định (
 
 ### In Scope (MVP – hạn chót 06/12/2026)
 
-- Tài khoản và phân quyền: đăng ký bắt buộc nhập đủ email và số điện thoại; đăng nhập bằng email hoặc số điện thoại đều được. Có 3 vai trò cố định: Khách hàng, Nhân viên, Admin. Admin chỉ quản lý tài khoản và gán vai trò cho tài khoản; Nhân viên thực hiện mọi thao tác vận hành cửa hàng
+- Tài khoản và phân quyền: đăng ký bắt buộc nhập đủ email và số điện thoại; đăng nhập bằng email hoặc số điện thoại đều được. Có 3 vai trò cố định: Khách hàng, Nhân viên, Admin. Admin chỉ quản lý tài khoản và gán vai trò cho tài khoản; Nhân viên thực hiện mọi thao tác vận hành cửa hàng. Khách hàng đăng nhập ở trang bán hàng (storefront); Nhân viên và Admin đăng nhập ở portal quản trị riêng (đã chốt 21/11/2026)
 - Hồ sơ khách hàng: sửa thông tin cá nhân, đổi mật khẩu
-- Trang bán hàng: trang chủ, trang danh mục có phân trang, sắp xếp (mặc định sản phẩm mới nhất) và lọc theo giới tính, size, danh mục, bộ sưu tập, tìm kiếm theo tên hoặc từ khóa, chi tiết sản phẩm (chọn màu và size, ảnh, bảng size, tình trạng còn/hết hàng), các trang giới thiệu, chính sách, FAQ. Khách hàng thả tim để lưu sản phẩm vào danh sách yêu thích (wishlist)
+- Trang bán hàng: trang chủ (gồm khối 5 sản phẩm bán chạy nhất 7 ngày gần nhất, bổ sung 21/11/2026), trang danh mục có phân trang, sắp xếp (mặc định sản phẩm mới nhất) và lọc theo giới tính, size, danh mục, bộ sưu tập, tìm kiếm theo tên hoặc từ khóa, chi tiết sản phẩm (chọn màu và size, ảnh, bảng size, tình trạng còn/hết hàng), các trang giới thiệu, chính sách, FAQ. Khách hàng thả tim để lưu sản phẩm vào danh sách yêu thích (wishlist)
 - Sản phẩm: quản lý sản phẩm, biến thể theo màu × size, giá bán theo size, danh mục, bộ sưu tập và các thuộc tính
 - Giỏ hàng và đặt hàng: khách chưa đăng nhập vẫn dùng được giỏ hàng, nhưng phải đăng nhập mới đặt hàng được. Thanh toán bằng COD hoặc chuyển khoản qua mã QR. Mọi đơn chuyển khoản dùng chung 1 tài khoản ngân hàng của cửa hàng; hệ thống tự đối soát qua webhook của dịch vụ bên thứ 3 theo dõi biến động số dư, không cần ai bấm xác nhận đã thanh toán
 - Khuyến mãi 3 loại: theo sản phẩm, theo giá trị hóa đơn, voucher. Khuyến mãi theo sản phẩm giảm trực tiếp trên giá sản phẩm (hiển thị trên trang chi tiết sản phẩm). Hệ thống tự chọn mức giảm có lợi hơn cho khách giữa khuyến mãi theo hóa đơn và voucher. Khuyến mãi theo sản phẩm được tính cùng với mức giảm được chọn đó. Mọi loại khuyến mãi giảm theo phần trăm, không có mức giảm tối đa
@@ -38,7 +38,8 @@ Xây dựng website bán đồ bơi online cho một cửa hàng giả định (
 ### Out of Scope
 
 - Mega menu, bộ lọc nâng cao, thêm nhanh vào giỏ từ thẻ sản phẩm
-- Trang Outlet, sổ nhiều địa chỉ, quên mật khẩu qua email
+- Trang Outlet, sổ nhiều địa chỉ
+- Quên mật khẩu — làm ở giai đoạn 2. Giai đoạn 1 trang đăng nhập storefront vẫn có nút "Quên mật khẩu" cho Khách hàng, nhưng bấm vào không có hành động nào (đã chốt 21/11/2026)
 - Đánh giá sản phẩm (review) — làm ở giai đoạn 2
 - Blog, trang cộng đồng, góp ý, thanh thông báo chạy, banner tùy chỉnh
 - Tạo vai trò mới hoặc cấu hình quyền
@@ -59,7 +60,30 @@ Xây dựng website bán đồ bơi online cho một cửa hàng giả định (
 Áp dụng cho mọi BR bên dưới.
 
 - **Technical — Kiến trúc Backend:** thiết kế theo kiến trúc 3 tầng (3-layer architecture): `Route` → `Service` → `Repository` → `Database`. Không gọi tắt tầng (Route không gọi trực tiếp Repository hoặc Database).
-- **Technical — Cache danh sách:** mọi danh sách lấy từ Database phải có chiến lược cache. Chiến lược cụ thể (nơi lưu cache, thời gian sống, cách làm mới khi dữ liệu thay đổi) chốt ở bước thiết kế — xem câu hỏi mở chung.
+- **Technical — Cache (đã chốt 21/11/2026, cập nhật cho SSR):** website render HTML phía server (FastAPI + Jinja + HTMX). **Không phải danh sách nào cũng cache:** chỉ dữ liệu công khai, giống nhau với mọi người xem, mới được cache; trang và danh sách gắn với một người dùng (cần đăng nhập) không cache, để luôn đúng dữ liệu mới nhất và không lộ dữ liệu trên máy dùng chung.
+  - **Được cache — cache dữ liệu ở Redis, không cache HTML** (HTML vẫn render lại mỗi request vì có phần riêng của từng người):
+    - Danh mục, thuộc tính sản phẩm (giới tính, size, màu, bộ sưu tập), danh sách sản phẩm theo danh mục và các khối trang chủ: key có chứa *số phiên bản catalog*; mỗi khi sản phẩm, khuyến mãi hoặc tồn kho thay đổi thì tăng số phiên bản, key cũ tự hết hiệu lực; TTL dự phòng 5 phút.
+    - Khuyến mãi đang hiệu lực: cache ở Redis; TTL hết hạn đúng mốc bắt đầu / kết thúc gần nhất của khuyến mãi theo hóa đơn và voucher, xóa key khi Nhân viên tạo hoặc kết thúc khuyến mãi `[GD]`.
+    - Khối bán chạy trang chủ: xem Constraints của BR-002.
+  - **Không cache:**
+    - Kết quả tìm kiếm.
+    - Mọi trang và danh sách cần đăng nhập: hồ sơ, giỏ hàng, wishlist, đơn hàng, hóa đơn của Khách hàng; mọi danh sách trong portal quản trị (tài khoản, đơn hàng, nhà cung cấp, phiếu nhập, khuyến mãi, voucher, tồn kho, hóa đơn…).
+    - Dashboard (BR-007): truy vấn trực tiếp Database.
+    - Giỏ của Khách vãng lai lưu ở `localStorage` của trình duyệt, không đưa vào Redis; tồn kho và voucher lúc đặt hàng luôn đọc từ Database trong transaction.
+  - **HTTP header:** HTML có phần riêng của từng người (tên tài khoản trên header, số lượng trong giỏ, nút thả tim) nên không trang HTML nào được đánh dấu `public`.
+    - Trang công khai (trang chủ, danh mục, tìm kiếm, chi tiết sản phẩm, trang giới thiệu / chính sách / FAQ) và mảnh HTMX của chúng: `Cache-Control: private, no-cache`. Không dùng `ETag` (đã chốt 21/11/2026): server vẫn phải render xong HTML mới băm được nên `ETag` chỉ tiết kiệm băng thông, không đáng thêm một middleware.
+    - Trang cần đăng nhập (storefront và portal quản trị), trang đăng nhập / đăng ký, trang giả lập vận chuyển: `Cache-Control: no-store` — trình duyệt không giữ bản sao, nên đăng xuất xong bấm Back không thấy lại dữ liệu cũ.
+    - Route trả cả trang đầy đủ lẫn mảnh HTMX: thêm `Vary: HX-Request`, để trình duyệt không lẫn mảnh HTML với trang đầy đủ khi bấm Back.
+    - File tĩnh `/static` (CSS, JS, ảnh giao diện): `Cache-Control: public, max-age=31536000, immutable`; tên file kèm mã phiên bản để đổi nội dung là đổi URL.
+    - Webhook SePay (JSON, BR-006): `Cache-Control: no-store`.
+- **Technical — Xác thực (đã chốt 21/11/2026, thay cơ chế access / refresh token của v20):** website render phía server (FastAPI + Jinja + HTMX) nên dùng **phiên đăng nhập phía server** (session), không dùng JWT.
+  - Đăng nhập thành công thì tạo 1 dòng trong bảng `identity.session`: hệ thống sinh mã phiên ngẫu nhiên, chỉ lưu bản băm SHA-256 trong DB, gửi mã gốc trong cookie `HttpOnly`, `Secure`, `SameSite=Lax`. Một tài khoản có thể có nhiều phiên (nhiều thiết bị).
+  - Storefront và portal quản trị dùng 2 cookie phiên khác tên, nên một trình duyệt có thể đăng nhập cùng lúc vào cả hai cổng `[GD]`.
+  - Hạn phiên: **Khách hàng 30 phút**, **Nhân viên / Admin 1 giờ**, tính từ lần thao tác cuối; mỗi request hợp lệ gia hạn phiên (đã chốt 21/11/2026). Hết hạn thì coi như chưa đăng nhập.
+  - Mỗi request: tìm phiên theo bản băm của mã trong cookie, còn hạn thì đọc vai trò và trạng thái từ `identity.account`. Phiên không lưu vai trò.
+  - Kết thúc phiên: đăng xuất (UC-03) xóa phiên hiện tại, có hiệu lực ngay. Đổi vai trò (UC-07), khóa tài khoản (UC-08), đổi mật khẩu (UC-05) xóa mọi phiên của tài khoản trong cùng transaction với thao tác đó.
+  - Chống giả mạo request (CSRF): cookie `SameSite=Lax` cộng kiểm tra header `Origin` ở mọi request ghi (POST, PUT, PATCH, DELETE, kể cả request HTMX); `Origin` khác domain của website thì từ chối. Không dùng CSRF token. Frontend và backend chạy cùng domain.
+  - Giới hạn tần suất (rate limit) theo IP, đếm ở Redis: đăng nhập 5 lần/phút. Vượt giới hạn thì từ chối với HTTP 429 `[GD]`.
 - **Technical — Cấu hình cửa hàng:** không có chức năng chỉnh sửa trên hệ thống và không có BR riêng. Gồm: hotline, link Zalo, thông tin người gửi, tài khoản nhận chuyển khoản, ngưỡng tồn kho thấp (hard-code); phí vận chuyển cố định cho mọi đơn nạp từ biến môi trường, mặc định 12.000đ (chốt 20/11/2026).
 - **Technical — Webhook thanh toán:** website phải có địa chỉ công khai để dịch vụ bên thứ 3 gửi webhook tới. Giai đoạn demo dùng ngrok forward cổng local ra internet (đã chốt 20/11/2026); mỗi khi địa chỉ ngrok thay đổi phải cập nhật lại URL webhook trên trang quản trị của dịch vụ. Khóa xác thực webhook (API key) nạp qua biến môi trường, không hard-code trong mã nguồn.
 - **Timeline:** demo hằng tuần thứ Hai 16/11, 23/11, 30/11/2026; hoàn thành và nghiệm thu hết ngày 06/12/2026; 07/12/2026 báo cáo kết quả.
@@ -81,7 +105,8 @@ Xây dựng website bán đồ bơi online cho một cửa hàng giả định (
 
 - [ ]  `[GD]` Cách gom các mục In Scope thành 7 BR như bảng trên có đúng ý không?
 - [ ]  `[GD]` Success Metric của từng BR đang suy ra từ metric tổng (100% acceptance test của nhóm tính năng đó). Có cần metric riêng cho từng BR không?
-- [ ]  Constraint cache: "danh sách" gồm những danh sách nào — chỉ danh sách phía khách (danh mục, tìm kiếm) hay cả danh sách trong trang quản trị (đơn hàng, tài khoản, phiếu nhập…)? Dữ liệu được phép cũ tối đa bao lâu?
+- [X]  Constraint cache: "danh sách" gồm những danh sách nào — chỉ danh sách phía khách (danh mục, tìm kiếm) hay cả danh sách trong trang quản trị (đơn hàng, tài khoản, phiếu nhập…)? Dữ liệu được phép cũ tối đa bao lâu? → Không phải danh sách nào cũng cache: chỉ dữ liệu công khai (danh mục, thuộc tính, danh sách sản phẩm theo danh mục, các khối trang chủ, khuyến mãi đang hiệu lực, khối bán chạy) được cache ở Redis; kết quả tìm kiếm, mọi trang và danh sách cần đăng nhập (kể cả portal quản trị) và dashboard không cache (đã chốt 21/11/2026, cập nhật cho SSR; xem Constraints chung — Cache).
+- [X]  Danh sách trong khu vực quản trị có cần chiến lược cache không? → Không cache: luôn đọc Database, trả `Cache-Control: no-store` (đã chốt 21/11/2026).
 
 ---
 
@@ -107,13 +132,17 @@ Khách hàng tự đăng ký, đăng nhập và quản lý hồ sơ của mình;
 ### Constraints
 
 - Theo *Constraints chung*.
-- Tài khoản đăng nhập (email, số điện thoại, mật khẩu, vai trò, trạng thái) tách khỏi hồ sơ cá nhân. Mỗi vai trò có hồ sơ riêng (Khách hàng / Nhân viên / Admin) gồm họ tên, ngày sinh, địa chỉ, có khóa ngoại tới tài khoản. Không có username riêng; email và số điện thoại là duy nhất (đã chốt 15/11/2026).
+- Tài khoản gồm thông tin đăng nhập (email, số điện thoại, mật khẩu, vai trò, trạng thái) và thông tin cá nhân (họ tên, ngày sinh, địa chỉ) trong cùng một bản ghi, dùng chung cho cả 3 vai trò (đã chốt 21/11/2026, thay quyết định ngày 15/11/2026 tách hồ sơ riêng theo vai trò). Không có username riêng; email và số điện thoại là duy nhất (đã chốt 15/11/2026).
+- Mỗi tài khoản có mã do hệ thống cấp: Khách hàng `KH-<ngày đăng ký>-<4 số>`, Nhân viên `NV-<họ tên>-<ngày sinh>-<4 số>`, Admin `AD-<họ tên>-<ngày sinh>-<4 số>`; bộ đếm 4 số riêng cho từng loại; ngày sinh bắt buộc với Nhân viên và Admin. Mã không sửa được, trừ khi đổi vai trò Nhân viên ↔ Admin thì cấp mã mới (đã chốt 21/11/2026).
 - Admin có toàn quyền tạo tài khoản với bất kỳ vai trò nào trong 3 vai trò cố định (Khách hàng, Nhân viên, Admin), không chỉ tài khoản nội bộ (đã chốt 20/11/2026).
 - `[GD]` Tài khoản do Admin tạo tuân theo cùng ràng buộc như khi khách tự đăng ký: bắt buộc đủ email và số điện thoại, không trùng với tài khoản khác; Admin đặt mật khẩu ban đầu.
 - Tài khoản do Admin tạo dùng được ngay, không bắt buộc đổi mật khẩu ở lần đăng nhập đầu (đã chốt 20/11/2026).
 - Admin chỉ đổi được vai trò qua lại giữa Nhân viên và Admin. Không đổi Khách hàng sang Nhân viên / Admin và không đổi Nhân viên / Admin sang Khách hàng. Vai trò mới có hiệu lực ngay, tài khoản đang đăng nhập bị đăng xuất; thông tin cá nhân và thông tin đăng nhập giữ nguyên (đã chốt 20/11/2026, thay quyết định cho đổi sang mọi vai trò cùng ngày).
 - `[GD]` Đổi vai trò giữ nguyên lịch sử thao tác của tài khoản.
 - Admin được tự đổi vai trò và tự khóa tài khoản của mình. Hệ thống luôn có ít nhất 1 Admin đang hoạt động: không cho đổi vai trò hoặc khóa Admin đang hoạt động cuối cùng (đã chốt 20/11/2026).
+- Hai cổng đăng nhập (đã chốt 21/11/2026): storefront chỉ cho tài khoản Khách hàng đăng nhập; tài khoản Nhân viên / Admin đăng nhập ở storefront bị báo "Thông tin đăng nhập không đúng" như sai mật khẩu. Nhân viên và Admin đăng nhập ở portal quản trị riêng; tài khoản Khách hàng đăng nhập ở portal cũng bị báo như vậy `[GD]`.
+- Quên mật khẩu làm ở giai đoạn 2. Giai đoạn 1 trang đăng nhập storefront có nút "Quên mật khẩu" nhưng không có hành động; portal quản trị không có nút này `[GD]` (đã chốt 21/11/2026).
+- Cơ chế phiên đăng nhập theo *Constraints chung — Xác thực* (phiên phía server lưu ở `identity.session`). Đổi vai trò, khóa tài khoản và đổi mật khẩu đều kết thúc ngay mọi phiên của tài khoản, kể cả phiên đang dùng để đổi mật khẩu (đã chốt 21/11/2026).
 
 ### Open Questions
 
@@ -147,7 +176,7 @@ Khách tìm và xem được sản phẩm cùng tình trạng còn/hết hàng t
 
 ### Constraints
 
-- Theo *Constraints chung*. Danh sách sản phẩm ở trang danh mục và kết quả tìm kiếm thuộc phạm vi constraint cache.
+- Theo *Constraints chung*. Danh sách sản phẩm ở trang danh mục và các khối trang chủ được cache ở Redis; kết quả tìm kiếm không cache (Constraints chung — Cache).
 - Trang giới thiệu, chính sách, FAQ có nội dung cố định, không chỉnh sửa trên hệ thống; chỉ thông tin sản phẩm là sửa được (đã chốt 15/11/2026).
 - Lọc sản phẩm theo giới tính, size, danh mục, bộ sưu tập (đã chốt 15/11/2026).
 - Sắp xếp ưu tiên sản phẩm mới nhất (đã chốt 15/11/2026).
@@ -155,6 +184,12 @@ Khách tìm và xem được sản phẩm cùng tình trạng còn/hết hàng t
 - Ảnh sản phẩm (gallery) gắn theo sản phẩm, không theo màu (đã chốt 15/11/2026).
 - Bảng size dùng chung cho cả cửa hàng, nội dung cố định (đã chốt 15/11/2026).
 - Wishlist: Khách hàng thả tim để lưu sản phẩm vào danh sách yêu thích; mỗi sản phẩm chỉ có 1 lần trong danh sách của một tài khoản (đã chốt 15/11/2026, theo ERD).
+- Khối bán chạy trên trang chủ (đã chốt 21/11/2026):
+  - Hiển thị 5 sản phẩm (tính theo sản phẩm, cộng mọi biến thể) có tổng số lượng bán lớn nhất trong 7 ngày gần nhất. Tính các đơn kể từ lúc đặt, không chờ giao thành công. Xếp theo tổng số lượng bán, không theo số đơn.
+  - `[GD]` "7 ngày gần nhất" là 7 × 24 giờ tính lùi từ lúc tính; loại đơn "Đã hủy".
+  - Một tác vụ chạy mỗi 10 phút tính top 15 sản phẩm và ghi vào Redis (chỉ lưu mã sản phẩm và số lượng, TTL 30 phút). Khi hiển thị, hệ thống bỏ sản phẩm đang Ngừng bán rồi lấy 5 sản phẩm đầu, nên Nhân viên chuyển sản phẩm sang Ngừng bán thì khối cập nhật ngay, không chờ 10 phút. Tên, ảnh, giá lấy tại lúc hiển thị. Key trống (Redis mất dữ liệu hoặc tác vụ lỗi) thì tính lại từ Database.
+  - `[GD]` Khối thuộc module `reporting`: lấy số lượng bán qua service của `ordering`, lọc trạng thái sản phẩm qua service của `catalog`.
+  - `[GD]` Còn dưới 5 sản phẩm sau khi lọc thì hiển thị số còn lại; không có sản phẩm nào thì ẩn khối.
 
 ### Open Questions
 
@@ -395,6 +430,7 @@ Xem được các chỉ số kinh doanh chính của cửa hàng trên một das
 - Hàng của đơn giao không thành công quay lại tồn kho không làm thay đổi giá vốn; không tính giá trị hàng hoàn.
 - Lợi nhuận gộp = Doanh thu − Giá vốn hàng bán (SL bán × giá vốn).
 - Tiền tính bằng số nguyên VND, làm tròn `ROUND_HALF_UP`.
+- Dashboard truy vấn trực tiếp Database theo khoảng thời gian Nhân viên chọn, không cache phía server (đã chốt 21/11/2026). Sản phẩm bán chạy trên dashboard khác khối bán chạy ở trang chủ (BR-002): tính theo kỳ báo cáo và chỉ đơn "Giao thành công".
 
 ### Open Questions
 
@@ -423,3 +459,8 @@ Xem được các chỉ số kinh doanh chính của cửa hàng trên một das
 - v16 (2026-11-20): Admin đổi được vai trò sang mọi vai trò (gồm Khách hàng ↔ Nhân viên/Admin)
 - v17 (2026-11-20): theo data model v2 — khuyến mãi theo sản phẩm chỉ có tạo rồi kết thúc, gắn đúng 1 sản phẩm; khuyến mãi theo hóa đơn và voucher có thời điểm bắt đầu / kết thúc, kết thúc sớm giữ nguyên thời điểm kết thúc; trạng thái hiển thị Sắp diễn ra / Đang hiệu lực / Đã kết thúc; khuyến mãi đã kết thúc không bật lại; BR-001: Admin được tự đổi vai trò, luôn còn ít nhất 1 Admin đang hoạt động; khuyến mãi theo sản phẩm không lọc theo khoảng thời gian
 - v18 (2026-11-20): BR-001 — chỉ đổi vai trò giữa Nhân viên và Admin (thay v16: không còn đổi Khách hàng ↔ Nhân viên/Admin); Admin được tự khóa chính mình khi còn Admin khác đang hoạt động
+- v19 (2026-11-21): BR-001 — gộp thông tin cá nhân vào tài khoản, bỏ hồ sơ riêng theo vai trò; mã tài khoản KH- / NV- / AD- với bộ đếm riêng từng loại, đổi vai trò Nhân viên ↔ Admin thì cấp mã mới
+- v20 (2026-11-21): chốt chiến lược cache (HTTP `ETag` cho mọi GET, `max-age=60` cho dữ liệu công khai, `private, no-cache` cho đơn hàng; Redis cho danh mục, trang chủ, khuyến mãi đang hiệu lực, khối bán chạy; dashboard không cache); chốt xác thực bằng access token 15 phút + refresh token 14 ngày lưu ở Redis, `account_token_version`, rate limit đăng nhập và làm mới token; quên mật khẩu chuyển sang giai đoạn 2 (giai đoạn 1 có nút nhưng không có hành động); storefront và portal quản trị đăng nhập riêng; BR-002 thêm khối bán chạy trên trang chủ
+- v21 (2026-11-21): website là SSR nên đổi xác thực sang phiên phía server: bảng `identity.session`, cookie `HttpOnly` + `Secure` + `SameSite=Lax`, kiểm tra `Origin` ở mọi request ghi; hạn phiên Khách hàng 30 phút, Nhân viên / Admin 1 giờ; bỏ access token JWT, refresh token Redis, `account_token_version` và rate limit làm mới token
+- v22 (2026-11-21): constraint cache cập nhật cho SSR — không phải danh sách nào cũng cache: chỉ dữ liệu công khai cache ở Redis (cache dữ liệu, không cache HTML); kết quả tìm kiếm, mọi trang cần đăng nhập (kể cả portal quản trị) và dashboard không cache; không trang HTML nào `public`: trang công khai `private, no-cache` + `ETag` `[GD]`, trang cần đăng nhập `no-store`, `Vary: HX-Request`, file tĩnh cache 1 năm; hạn phiên tính từ lần thao tác cuối (đã chốt)
+- v23 (2026-11-21): bỏ `ETag` cho trang HTML công khai; không còn response nào dùng `ETag`

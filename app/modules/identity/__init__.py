@@ -1,14 +1,18 @@
-"""Module identity — vai trò, tài khoản, hồ sơ (BR-001).
+"""Module identity — vai trò, tài khoản, phiên đăng nhập (BR-001).
 
 Use case: specs/use-cases/identity/ (UC-01 → UC-08).
-Bảng sở hữu: identity.role, identity.account, identity.customer, identity.employee, identity.admin.
+Bảng sở hữu: identity.role, identity.account, identity.session.
 
 Phạm vi:
 - Đăng ký (Khách hàng), đăng nhập bằng email hoặc SĐT, đăng xuất, đổi mật khẩu.
-- Cập nhật hồ sơ Khách hàng.
+- Phiên đăng nhập phía server (identity.session, cookie HttpOnly + Secure + SameSite=Lax):
+  storefront chỉ cho Khách hàng, portal quản trị chỉ cho Nhân viên / Admin; hạn phiên
+  Khách hàng 30 phút, Nhân viên / Admin 1 giờ, gia hạn khi còn thao tác.
+- Đổi mật khẩu, đổi vai trò, khóa tài khoản xóa mọi phiên của tài khoản trong cùng transaction.
+- Cập nhật thông tin cá nhân của Khách hàng (họ tên, ngày sinh, địa chỉ nằm trong account).
 - Admin tạo tài khoản mọi vai trò, sửa, khóa / mở khóa tài khoản.
 - Đổi vai trò chỉ giữa Nhân viên và Admin; luôn còn ít nhất 1 Admin đang hoạt động.
-- Cấp mã tự nhiên KH- / NV- / AD- (bộ đếm 4 số chung cho cả bảng).
+- Cấp mã tài khoản KH- / NV- / AD- (bộ đếm 4 số riêng cho từng tiền tố); đổi vai trò NV <-> AD thì cấp mã mới.
 
 Phụ thuộc module khác (chỉ qua service công khai):
 - (không có)

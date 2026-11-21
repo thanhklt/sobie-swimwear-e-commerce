@@ -23,7 +23,7 @@ Hàng đã về kho; Nhân viên chọn "Xác nhận" trên một phiếu nhập
    1. Lấy tồn hiện tại và giá vốn hiện tại của biến thể; giá trị tồn hiện tại = tồn hiện tại × giá vốn hiện tại.
    2. Tính tồn sau khi nhập = tồn hiện tại + số lượng nhập.
    3. Tính `Giá vốn mới = (Giá trị tồn hiện tại + Tiền nhập lô này) / Tồn sau khi nhập`, với tiền nhập lô này = số lượng nhập × giá nhập; làm tròn `ROUND_HALF_UP` về số nguyên VND.
-   4. Cập nhật tồn kho và giá vốn của biến thể.
+   4. Cập nhật tồn kho và giá vốn của biến thể (bảng `inventory.stock`).
 4. Hệ thống chuyển phiếu sang "Đã xác nhận".
 5. Hệ thống commit transaction.
 
@@ -84,10 +84,10 @@ And: phiếu vẫn ở trạng thái "Nháp"
 - Công thức giá vốn, cách làm tròn và giá vốn theo biến thể đã chốt trong BR-GIAIDOAN1 (Constraints của BR-007).
 - Cộng tồn và cập nhật giá vốn trong cùng một transaction.
 - Tồn kho không bao giờ âm (BR-005).
-- ERD hiện chưa có cột giá vốn ở biến thể; cần bổ sung để lưu giá vốn bình quân gia quyền.
+- Tồn kho và giá vốn bình quân gia quyền của biến thể lưu ở `inventory.stock` (`stock_quantity`, `stock_cost_price`), chỉ module inventory ghi (data model v2, đã chốt 20/11/2026).
 
 **Quyết định đã chốt**
-- Bổ sung cột giá vốn ở biến thể trong ERD để lưu giá vốn bình quân gia quyền (đã chốt 15/11/2026).
+- Giá vốn bình quân gia quyền lưu theo biến thể ở `inventory.stock.stock_cost_price` (đã chốt 15/11/2026; chuyển từ `catalog.variant` sang `inventory.stock` ngày 20/11/2026, data model v2).
 - Nhân viên xem được tồn kho theo biến thể ngoài dashboard (đã chốt 15/11/2026) — xem UC-39.
 - Không lưu người và thời điểm xác nhận phiếu nhập (đã chốt 15/11/2026).
 
@@ -95,3 +95,4 @@ And: phiếu vẫn ở trạng thái "Nháp"
 - v1 (2026-11-15): initial
 - v2 (2026-11-15): chốt bổ sung cột giá vốn ở biến thể trong ERD; câu hỏi xem tồn kho chuyển sang UC-39
 - v3 (2026-11-15): chốt không lưu người và thời điểm xác nhận phiếu nhập
+- v4 (2026-11-21): cập nhật nơi lưu tồn kho và giá vốn bình quân gia quyền theo data model v2

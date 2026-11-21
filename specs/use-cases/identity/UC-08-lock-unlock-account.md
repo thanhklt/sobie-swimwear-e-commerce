@@ -20,11 +20,11 @@ Admin bấm "Khóa" hoặc "Mở khóa" trên một tài khoản trong danh sác
 1. Admin chọn một tài khoản đang Hoạt động và bấm "Khóa".
 2. Hệ thống yêu cầu xác nhận.
 3. Admin xác nhận.
-4. Hệ thống chuyển tài khoản sang trạng thái Bị khóa và kết thúc mọi phiên đăng nhập đang mở của tài khoản đó `[GD]`.
+4. Trong cùng một transaction, hệ thống chuyển tài khoản sang trạng thái Bị khóa và xóa mọi phiên (`identity.session`) của tài khoản, nên mọi phiên đăng nhập đang mở của tài khoản đó kết thúc ngay.
 5. Hệ thống báo khóa thành công.
 
 ## Alternative Flows
-- **1a. Mở khóa:** Admin chọn tài khoản đang Bị khóa và bấm "Mở khóa" — sau khi xác nhận, hệ thống chuyển tài khoản về Hoạt động; tài khoản đăng nhập lại được.
+- **1a. Mở khóa:** Admin chọn tài khoản đang Bị khóa và bấm "Mở khóa" — sau khi xác nhận, hệ thống chuyển tài khoản về Hoạt động; tài khoản đăng nhập lại được (không có phiên cũ nào được khôi phục).
 - **1b. Admin tự khóa chính mình:** được phép khi hệ thống còn ít nhất 1 Admin khác đang hoạt động (E1). Sau khi khóa, phiên của Admin đó bị kết thúc và không đăng nhập lại được cho tới khi một Admin khác mở khóa.
 - **3a. Hủy xác nhận:** Admin bấm "Hủy" — trạng thái tài khoản giữ nguyên.
 
@@ -86,9 +86,9 @@ Then: hệ thống từ chối truy cập
 - Hệ thống luôn có ít nhất 1 Admin đang hoạt động (vai trò Admin, trạng thái Hoạt động); không cho khóa Admin đang hoạt động cuối cùng (đã chốt 20/11/2026, data model v2, Q24).
 - Kiểm tra trong cùng transaction với thao tác khóa, khóa các dòng tài khoản Admin để 2 thao tác đồng thời không cùng vượt qua kiểm tra (data model v2).
 - Admin được tự khóa chính mình khi còn ít nhất 1 Admin khác đang hoạt động (đã chốt 20/11/2026).
+- Khóa tài khoản kết thúc ngay mọi phiên đăng nhập đang mở của tài khoản đó, bằng cách xóa các dòng `identity.session` của tài khoản trong cùng transaction với thao tác khóa (đã chốt 21/11/2026; BR-GIAIDOAN1, Constraints chung — Xác thực; data model v2.15, Q35).
 
 ### Giả định [GD]
-- Khóa tài khoản kết thúc ngay mọi phiên đăng nhập đang mở của tài khoản đó.
 - Khóa và mở khóa áp dụng cho mọi vai trò (Khách hàng, Nhân viên, Admin).
 - Khóa không xóa dữ liệu của tài khoản.
 
@@ -96,3 +96,5 @@ Then: hệ thống từ chối truy cập
 - v1 (2026-11-15): initial
 - v2 (2026-11-20): theo data model v2 — không khóa Admin đang hoạt động cuối cùng (E2, AC-7)
 - v3 (2026-11-20): cho Admin tự khóa chính mình khi còn Admin khác đang hoạt động (bỏ E1 cũ, thêm 1b, AC-5 viết lại); E2 đổi thành E1, AC-7 viết lại
+- v4 (2026-11-21): chốt khóa kết thúc ngay mọi phiên bằng `account_token_version` (bước 4, 1a, Notes)
+- v5 (2026-11-21): theo BR-GIAIDOAN1 v21 — kết thúc phiên bằng xóa `identity.session` thay cho `account_token_version` (bước 4, 1a, Notes)

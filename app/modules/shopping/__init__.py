@@ -9,7 +9,7 @@ Phạm vi:
 - Danh sách yêu thích: mỗi sản phẩm 1 lần.
 
 Phụ thuộc module khác (chỉ qua service công khai):
-- identity: customer_key của tài khoản đang đăng nhập.
+- identity: kiểm tra tài khoản đang đăng nhập có vai trò Khách hàng (giỏ, wishlist trỏ tới account_key).
 - catalog: thông tin và giá biến thể.
 - inventory: tồn kho để giới hạn số lượng.
 """

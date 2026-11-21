@@ -10,7 +10,9 @@ Hiện repo **chỉ có khung thư mục / file** (mỗi file chỉ có docstrin
 |---|---|
 | Business requirements | [specs/business-requirements/BR-GIAIDOAN1.md](specs/business-requirements/BR-GIAIDOAN1.md) |
 | Use case theo module | [specs/use-cases/](specs/use-cases/README.md) |
-| Data model hiện hành | [specs/entity-model/data_model_v2.dbml](specs/entity-model/data_model_v2.dbml) |
+| Data model hiện hành | [specs/entity-model/data_model_v2.dbml](specs/entity-model/data_model_v2.dbml) (bản vẽ Mermaid: [data_model_v2.md](specs/entity-model/data_model_v2.md)) |
+| Entity diagram (SDD Tầng 3) | [specs/entity-model/entity_diagram_v2.md](specs/entity-model/entity_diagram_v2.md) |
+| Schema và dữ liệu mẫu PostgreSQL | [infra/postgres/init.sql](infra/postgres/init.sql), [infra/postgres/seed.sql](infra/postgres/seed.sql) |
 | Quy tắc cho agent | [AGENTS.md](AGENTS.md) |
 
 ## Module
@@ -19,11 +21,11 @@ Một module dùng chung **một tên** cho: thư mục use case `specs/use-case
 
 | Module | BR | Phạm vi | Bảng | Use case |
 |---|---|---|---|---|
-| `identity` | BR-001 | Vai trò, tài khoản, hồ sơ Khách hàng / Nhân viên / Admin | role, account, customer, employee, admin | UC-01 → 08 |
+| `identity` | BR-001 | Vai trò, tài khoản (gồm thông tin cá nhân của cả 3 vai trò), phiên đăng nhập | role, account, session | UC-01 → 08 |
 | `catalog` | BR-002 | Sản phẩm, biến thể, giá bán theo size, phân loại, ảnh | category, collection, gender, size, color, product, product_collection, variant, gallery | UC-09 → 17 |
 | `shopping` | BR-002, BR-003 | Giỏ hàng, danh sách yêu thích | cart, cart_item, wishlist, wishlist_item | UC-18, 38 |
-| `ordering` | BR-003 | Đặt hàng, vòng đời đơn, hủy đơn, hóa đơn | payment (phương thức), order, order_detail, order_status_history, invoice | UC-19 → 24, 26, 27 |
-| `payment` | BR-006 | Webhook SePay, tự đối soát chuyển khoản, VietQR | bank_transaction | UC-25 |
+| `ordering` | BR-003 | Đặt hàng, VietQR, vòng đời đơn, hủy đơn, hóa đơn | payment (phương thức), order, order_detail, order_status_history, invoice | UC-19 → 24, 26, 27 |
+| `payment` | BR-006 | Webhook SePay, tự đối soát chuyển khoản | bank_transaction | UC-25 |
 | `promotion` | BR-004 | Khuyến mãi theo sản phẩm, theo hóa đơn, voucher | promotion, product_promotion, order_promotion, code_promotion | UC-28 → 31 |
 | `inventory` | BR-005 | Nhà cung cấp, phiếu nhập, tồn kho, giá vốn | supplier, goods_receipt, goods_receipt_detail, stock | UC-32 → 35, 39 |
 | `shipping` | BR-006 | Bàn giao vận chuyển, trang giả lập vận chuyển | (không có) | UC-36, 40 |
@@ -40,7 +42,7 @@ soobin-swimwear-e-commerce/
 │   │   ├── database/
 │   │   │   ├── engine.py           # Engine, session
 │   │   │   └── transaction.py      # Transaction đi qua nhiều module
-│   │   ├── security/               # Băm mật khẩu, token đăng nhập
+│   │   ├── security/               # Băm mật khẩu, mã phiên, kiểm tra Origin
 │   │   ├── web/
 │   │   │   ├── response.py         # Envelope success / data / error / meta
 │   │   │   ├── templates/base.html
@@ -81,5 +83,5 @@ Luồng bắt buộc: `Route → Service → Repository → Database`. Module ch
 ## Trạng thái và phần còn chờ
 
 - Chưa chọn framework web, ORM, công cụ migration; `pyproject.toml` chưa khai báo thư viện.
-- `infra/postgres/init.sql` vẫn theo data model cũ (schema `auth`, `customer`, `sales`), chưa theo schema module và data model v2.
-- `docker-compose.yml` trong `infra/` còn rỗng.
+- `init.sql` và `seed.sql` đã chạy thử trên PostgreSQL 16 (21/11/2026).
+- Docker Compose chạy PostgreSQL 16 và tự nạp `init.sql` rồi `seed.sql` khi volume còn trống (`docker compose -f infra/docker-compose.yml up -d`).

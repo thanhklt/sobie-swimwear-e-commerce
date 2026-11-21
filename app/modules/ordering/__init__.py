@@ -5,6 +5,8 @@ Bảng sở hữu: ordering.payment, ordering.order, ordering.order_detail, orde
 
 Phạm vi:
 - Đặt hàng COD / QR: sinh order_code (8 ký tự Crockford Base32), chụp thông tin nhận hàng.
+- Sinh dữ liệu VietQR cho đơn QR (tài khoản cửa hàng, số tiền, nội dung SOBIE + order_code),
+  hiển thị khi đặt hàng (UC-20) và ở chi tiết đơn chưa thanh toán (UC-21).
 - Trừ tồn, áp khuyến mãi / tăng lượt và tạo đơn trong cùng 1 transaction.
 - Theo dõi, hủy (khách / Nhân viên có lý do), xác nhận đơn; tự hủy đơn QR quá 24 giờ.
 - Ghi lịch sử mỗi lần đổi trạng thái đơn.

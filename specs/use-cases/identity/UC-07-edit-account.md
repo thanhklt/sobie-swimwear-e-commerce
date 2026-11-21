@@ -22,11 +22,11 @@ Admin mở khu vực quản lý tài khoản và chọn một tài khoản để
 4. Admin sửa họ tên, ngày sinh, địa chỉ, email, số điện thoại. Với tài khoản Nhân viên hoặc Admin, Admin có thể đổi vai trò qua lại giữa Nhân viên và Admin. Tài khoản Khách hàng không có thao tác đổi vai trò.
 5. Hệ thống kiểm tra dữ liệu hợp lệ và email, số điện thoại không trùng tài khoản khác.
 6. Trong cùng một transaction `[GD]`, hệ thống lưu thông tin và vai trò mới, báo cập nhật thành công. Họ tên, ngày sinh, địa chỉ, email, số điện thoại, mật khẩu được giữ nguyên khi đổi vai trò.
-7. Nếu vai trò được đổi, hệ thống chuyển hồ sơ sang vai trò mới và cấp mã mới theo vai trò (`NV-...` → `AD-...` hoặc ngược lại), kết thúc ngay mọi phiên đang mở của tài khoản đó; vai trò mới có hiệu lực ngay.
+7. Nếu vai trò được đổi, hệ thống cấp mã tài khoản mới theo vai trò (`NV-...` → `AD-...` hoặc ngược lại; mã cũ không dùng lại) và xóa mọi phiên (`identity.session`) của tài khoản trong cùng transaction ở bước 6, nên mọi phiên đang mở của tài khoản đó kết thúc ngay; vai trò mới có hiệu lực ngay.
 
 ## Alternative Flows
 - **3a. Không tìm thấy:** từ khóa không khớp tài khoản nào — hệ thống hiển thị danh sách rỗng kèm thông báo "Không tìm thấy tài khoản".
-- **4a. Đổi Nhân viên sang Admin hoặc Admin sang Nhân viên:** lịch sử thao tác cũ (ví dụ người đổi trạng thái đơn, người lập phiếu nhập) được giữ nguyên vì gắn với tài khoản, không gắn với hồ sơ.
+- **4a. Đổi Nhân viên sang Admin hoặc Admin sang Nhân viên:** lịch sử thao tác cũ (ví dụ người đổi trạng thái đơn, người lập phiếu nhập) được giữ nguyên vì gắn với tài khoản.
 - **4b. Admin tự đổi vai trò của chính mình (Admin → Nhân viên):** được phép, miễn sau khi đổi hệ thống vẫn còn ít nhất 1 Admin đang hoạt động (E4); đổi xong phiên của Admin đó bị kết thúc như mọi lần đổi vai trò.
 
 ## Exceptions
@@ -124,7 +124,8 @@ Then: hệ thống từ chối, vai trò giữ nguyên Admin
 ## Notes
 - Áp dụng constraint cache danh sách (BR-GIAIDOAN1, Constraints chung).
 - Admin không đặt lại mật khẩu cho người khác trong UC này (không có trong BR).
-- Data model v2 (`specs/entity-model/data_model_v2.dbml`): vai trò lưu ở bảng `identity.role`, tài khoản có `account_role_key`; hồ sơ tách theo vai trò (`identity.customer`, `identity.employee`, `identity.admin`).
+- Data model v2 (`specs/entity-model/data_model_v2.dbml`): vai trò lưu ở bảng `identity.role`; `identity.account` có `account_role_key`, mã `account_id` và thông tin cá nhân (không còn bảng hồ sơ riêng theo vai trò, đã chốt 21/11/2026).
+- Kết thúc phiên khi đổi vai trò bằng cách xóa các dòng `identity.session` của tài khoản (BR-GIAIDOAN1, Constraints chung — Xác thực; data model v2.15, Q35, đã chốt 21/11/2026). Sửa thông tin mà không đổi vai trò thì không xóa phiên. Lỗi khi lưu (E5) thì transaction bị hủy, các phiên giữ nguyên.
 
 ### Quyết định đã chốt
 - Admin chỉ quản lý tài khoản và gán vai trò cho tài khoản; mọi thao tác vận hành cửa hàng do Nhân viên thực hiện (đã chốt 15/11/2026).
@@ -132,7 +133,7 @@ Then: hệ thống từ chối, vai trò giữ nguyên Admin
 - Vai trò mới có hiệu lực ngay khi được đổi; nếu tài khoản đang đăng nhập thì bị đăng xuất (đã chốt 15/11/2026).
 - Admin được tự đổi vai trò của mình; ràng buộc duy nhất là hệ thống luôn có ít nhất 1 Admin đang hoạt động (đã chốt 20/11/2026, data model v2, Q23b, Q24).
 - Mỗi tài khoản đúng 1 vai trò (đã chốt 20/11/2026, data model v2, Q17).
-- Đổi vai trò thì hồ sơ chuyển sang vai trò mới và được cấp mã mới theo vai trò: `NV-` / `AD-<HỌ TÊN>-<YYYYMMDD ngày sinh>-<4 số>`; mã cũ không dùng lại (đã chốt 20/11/2026, data model v2, Q10, Q16, Q18).
+- Đổi vai trò thì tài khoản được cấp mã mới theo vai trò: `NV-` / `AD-<HỌ TÊN>-<YYYYMMDD ngày sinh>-<4 số>`, bộ đếm riêng cho từng tiền tố; mã cũ không dùng lại. Đây là trường hợp duy nhất mã tài khoản thay đổi (đã chốt 21/11/2026, data model v2, Q16, Q32).
 
 ### Giả định [GD]
 - Việc xem và tìm danh sách tài khoản gộp vào UC này.
@@ -149,3 +150,6 @@ Then: hệ thống từ chối, vai trò giữ nguyên Admin
 - v6 (2026-11-20): cho đổi sang mọi vai trò (gồm Khách hàng ↔ Nhân viên/Admin); bỏ mô tả chuyển hồ sơ giữa các bảng (không dựa vào data model hiện tại); thêm E4 không để hệ thống hết Admin, AC-7, AC-8, AC-11, AC-12
 - v7 (2026-11-20): theo data model v2 — Admin được tự đổi vai trò (4c, AC-11), chỉ chặn khi hết Admin đang hoạt động (E4, AC-13); đổi vai trò cấp mã mới (bước 7); thay E3 bằng yêu cầu ngày sinh khi đổi sang Nhân viên/Admin `[GD]`
 - v8 (2026-11-20): chỉ đổi vai trò giữa Nhân viên và Admin — bỏ đổi Khách hàng ↔ Nhân viên/Admin (bước 4, 4a, 4b, E3, AC-7, AC-8 viết lại); bỏ giả định về ngày sinh và mã `KH-` khi đổi vai trò (không còn cần); AC-5 thêm mã mới
+- v9 (2026-11-21): theo data model v2 — không còn bảng hồ sơ riêng; đổi vai trò cấp mã mới trên account (bước 7, 4a, Notes)
+- v10 (2026-11-21): theo BR-GIAIDOAN1 v20 — kết thúc phiên khi đổi vai trò bằng `account_token_version` (bước 7, Notes)
+- v11 (2026-11-21): theo BR-GIAIDOAN1 v21 — kết thúc phiên bằng xóa `identity.session` thay cho `account_token_version` (bước 7, Notes)

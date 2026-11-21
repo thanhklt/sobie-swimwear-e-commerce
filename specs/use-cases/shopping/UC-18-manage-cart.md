@@ -82,7 +82,7 @@ When: Khách hàng đăng nhập trên máy B và mở giỏ hàng
 Then: giỏ có dòng "Đỏ / M" số lượng 1
 
 ## Dependencies
-- **Upstream UC:** UC-12 Xem chi tiết sản phẩm, UC-15 Quản lý biến thể màu × size, UC-16 Quản lý giá bán theo size, UC-28 Quản lý khuyến mãi theo sản phẩm
+- **Upstream UC:** UC-01 Đăng ký tài khoản, UC-06 Tạo tài khoản, UC-12 Xem chi tiết sản phẩm, UC-15 Quản lý biến thể màu × size, UC-16 Quản lý giá bán theo size, UC-28 Quản lý khuyến mãi theo sản phẩm
 - **Downstream UC:** UC-19 Đặt hàng thanh toán COD, UC-20 Đặt hàng thanh toán chuyển khoản QR
 - **External Systems:** Không có
 
@@ -95,6 +95,7 @@ Then: giỏ có dòng "Đỏ / M" số lượng 1
 - Giỏ của Khách hàng đã đăng nhập lưu trong DB; mỗi Khách hàng có 1 giỏ, mỗi biến thể chỉ có 1 dòng trong giỏ (theo ERD).
 - Giỏ của khách vãng lai lưu ở `localStorage` của trình duyệt (đã chốt 20/11/2026, data model v2, Q23d).
 - Giỏ không lưu giá; luôn hiển thị giá hiện tại, không giữ giá lúc thêm (đã chốt 20/11/2026, data model v2, Q26).
+- Mỗi Khách hàng có đúng 1 giỏ trong DB, tạo cùng lúc tạo tài khoản Khách hàng (UC-01, UC-06). Trang giỏ luôn có giỏ để đọc / ghi, không tạo giỏ khi thêm sản phẩm lần đầu (đã chốt 21/11/2026, Q39).
 
 ### Giả định [GD]
 - Khi đăng nhập, giỏ trong `localStorage` gộp vào giỏ tài khoản; dòng trùng cộng dồn nhưng không vượt tồn kho.
@@ -104,3 +105,5 @@ Then: giỏ có dòng "Đỏ / M" số lượng 1
 - v1 (2026-11-15): initial
 - v2 (2026-11-15): giỏ của Khách hàng đăng nhập lưu trong DB, 1 dòng mỗi biến thể (theo ERD); thêm AC-8
 - v3 (2026-11-20): theo data model v2 — chốt giỏ khách vãng lai lưu ở `localStorage` (2a, 2b); chốt giỏ không lưu giá
+- v4 (2026-11-21): bổ sung giả định tạo giỏ hàng cùng lúc tạo tài khoản Khách hàng
+- v5 (2026-11-21): chốt tạo giỏ hàng cùng lúc tạo tài khoản Khách hàng (Q39)

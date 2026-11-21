@@ -17,9 +17,9 @@ Admin bấm "Tạo tài khoản" trong khu vực quản lý tài khoản.
 
 ## Main Flow
 1. Admin mở form tạo tài khoản.
-2. Admin nhập họ tên, ngày sinh, địa chỉ, email, số điện thoại, mật khẩu ban đầu `[GD]` và chọn một trong 3 vai trò: Khách hàng, Nhân viên hoặc Admin.
+2. Admin nhập họ tên, ngày sinh, địa chỉ, email, số điện thoại, mật khẩu ban đầu `[GD]` và chọn một trong 3 vai trò: Khách hàng, Nhân viên hoặc Admin. Ngày sinh bắt buộc với Nhân viên và Admin (mã tài khoản dùng ngày sinh).
 3. Hệ thống kiểm tra dữ liệu hợp lệ và email, số điện thoại chưa được dùng.
-4. Trong cùng một transaction `[GD]`, hệ thống tạo account (email, số điện thoại, mật khẩu đã hash, vai trò đã chọn, trạng thái Hoạt động) và hồ sơ tương ứng với vai trò: Customer nếu là Khách hàng, Employee nếu là Nhân viên, Admin nếu là Admin (họ tên, ngày sinh, địa chỉ).
+4. Trong cùng một transaction `[GD]`, hệ thống cấp mã tài khoản theo vai trò (`KH-<YYYYMMDD ngày tạo>-<4 số>`, `NV-` / `AD-<HỌ TÊN>-<YYYYMMDD ngày sinh>-<4 số>`) và tạo account gồm email, số điện thoại, mật khẩu đã hash, vai trò đã chọn, trạng thái Hoạt động, họ tên, ngày sinh, địa chỉ. Nếu vai trò là Khách hàng, hệ thống đồng thời tạo giỏ hàng và danh sách yêu thích trống (đã chốt 21/11/2026).
 5. Hệ thống báo tạo thành công; tài khoản mới hiện trong danh sách tài khoản (UC-07).
 
 ## Alternative Flows
@@ -29,10 +29,12 @@ Admin bấm "Tạo tài khoản" trong khu vực quản lý tài khoản.
 - **E1. Email hoặc số điện thoại đã được dùng:** hệ thống báo trường bị trùng, không tạo tài khoản.
 - **E2. Dữ liệu không hợp lệ:** thiếu trường bắt buộc, sai định dạng, mật khẩu dưới 6 ký tự `[GD]` — hệ thống báo lỗi tại trường tương ứng, không tạo.
 - **E3. Vai trò không hợp lệ:** vai trò không thuộc 3 vai trò cố định — hệ thống từ chối.
+- **E4. Thiếu ngày sinh khi tạo Nhân viên hoặc Admin:** hệ thống báo lỗi ở ô ngày sinh, không tạo.
 
 ## Postconditions
 - Có account mới, đăng nhập được ngay bằng mật khẩu ban đầu (UC-02), không bắt buộc đổi mật khẩu ở lần đăng nhập đầu.
-- Có hồ sơ Customer, Employee hoặc Admin (theo vai trò) gắn với account đó.
+- Account có mã theo vai trò (`KH-`, `NV-` hoặc `AD-`).
+- Tài khoản vai trò Khách hàng có 1 giỏ hàng trống và 1 danh sách yêu thích trống (UC-18, UC-38).
 
 ## Acceptance Criteria
 
@@ -40,14 +42,14 @@ Admin bấm "Tạo tài khoản" trong khu vực quản lý tài khoản.
 Given: Admin đang đăng nhập, email "nv1@example.com" chưa được dùng
 When: Admin nhập đủ thông tin, chọn vai trò Nhân viên và bấm "Tạo"
 Then: hệ thống tạo account vai trò Nhân viên, trạng thái Hoạt động
-And: hệ thống tạo hồ sơ Employee gắn với account đó
+And: account có mã dạng `NV-<HỌ TÊN>-<YYYYMMDD ngày sinh>-<4 số>`
 And: tài khoản đăng nhập được bằng mật khẩu ban đầu
 
 ### AC-2: Tạo tài khoản Admin
 Given: Admin đang đăng nhập
 When: Admin tạo tài khoản với vai trò Admin
 Then: hệ thống tạo account vai trò Admin
-And: hệ thống tạo hồ sơ Admin gắn với account đó
+And: account có mã dạng `AD-<HỌ TÊN>-<YYYYMMDD ngày sinh>-<4 số>`
 
 ### AC-3: Email hoặc số điện thoại trùng
 Given: đã có tài khoản dùng email "nv1@example.com"
@@ -59,7 +61,7 @@ And: không có tài khoản mới nào được tạo
 Given: Admin đang đăng nhập, email "kh1@example.com" và số điện thoại "0901234567" chưa được dùng
 When: Admin nhập đủ thông tin, chọn vai trò Khách hàng và bấm "Tạo"
 Then: hệ thống tạo account vai trò Khách hàng, trạng thái Hoạt động
-And: hệ thống tạo hồ sơ Customer gắn với account đó
+And: account có mã dạng `KH-<YYYYMMDD ngày tạo>-<4 số>`
 And: tài khoản đăng nhập được ngay và đặt hàng được như tài khoản khách tự đăng ký, không bị yêu cầu đổi mật khẩu
 
 ### AC-5: Vai trò khác không tạo được tài khoản
@@ -77,14 +79,17 @@ Then: hệ thống từ chối truy cập
 
 ### Quyết định đã chốt
 - Admin chỉ quản lý tài khoản và gán vai trò cho tài khoản; mọi thao tác vận hành cửa hàng do Nhân viên thực hiện (đã chốt 15/11/2026).
-- Account chỉ giữ thông tin đăng nhập: email (unique), số điện thoại (unique), mật khẩu đã hash, vai trò, trạng thái; không có username riêng (theo ERD, đã chốt 15/11/2026).
-- Thông tin cá nhân (họ tên, ngày sinh, địa chỉ) nằm ở hồ sơ riêng theo vai trò: Customer cho Khách hàng, Employee cho Nhân viên, Admin cho Admin; mỗi hồ sơ có khóa ngoại tới account (theo ERD, đã chốt 15/11/2026).
+- Account gồm thông tin đăng nhập (email unique, số điện thoại unique, mật khẩu đã hash, vai trò, trạng thái) và thông tin cá nhân (họ tên, ngày sinh, địa chỉ) cho cả 3 vai trò; không có username riêng (đã chốt 21/11/2026, data model v2, thay quyết định hồ sơ riêng theo vai trò ngày 15/11/2026).
+- Mã tài khoản do hệ thống cấp theo vai trò, bộ đếm 4 số riêng cho từng tiền tố `KH`, `NV`, `AD`; ngày sinh bắt buộc với Nhân viên và Admin (đã chốt 21/11/2026).
 - Admin toàn quyền tạo tài khoản với mọi vai trò: Khách hàng, Nhân viên, Admin (đã chốt 20/11/2026).
 - Tài khoản do Admin tạo dùng được ngay, không bắt buộc đổi mật khẩu ở lần đăng nhập đầu (đã chốt 20/11/2026).
 - Tài khoản do Admin tạo cũng bắt buộc đủ email và số điện thoại, không trùng tài khoản khác (như đăng ký, UC-01).
+- Ngày đăng ký trong mã `KH-` lấy theo giờ `Asia/Ho_Chi_Minh` của `account_created_at` (đã chốt 21/11/2026).
+- Mật khẩu băm bằng bcrypt (đã chốt 21/11/2026).
+- Khi tạo tài khoản Khách hàng, giỏ hàng và danh sách yêu thích trống được tạo cùng transaction tạo account; module identity gọi service công khai của shopping (đã chốt 21/11/2026, Q39).
 
 ### Giả định [GD]
-- Tạo account và hồ sơ theo vai trò trong cùng một transaction.
+- Cấp mã và tạo account trong cùng một transaction.
 - Admin đặt mật khẩu ban đầu cho tài khoản; mật khẩu tối thiểu 6 ký tự.
 - Hệ thống có sẵn 1 tài khoản Admin khi khởi tạo.
 
@@ -93,3 +98,6 @@ Then: hệ thống từ chối truy cập
 - v2 (2026-11-15): chốt phạm vi quyền của Admin
 - v3 (2026-11-15): theo ERD — tạo account và hồ sơ Employee/Admin riêng theo vai trò
 - v4 (2026-11-20): Admin tạo được tài khoản mọi vai trò (thêm Khách hàng, tạo hồ sơ Customer); đổi tên UC và file thành `UC-06-create-account.md`; tài khoản dùng được ngay, không bắt buộc đổi mật khẩu
+- v5 (2026-11-21): theo data model v2 — bỏ hồ sơ riêng theo vai trò, thông tin cá nhân nằm trong account; cấp mã theo vai trò (bước 4, AC-1, AC-2, AC-4); thêm E4 thiếu ngày sinh cho Nhân viên / Admin
+- v6 (2026-11-21): chốt bcrypt và múi giờ của mã `KH-`, bổ sung giả định tạo giỏ hàng và danh sách yêu thích cho Khách hàng
+- v7 (2026-11-21): chốt tạo giỏ hàng và danh sách yêu thích cùng transaction tạo tài khoản Khách hàng (Q39)

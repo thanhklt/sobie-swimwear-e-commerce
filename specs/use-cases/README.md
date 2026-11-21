@@ -27,7 +27,7 @@ Dự án là modular monolith gồm 9 module. Một module dùng chung một tê
 
 | Module | BR | Phạm vi | Bảng (schema cùng tên) |
 |---|---|---|---|
-| [identity](identity/) | BR-001 | Vai trò, tài khoản, đăng nhập, hồ sơ Khách hàng / Nhân viên / Admin, quản lý tài khoản | role, account, customer, employee, admin |
+| [identity](identity/) | BR-001 | Vai trò, tài khoản (gồm thông tin cá nhân), đăng nhập, phiên đăng nhập, quản lý tài khoản | role, account, session |
 | [catalog](catalog/) | BR-002 | Trang bán hàng, sản phẩm, biến thể, giá bán theo size, phân loại, ảnh | category, collection, gender, size, color, product, product_collection, variant, gallery |
 | [shopping](shopping/) | BR-002, BR-003 | Giỏ hàng, danh sách yêu thích | cart, cart_item, wishlist, wishlist_item |
 | [ordering](ordering/) | BR-003 | Đặt hàng COD/QR, vòng đời đơn, hủy đơn, tự hủy đơn QR quá hạn, hóa đơn | payment (phương thức), order, order_detail, order_status_history, invoice |
@@ -35,7 +35,7 @@ Dự án là modular monolith gồm 9 module. Một module dùng chung một tê
 | [promotion](promotion/) | BR-004 | 3 loại khuyến mãi, tính mức giảm | promotion, product_promotion, order_promotion, code_promotion |
 | [inventory](inventory/) | BR-005 | Nhà cung cấp, phiếu nhập, tồn kho, giá vốn | supplier, goods_receipt, goods_receipt_detail, stock |
 | [shipping](shipping/) | BR-006 | Bàn giao vận chuyển, trang giả lập vận chuyển | (không có — đổi trạng thái đơn qua service của ordering) |
-| [reporting](reporting/) | BR-007 | Dashboard | (không có — đọc qua service của module khác) |
+| [reporting](reporting/) | BR-007, BR-002 | Dashboard; khối bán chạy trên trang chủ `[GD]` | (không có — đọc qua service của module khác) |
 
 Module giao tiếp qua service công khai; không đọc / ghi bảng hoặc gọi repository của module khác (AGENTS.md).
 
@@ -104,9 +104,18 @@ Chưa xử lý ──(UC-23 xác nhận)──► Đã xác nhận ──(UC-40 
 | Trạng thái đơn | Bộ trạng thái như sơ đồ trên; Nhân viên bàn giao vận chuyển thì đơn sang "Chờ lấy hàng", đơn vị vận chuyển bấm "Đã nhận hàng" thì sang "Đang giao" (cập nhật 20/11/2026) | UC-19 → UC-24, UC-36, UC-40 |
 | Hủy đơn | Cộng lại tồn kho và hoàn lượt voucher. Khách hủy khi "Chưa xử lý"; Nhân viên hủy đến trước khi vận chuyển nhận hàng, bắt buộc nhập lý do, khách không thấy lý do; không còn "Từ chối" (cập nhật 20/11/2026) | UC-22, UC-23, UC-24, UC-31 |
 | Phân quyền | Admin chỉ quản lý tài khoản (tạo được tài khoản mọi vai trò, dùng ngay không bắt buộc đổi mật khẩu — 20/11/2026) và đổi vai trò giữa Nhân viên và Admin; Nhân viên vận hành cửa hàng; Admin không xem hóa đơn, dashboard | UC-02, UC-06, UC-07, UC-14, UC-23, UC-27, UC-37 |
-| Đổi vai trò | Chỉ đổi qua lại giữa Nhân viên và Admin; không đổi Khách hàng ↔ Nhân viên/Admin (chốt lại 20/11/2026); có hiệu lực ngay; tài khoản đang đăng nhập bị đăng xuất; hồ sơ được cấp mã mới (`NV-` ↔ `AD-`) | UC-07 |
-| Tài khoản (ERD) | Account gồm email, SĐT (unique), mật khẩu, vai trò, trạng thái; không có username. Hồ sơ Customer / Employee / Admin gồm họ tên, ngày sinh, địa chỉ | UC-01, UC-02, UC-04, UC-06, UC-07 |
+| Đổi vai trò | Chỉ đổi qua lại giữa Nhân viên và Admin; không đổi Khách hàng ↔ Nhân viên/Admin (chốt lại 20/11/2026); có hiệu lực ngay; tài khoản đang đăng nhập bị đăng xuất; tài khoản được cấp mã mới (`NV-` ↔ `AD-`) | UC-07 |
+| Tài khoản | Account gồm email, SĐT (unique), mật khẩu, vai trò, trạng thái và họ tên, ngày sinh, địa chỉ; không có username; không còn hồ sơ riêng theo vai trò (21/11/2026). Mã `KH-` / `NV-` / `AD-` do hệ thống cấp, bộ đếm riêng từng loại; ngày sinh bắt buộc với Nhân viên, Admin | UC-01, UC-02, UC-04, UC-06, UC-07 |
+| Mật khẩu | Băm bằng bcrypt (21/11/2026) | UC-01, UC-05, UC-06 |
+| Mã khách hàng | Ngày đăng ký trong mã `KH-` lấy theo giờ `Asia/Ho_Chi_Minh` (21/11/2026) | UC-01, UC-06 |
+| Giỏ hàng, danh sách yêu thích | Mỗi Khách hàng có 1 giỏ và 1 danh sách yêu thích, tạo cùng transaction tạo tài khoản Khách hàng; identity gọi service công khai của shopping (21/11/2026, Q39) | UC-01, UC-06, UC-18, UC-38 |
 | Đăng ký / đăng nhập | Đăng ký nhập đủ email và SĐT; đăng nhập bằng một trong hai | UC-01, UC-02 |
+| Cổng đăng nhập | Storefront chỉ cho Khách hàng; Nhân viên / Admin đăng nhập ở storefront bị báo "Thông tin đăng nhập không đúng"; Nhân viên và Admin dùng portal quản trị riêng (21/11/2026) | UC-02 |
+| Quên mật khẩu | Làm ở giai đoạn 2; giai đoạn 1 storefront có nút "Quên mật khẩu" nhưng không có hành động (21/11/2026) | UC-02 |
+| Xác thực | Website SSR nên dùng phiên phía server lưu ở `identity.session`, không dùng JWT; cookie `HttpOnly`, `Secure`, `SameSite=Lax`, kiểm tra header `Origin` ở mọi request ghi; hạn phiên Khách hàng 30 phút, Nhân viên / Admin 1 giờ, tính từ lần thao tác cuối; rate limit theo IP: đăng nhập 5 lần/phút (21/11/2026) | UC-02, UC-03 |
+| Kết thúc phiên | Đổi vai trò, khóa, đổi mật khẩu xóa mọi `identity.session` của tài khoản → mọi phiên kết thúc ngay (đổi mật khẩu kết thúc cả phiên hiện tại); đăng xuất xóa phiên hiện tại, có hiệu lực ngay (21/11/2026) | UC-03, UC-05, UC-07, UC-08 |
+| Cache | Không phải danh sách nào cũng cache. Chỉ dữ liệu công khai cache ở Redis (cache dữ liệu, không cache HTML): danh mục, thuộc tính, danh sách sản phẩm theo danh mục, trang chủ (theo số phiên bản catalog, TTL 5 phút), khuyến mãi đang hiệu lực, khối bán chạy. Không cache: kết quả tìm kiếm, mọi trang / danh sách cần đăng nhập (kể cả portal quản trị), dashboard. Header: không trang HTML nào `public`; trang công khai `private, no-cache`, không dùng `ETag`; trang cần đăng nhập `no-store`; `Vary: HX-Request`; file tĩnh cache 1 năm (21/11/2026, cập nhật cho SSR) | Mọi UC có danh sách |
+| Khối bán chạy trang chủ | Top 5 sản phẩm theo tổng số lượng bán, 7 ngày gần nhất, tính đơn từ lúc đặt; tác vụ 10 phút; Ngừng bán biến mất ngay (21/11/2026) | UC-09 |
 | Trang danh mục | Lọc theo giới tính, size, danh mục, bộ sưu tập; sắp xếp mặc định mới nhất | UC-10 |
 | Sản phẩm (ERD) | 1 danh mục, 1 giới tính, nhiều bộ sưu tập; ảnh (gallery) theo sản phẩm, có thứ tự; review để giai đoạn 2 | UC-12, UC-14, UC-17 |
 | Giá bán | Chỉ đổi theo size; cùng size khác màu cùng giá | UC-12, UC-16 |
@@ -136,6 +145,7 @@ Chưa xử lý ──(UC-23 xác nhận)──► Đã xác nhận ──(UC-40 
 | Sửa khuyến mãi | Khuyến mãi đã tạo không được sửa, chỉ ngừng; tạo có popup xác nhận | UC-28 → UC-31 |
 | Tra cứu khuyến mãi | Không có tên, nhận diện bằng mã `KM-<4 số>`; danh sách khuyến mãi theo hóa đơn và voucher lọc theo khoảng thời gian — hiện khuyến mãi có thời gian hiệu lực giao với khoảng chọn (kể cả một phần); khuyến mãi theo sản phẩm không lọc theo thời gian (20/11/2026) | UC-28, UC-29, UC-30 |
 | Nhà cung cấp | Có trạng thái Đang hợp tác / Ngừng hợp tác; chỉ chọn nhà cung cấp Đang hợp tác khi lập phiếu | UC-32, UC-33 |
+| Giá nhập | Số nguyên VND ≥ 0 (21/11/2026) | UC-33 |
 | Phiếu nhập | Không lưu người / thời điểm xác nhận | UC-34 |
 | Hàng hoàn | Chống cộng tồn hai lần bằng trạng thái đơn, không có cột đánh dấu | UC-35 |
 
@@ -149,34 +159,38 @@ Mỗi dòng là một giả định đang có trong mục *Notes* của UC, ch�
 | UC | Giả định |
 |---|---|
 | UC-01 | Ngày sinh và địa chỉ nhận hàng không bắt buộc khi đăng ký; khách bổ sung ở UC-04. |
-| UC-01 | Tạo account và hồ sơ Customer trong cùng một transaction. |
+| UC-01 | Cấp mã và tạo account trong cùng một transaction. |
 | UC-01 | Mật khẩu tối thiểu 6 ký tự. |
 | UC-01 | Đăng ký xong chuyển tới trang đăng nhập, không tự đăng nhập. |
 | UC-01 | Người đã đăng nhập mở trang đăng ký thì bị chuyển về trang chủ. |
-| UC-02 | Sau đăng nhập: Khách hàng về trang bán hàng; Nhân viên và Admin về khu vực quản trị. |
+| UC-02 | Sau đăng nhập: Khách hàng về trang bán hàng; Nhân viên và Admin về trang đầu của portal quản trị. |
 | UC-02 | Đăng nhập khi đang đặt hàng thì quay lại trang đang thao tác. |
 | UC-02 | Sai thông tin đăng nhập báo chung, không chỉ rõ sai tài khoản hay mật khẩu. |
+| UC-02 | Portal quản trị từ chối tài khoản Khách hàng với cùng thông báo "Thông tin đăng nhập không đúng". |
+| UC-02 | Portal quản trị không có nút "Quên mật khẩu". |
+| UC-02 | Vượt rate limit trả HTTP 429. |
+| UC-02 | Storefront và portal quản trị dùng 2 cookie phiên khác tên; một trình duyệt có thể đăng nhập cùng lúc vào cả hai cổng. |
 | UC-03 | Toàn bộ UC này là giả định: BR-001 chỉ nêu đăng ký và đăng nhập, không nêu đăng xuất. |
 | UC-03 | Đăng xuất chỉ kết thúc phiên trên thiết bị hiện tại. |
 | UC-03 | Sau đăng xuất chuyển về trang chủ. |
-| UC-04 | Lưu hồ sơ Customer và account trong cùng một transaction. |
-| UC-04 | Địa chỉ trong hồ sơ được điền sẵn khi đặt hàng. |
+| UC-04 | Địa chỉ trong tài khoản được điền sẵn khi đặt hàng. |
 | UC-04 | Đổi email hoặc số điện thoại không cần xác minh lại. |
 | UC-05 | Nhân viên và Admin cũng tự đổi được mật khẩu của mình. |
 | UC-05 | Mật khẩu mới tối thiểu 6 ký tự và phải khác mật khẩu hiện tại. |
-| UC-05 | Đổi mật khẩu không đăng xuất phiên hiện tại. |
-| UC-06 | Tạo account và hồ sơ theo vai trò trong cùng một transaction. |
+| UC-06 | Cấp mã và tạo account trong cùng một transaction. |
 | UC-06 | Admin đặt mật khẩu ban đầu cho tài khoản; mật khẩu tối thiểu 6 ký tự. |
 | UC-06 | Hệ thống có sẵn 1 tài khoản Admin khi khởi tạo. |
 | UC-07 | Việc xem và tìm danh sách tài khoản gộp vào UC này. |
 | UC-07 | Danh sách có phân trang; tìm theo họ tên, email hoặc số điện thoại. |
 | UC-07 | Admin sửa được thông tin mọi tài khoản. |
 | UC-07 | Đổi vai trò giữ nguyên thông tin cá nhân, email, số điện thoại, mật khẩu; lưu trong một transaction, lỗi thì hủy toàn bộ. |
-| UC-08 | Khóa tài khoản kết thúc ngay mọi phiên đăng nhập đang mở của tài khoản đó. |
 | UC-08 | Khóa và mở khóa áp dụng cho mọi vai trò (Khách hàng, Nhân viên, Admin). |
 | UC-08 | Khóa không xóa dữ liệu của tài khoản. |
 | UC-09 | Trang chủ gồm khối hàng mới và khối sản phẩm theo bộ sưu tập. |
 | UC-09 | Khối không có sản phẩm thì ẩn. |
+| UC-09 | Khối bán chạy: "7 ngày gần nhất" là 7 × 24 giờ tính lùi; loại đơn "Đã hủy"; còn dưới 5 sản phẩm sau khi lọc thì hiển thị số còn lại. |
+| UC-09 | Khối bán chạy thuộc module `reporting`, đọc số lượng bán qua `ordering`, lọc trạng thái sản phẩm qua `catalog`. |
+| Chung | Khuyến mãi đang hiệu lực trong Redis: TTL hết hạn ở mốc bắt đầu / kết thúc gần nhất, xóa key khi tạo hoặc kết thúc khuyến mãi. |
 | UC-10 | Các tiêu chí sắp xếp khác ngoài mặc định: giá tăng dần, giá giảm dần. |
 | UC-10 | Các tiêu chí lọc kết hợp theo kiểu "và" (thỏa đồng thời); mỗi tiêu chí chọn một giá trị. |
 | UC-10 | Lọc theo size: sản phẩm có ít nhất một biến thể size đó, không xét còn hàng. |
@@ -258,5 +272,5 @@ Mỗi dòng là một giả định đang có trong mục *Notes* của UC, ch�
 
 ## Câu hỏi mở (từ BR-GIAIDOAN1)
 
-- Chung: phạm vi constraint cache danh sách (danh sách phía khách hay cả trang quản trị; dữ liệu được phép cũ bao lâu).
+- Chung: phạm vi constraint cache — đã chốt 21/11/2026, cập nhật cho SSR (xem bảng quyết định, dòng "Cache"): danh sách quản trị không cache; không dùng `ETag`.
 - Chung `[GD]`: cách gom In Scope thành 7 BR; Success Metric của từng BR suy ra từ metric tổng.

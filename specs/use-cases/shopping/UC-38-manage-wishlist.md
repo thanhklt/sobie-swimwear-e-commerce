@@ -82,7 +82,7 @@ When: Khách hàng Y mở trang "Danh sách yêu thích"
 Then: sản phẩm A không xuất hiện trong danh sách của Y
 
 ## Dependencies
-- **Upstream UC:** UC-02 Đăng nhập, UC-10 Xem sản phẩm theo danh mục, UC-12 Xem chi tiết sản phẩm, UC-14 Quản lý sản phẩm
+- **Upstream UC:** UC-01 Đăng ký tài khoản, UC-02 Đăng nhập, UC-06 Tạo tài khoản, UC-10 Xem sản phẩm theo danh mục, UC-12 Xem chi tiết sản phẩm, UC-14 Quản lý sản phẩm
 - **Downstream UC:** UC-12 Xem chi tiết sản phẩm
 - **External Systems:** không có
 
@@ -92,6 +92,7 @@ Then: sản phẩm A không xuất hiện trong danh sách của Y
 ### Quyết định đã chốt
 - Wishlist là chức năng trong phạm vi MVP: khách thả tim để lưu sản phẩm vào một danh sách (đã chốt 15/11/2026).
 - Mỗi sản phẩm chỉ xuất hiện 1 lần trong danh sách của một tài khoản (theo ERD: unique account + product).
+- Mỗi Khách hàng có đúng 1 danh sách yêu thích trong DB, tạo cùng lúc tạo tài khoản Khách hàng (UC-01, UC-06). Trang danh sách yêu thích luôn có danh sách để đọc / ghi, không tạo danh sách khi thả tim lần đầu (đã chốt 21/11/2026, Q39).
 
 ### Giả định [GD]
 - UC thuộc module shopping (cùng giỏ hàng), đã chốt 20/11/2026.
@@ -103,3 +104,5 @@ Then: sản phẩm A không xuất hiện trong danh sách của Y
 ## History
 - v1 (2026-11-15): initial
 - v2 (2026-11-15): theo data model v1 — sắp xếp theo thứ tự thêm, không dùng cột thời gian
+- v3 (2026-11-21): bổ sung giả định tạo danh sách yêu thích cùng lúc tạo tài khoản Khách hàng
+- v4 (2026-11-21): chốt tạo danh sách yêu thích cùng lúc tạo tài khoản Khách hàng (Q39)

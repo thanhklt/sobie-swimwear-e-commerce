@@ -1,0 +1,587 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1672" height="2009" viewBox="0 0 1672 2009" role="img" aria-labelledby="title desc">
+<title id="title">Soobin Swimwear: module, bảng và service</title>
+<desc id="desc">9 module của modular monolith, bảng CSDL mỗi module sở hữu và các service đề xuất.</desc>
+<rect width="100%" height="100%" fill="#F7F6F3"/>
+<text x="32.0" y="48.0" font-size="26" fill="#1F2328" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" font-weight="700">Soobin Swimwear: module, bảng và service</text>
+<text x="32.0" y="76.0" font-size="13.5" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">Theo specs/ ngày 21/11/2026: bảng theo TableGroup trong data_model_v2.dbml (v2.15); nghiệp vụ theo BR-GIAIDOAN1 v21 và UC. Tên hàm là đề xuất [GD].</text>
+<rect x="32" y="98" width="1608" height="34" rx="8" fill="#FFFFFF" stroke="#D6D2C9"/>
+<rect x="46" y="109" width="12" height="12" rx="2" fill="#E8EFF8" stroke="#1D3B66" stroke-width="0.6"/>
+<text x="64.0" y="120.0" font-size="12.5" fill="#1F2328" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">module có bảng riêng</text>
+<rect x="222" y="109" width="12" height="12" rx="2" fill="#EEEAF6" stroke="#3E2F66" stroke-width="0.6"/>
+<text x="240.0" y="120.0" font-size="12.5" fill="#1F2328" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">module không có bảng</text>
+<circle cx="412" cy="115" r="3.5" fill="#9AA1AA"/>
+<text x="422.0" y="120.0" font-size="12.5" fill="#1F2328" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">service phục vụ route của chính module</text>
+<rect x="682" y="106" width="18" height="18" rx="4" fill="#FFF1E3"/>
+<circle cx="691" cy="115" r="3.5" fill="#C2410C"/>
+<text x="708.0" y="120.0" font-size="12.5" fill="#1F2328" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">service công khai: module khác được gọi</text>
+<text x="992.0" y="120.0" font-size="12.5" fill="#1F2328" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">Gọi sang: module mà service này gọi service công khai</text>
+<g id="module-identity">
+<rect x="32" y="150" width="520" height="688" rx="10" fill="#FFFFFF" stroke="#D6D2C9"/>
+<path d="M32,160 a10,10 0 0 1 10,-10 h500 a10,10 0 0 1 10,10 v36 h-520 z" fill="#E8EFF8"/>
+<line x1="32" y1="196" x2="552" y2="196" stroke="#D6D2C9"/>
+<text x="48.0" y="180.0" font-size="19" fill="#1D3B66" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="700">identity</text>
+<text x="536.0" y="179.0" font-size="12.5" fill="#1D3B66" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">BR-001  ·  UC-01 → 08</text>
+<text x="48.0" y="221.0" font-size="12.5" fill="#1F2328" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">Quản lý tài khoản của Khách hàng, Nhân viên, Admin: đăng ký, đăng nhập ở 2</text>
+<text x="48.0" y="239.0" font-size="12.5" fill="#1F2328" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">cổng (storefront, portal quản trị), phiên đăng nhập, hồ sơ, đổi mật khẩu.</text>
+<text x="48.0" y="257.0" font-size="12.5" fill="#1F2328" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">Admin tạo, sửa, khóa tài khoản và đổi vai trò Nhân viên ↔ Admin.</text>
+<line x1="48" y1="274" x2="536" y2="274" stroke="#ECE9E3"/>
+<text x="48.0" y="294.0" font-size="11" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" font-weight="700">BẢNG  ·  schema identity</text>
+<rect x="48" y="304" width="6" height="6" rx="1" fill="#1D3B66"/>
+<text x="62.0" y="311.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="600">role</text>
+<text x="129.0" y="311.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">vai trò: customer | employee | admin</text>
+<rect x="48" y="325" width="6" height="6" rx="1" fill="#1D3B66"/>
+<text x="62.0" y="332.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="600">account</text>
+<text x="129.0" y="332.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">đăng nhập + thông tin cá nhân</text>
+<rect x="48" y="346" width="6" height="6" rx="1" fill="#1D3B66"/>
+<text x="62.0" y="353.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="600">session</text>
+<text x="129.0" y="353.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">phiên phía server, hạn 30 phút / 1 giờ</text>
+<text x="48.0" y="374.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" font-style="italic">Hồ sơ customer, employee, admin đã gộp vào account (v2.13)</text>
+<text x="48.0" y="395.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" font-style="italic">SSR: phiên lưu ở bảng session, không dùng JWT (v2.15)</text>
+<line x1="48" y1="419" x2="536" y2="419" stroke="#ECE9E3"/>
+<text x="48.0" y="439.0" font-size="11" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" font-weight="700">SERVICE  ·  app/modules/identity/service.py</text>
+<circle cx="51" cy="451" r="3.5" fill="#9AA1AA"/>
+<text x="62.0" y="456.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">register_customer()</text>
+<text x="225.0" y="456.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">cấp mã KH-, tạo account</text>
+<text x="536.0" y="456.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-01</text>
+<circle cx="51" cy="472" r="3.5" fill="#9AA1AA"/>
+<text x="62.0" y="477.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">login()</text>
+<text x="225.0" y="477.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">tạo session; storefront KH, portal NV/AD</text>
+<text x="536.0" y="477.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-02</text>
+<circle cx="51" cy="493" r="3.5" fill="#9AA1AA"/>
+<text x="62.0" y="498.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">logout()</text>
+<text x="225.0" y="498.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">xóa session hiện tại</text>
+<text x="536.0" y="498.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-03</text>
+<circle cx="51" cy="514" r="3.5" fill="#9AA1AA"/>
+<text x="62.0" y="519.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">update_profile()</text>
+<text x="225.0" y="519.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">họ tên, ngày sinh, địa chỉ</text>
+<text x="536.0" y="519.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-04</text>
+<circle cx="51" cy="535" r="3.5" fill="#9AA1AA"/>
+<text x="62.0" y="540.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">change_password()</text>
+<text x="225.0" y="540.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">xóa mọi session của tài khoản</text>
+<text x="536.0" y="540.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-05</text>
+<circle cx="51" cy="556" r="3.5" fill="#9AA1AA"/>
+<text x="62.0" y="561.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">create_account()</text>
+<text x="225.0" y="561.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">admin tạo, cấp mã KH / NV / AD</text>
+<text x="536.0" y="561.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-06</text>
+<circle cx="51" cy="577" r="3.5" fill="#9AA1AA"/>
+<text x="62.0" y="582.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">edit_account()</text>
+<text x="225.0" y="582.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">đổi vai trò NV ↔ AD, xóa session</text>
+<text x="536.0" y="582.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-07</text>
+<circle cx="51" cy="598" r="3.5" fill="#9AA1AA"/>
+<text x="62.0" y="603.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">lock() / unlock()</text>
+<text x="225.0" y="603.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">khóa thì xóa mọi session</text>
+<text x="536.0" y="603.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-08</text>
+<rect x="40" y="608.5" width="504" height="20" rx="4" fill="#FFF1E3"/>
+<circle cx="51" cy="619" r="3.5" fill="#C2410C"/>
+<text x="62.0" y="624.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">get_current_account()</text>
+<text x="225.0" y="624.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">đọc session từ cookie, gia hạn</text>
+<text x="536.0" y="624.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">mọi UC</text>
+<rect x="40" y="629.5" width="504" height="20" rx="4" fill="#FFF1E3"/>
+<circle cx="51" cy="640" r="3.5" fill="#C2410C"/>
+<text x="62.0" y="645.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">get_shipping_info()</text>
+<text x="225.0" y="645.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">thông tin nhận hàng mặc định</text>
+<text x="536.0" y="645.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-19, 20</text>
+<rect x="40" y="650.5" width="504" height="20" rx="4" fill="#FFF1E3"/>
+<circle cx="51" cy="661" r="3.5" fill="#C2410C"/>
+<text x="62.0" y="666.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">is_customer()</text>
+<text x="225.0" y="666.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">kiểm tra vai trò Khách hàng</text>
+<text x="536.0" y="666.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-18, 38</text>
+<line x1="48" y1="690" x2="536" y2="690" stroke="#ECE9E3"/>
+<text x="48.0" y="708.0" font-size="12" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" font-weight="700">Gọi sang:</text>
+<text x="114.0" y="708.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">không gọi module nào</text>
+</g>
+<g id="module-catalog">
+<rect x="576" y="150" width="520" height="688" rx="10" fill="#FFFFFF" stroke="#D6D2C9"/>
+<path d="M576,160 a10,10 0 0 1 10,-10 h500 a10,10 0 0 1 10,10 v36 h-520 z" fill="#E8EFF8"/>
+<line x1="576" y1="196" x2="1096" y2="196" stroke="#D6D2C9"/>
+<text x="592.0" y="180.0" font-size="19" fill="#1D3B66" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="700">catalog</text>
+<text x="1080.0" y="179.0" font-size="12.5" fill="#1D3B66" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">BR-002  ·  UC-09 → 17</text>
+<text x="592.0" y="221.0" font-size="12.5" fill="#1F2328" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">Trang bán hàng cho khách: trang chủ, danh mục, tìm kiếm, chi tiết sản</text>
+<text x="592.0" y="239.0" font-size="12.5" fill="#1F2328" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">phẩm, trang thông tin. Nhân viên quản lý sản phẩm, biến thể màu × size,</text>
+<text x="592.0" y="257.0" font-size="12.5" fill="#1F2328" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">giá bán theo size, danh mục, bộ sưu tập.</text>
+<line x1="592" y1="274" x2="1080" y2="274" stroke="#ECE9E3"/>
+<text x="592.0" y="294.0" font-size="11" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" font-weight="700">BẢNG  ·  schema catalog</text>
+<rect x="592" y="304" width="6" height="6" rx="1" fill="#1D3B66"/>
+<text x="606.0" y="311.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="600">category</text>
+<text x="750.0" y="311.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">danh mục</text>
+<rect x="592" y="325" width="6" height="6" rx="1" fill="#1D3B66"/>
+<text x="606.0" y="332.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="600">collection</text>
+<text x="750.0" y="332.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">bộ sưu tập</text>
+<rect x="592" y="346" width="6" height="6" rx="1" fill="#1D3B66"/>
+<text x="606.0" y="353.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="600">gender</text>
+<text x="750.0" y="353.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">giới tính</text>
+<rect x="592" y="367" width="6" height="6" rx="1" fill="#1D3B66"/>
+<text x="606.0" y="374.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="600">size</text>
+<text x="750.0" y="374.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">size</text>
+<rect x="592" y="388" width="6" height="6" rx="1" fill="#1D3B66"/>
+<text x="606.0" y="395.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="600">color</text>
+<text x="750.0" y="395.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">màu</text>
+<rect x="592" y="409" width="6" height="6" rx="1" fill="#1D3B66"/>
+<text x="606.0" y="416.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="600">product</text>
+<text x="750.0" y="416.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">sản phẩm</text>
+<rect x="592" y="430" width="6" height="6" rx="1" fill="#1D3B66"/>
+<text x="606.0" y="437.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="600">product_collection</text>
+<text x="750.0" y="437.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">sản phẩm ↔ bộ sưu tập</text>
+<rect x="592" y="451" width="6" height="6" rx="1" fill="#1D3B66"/>
+<text x="606.0" y="458.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="600">variant</text>
+<text x="750.0" y="458.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">màu × size, giá bán theo size</text>
+<rect x="592" y="472" width="6" height="6" rx="1" fill="#1D3B66"/>
+<text x="606.0" y="479.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="600">gallery</text>
+<text x="750.0" y="479.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">ảnh sản phẩm</text>
+<line x1="592" y1="503" x2="1080" y2="503" stroke="#ECE9E3"/>
+<text x="592.0" y="523.0" font-size="11" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" font-weight="700">SERVICE  ·  app/modules/catalog/service.py</text>
+<circle cx="595" cy="535" r="3.5" fill="#9AA1AA"/>
+<text x="606.0" y="540.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">get_home_page()</text>
+<text x="776.0" y="540.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">hàng mới, bộ sưu tập, bán chạy</text>
+<text x="1080.0" y="540.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-09</text>
+<circle cx="595" cy="556" r="3.5" fill="#9AA1AA"/>
+<text x="606.0" y="561.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">list_products()</text>
+<text x="776.0" y="561.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">lọc, sắp xếp, phân trang</text>
+<text x="1080.0" y="561.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-10</text>
+<circle cx="595" cy="577" r="3.5" fill="#9AA1AA"/>
+<text x="606.0" y="582.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">search_products()</text>
+<text x="776.0" y="582.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">tìm theo tên, từ khóa</text>
+<text x="1080.0" y="582.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-11</text>
+<circle cx="595" cy="598" r="3.5" fill="#9AA1AA"/>
+<text x="606.0" y="603.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">get_product_detail()</text>
+<text x="776.0" y="603.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">màu, size, ảnh, còn hàng</text>
+<text x="1080.0" y="603.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-12</text>
+<circle cx="595" cy="619" r="3.5" fill="#9AA1AA"/>
+<text x="606.0" y="624.0" font-size="12.5" fill="#5F6670" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-style="italic">(không có service)</text>
+<text x="776.0" y="624.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">trang tĩnh: chỉ route + template</text>
+<text x="1080.0" y="624.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-13</text>
+<circle cx="595" cy="640" r="3.5" fill="#9AA1AA"/>
+<text x="606.0" y="645.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">manage_product()</text>
+<text x="776.0" y="645.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">tạo, sửa, ngừng bán</text>
+<text x="1080.0" y="645.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-14</text>
+<circle cx="595" cy="661" r="3.5" fill="#9AA1AA"/>
+<text x="606.0" y="666.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">manage_variant()</text>
+<text x="776.0" y="666.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">thêm, ngừng bán màu × size</text>
+<text x="1080.0" y="666.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-15</text>
+<circle cx="595" cy="682" r="3.5" fill="#9AA1AA"/>
+<text x="606.0" y="687.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">update_size_price()</text>
+<text x="776.0" y="687.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">giá bán theo size</text>
+<text x="1080.0" y="687.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-16</text>
+<circle cx="595" cy="703" r="3.5" fill="#9AA1AA"/>
+<text x="606.0" y="708.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">manage_taxonomy()</text>
+<text x="776.0" y="708.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">danh mục, bộ sưu tập, thuộc tính</text>
+<text x="1080.0" y="708.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-17</text>
+<rect x="584" y="713.5" width="504" height="20" rx="4" fill="#FFF1E3"/>
+<circle cx="595" cy="724" r="3.5" fill="#C2410C"/>
+<text x="606.0" y="729.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">get_variants()</text>
+<text x="776.0" y="729.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">thông tin, giá bán hiện tại</text>
+<text x="1080.0" y="729.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-18 → 20</text>
+<rect x="584" y="734.5" width="504" height="20" rx="4" fill="#FFF1E3"/>
+<circle cx="595" cy="745" r="3.5" fill="#C2410C"/>
+<text x="606.0" y="750.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">is_on_sale()</text>
+<text x="776.0" y="750.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">sản phẩm / biến thể đang bán</text>
+<text x="1080.0" y="750.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-09, 18 → 20</text>
+<rect x="584" y="755.5" width="504" height="20" rx="4" fill="#FFF1E3"/>
+<circle cx="595" cy="766" r="3.5" fill="#C2410C"/>
+<text x="606.0" y="771.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">bump_catalog_version()</text>
+<text x="776.0" y="771.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">làm mới cache Redis trang bán</text>
+<text x="1080.0" y="771.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-14, 28, 34</text>
+<line x1="592" y1="795" x2="1080" y2="795" stroke="#ECE9E3"/>
+<text x="592.0" y="813.0" font-size="12" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" font-weight="700">Gọi sang:</text>
+<text x="658.0" y="813.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">inventory, promotion, reporting</text>
+</g>
+<g id="module-shopping">
+<rect x="1120" y="150" width="520" height="688" rx="10" fill="#FFFFFF" stroke="#D6D2C9"/>
+<path d="M1120,160 a10,10 0 0 1 10,-10 h500 a10,10 0 0 1 10,10 v36 h-520 z" fill="#E8EFF8"/>
+<line x1="1120" y1="196" x2="1640" y2="196" stroke="#D6D2C9"/>
+<text x="1136.0" y="180.0" font-size="19" fill="#1D3B66" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="700">shopping</text>
+<text x="1624.0" y="179.0" font-size="12.5" fill="#1D3B66" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">BR-002, 003  ·  UC-18, 38</text>
+<text x="1136.0" y="221.0" font-size="12.5" fill="#1F2328" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">Giỏ hàng và danh sách yêu thích của khách. Giỏ khách vãng lai lưu ở trình</text>
+<text x="1136.0" y="239.0" font-size="12.5" fill="#1F2328" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">duyệt, gộp vào tài khoản khi đăng nhập; giỏ không lưu giá, luôn hiện giá</text>
+<text x="1136.0" y="257.0" font-size="12.5" fill="#1F2328" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">hiện tại.</text>
+<line x1="1136" y1="274" x2="1624" y2="274" stroke="#ECE9E3"/>
+<text x="1136.0" y="294.0" font-size="11" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" font-weight="700">BẢNG  ·  schema shopping</text>
+<rect x="1136" y="304" width="6" height="6" rx="1" fill="#1D3B66"/>
+<text x="1150.0" y="311.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="600">cart</text>
+<text x="1259.0" y="311.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">1 giỏ / account Khách hàng</text>
+<rect x="1136" y="325" width="6" height="6" rx="1" fill="#1D3B66"/>
+<text x="1150.0" y="332.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="600">cart_item</text>
+<text x="1259.0" y="332.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">dòng giỏ, không lưu giá</text>
+<rect x="1136" y="346" width="6" height="6" rx="1" fill="#1D3B66"/>
+<text x="1150.0" y="353.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="600">wishlist</text>
+<text x="1259.0" y="353.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">1 danh sách / account Khách hàng</text>
+<rect x="1136" y="367" width="6" height="6" rx="1" fill="#1D3B66"/>
+<text x="1150.0" y="374.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="600">wishlist_item</text>
+<text x="1259.0" y="374.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">sản phẩm đã thả tim</text>
+<line x1="1136" y1="398" x2="1624" y2="398" stroke="#ECE9E3"/>
+<text x="1136.0" y="418.0" font-size="11" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" font-weight="700">SERVICE  ·  app/modules/shopping/service.py</text>
+<circle cx="1139" cy="430" r="3.5" fill="#9AA1AA"/>
+<text x="1150.0" y="435.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">get_cart()</text>
+<text x="1320.0" y="435.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">dòng giỏ, tạm tính</text>
+<text x="1624.0" y="435.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-18</text>
+<circle cx="1139" cy="451" r="3.5" fill="#9AA1AA"/>
+<text x="1150.0" y="456.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">add_to_cart()</text>
+<text x="1320.0" y="456.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">kiểm tra tồn, cộng dồn</text>
+<text x="1624.0" y="456.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-18</text>
+<circle cx="1139" cy="472" r="3.5" fill="#9AA1AA"/>
+<text x="1150.0" y="477.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">update_cart_item()</text>
+<text x="1320.0" y="477.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">đổi số lượng, xóa dòng</text>
+<text x="1624.0" y="477.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-18</text>
+<circle cx="1139" cy="493" r="3.5" fill="#9AA1AA"/>
+<text x="1150.0" y="498.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">merge_guest_cart()</text>
+<text x="1320.0" y="498.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">gộp giỏ localStorage khi đăng nhập</text>
+<text x="1624.0" y="498.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-18</text>
+<circle cx="1139" cy="514" r="3.5" fill="#9AA1AA"/>
+<text x="1150.0" y="519.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">toggle_wishlist()</text>
+<text x="1320.0" y="519.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">thả, bỏ tim</text>
+<text x="1624.0" y="519.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-38</text>
+<circle cx="1139" cy="535" r="3.5" fill="#9AA1AA"/>
+<text x="1150.0" y="540.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">get_wishlist()</text>
+<text x="1320.0" y="540.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">xem danh sách yêu thích</text>
+<text x="1624.0" y="540.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-38</text>
+<rect x="1128" y="545.5" width="504" height="20" rx="4" fill="#FFF1E3"/>
+<circle cx="1139" cy="556" r="3.5" fill="#C2410C"/>
+<text x="1150.0" y="561.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">get_checkout_items()</text>
+<text x="1320.0" y="561.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">dòng giỏ để đặt hàng</text>
+<text x="1624.0" y="561.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-19, 20</text>
+<rect x="1128" y="566.5" width="504" height="20" rx="4" fill="#FFF1E3"/>
+<circle cx="1139" cy="577" r="3.5" fill="#C2410C"/>
+<text x="1150.0" y="582.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">remove_ordered_items()</text>
+<text x="1320.0" y="582.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">xóa dòng đã đặt khỏi giỏ</text>
+<text x="1624.0" y="582.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-19, 20</text>
+<line x1="1136" y1="606" x2="1624" y2="606" stroke="#ECE9E3"/>
+<text x="1136.0" y="624.0" font-size="12" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" font-weight="700">Gọi sang:</text>
+<text x="1202.0" y="624.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">identity, catalog, inventory</text>
+</g>
+<g id="module-ordering">
+<rect x="32" y="862" width="520" height="688" rx="10" fill="#FFFFFF" stroke="#D6D2C9"/>
+<path d="M32,872 a10,10 0 0 1 10,-10 h500 a10,10 0 0 1 10,10 v36 h-520 z" fill="#E8EFF8"/>
+<line x1="32" y1="908" x2="552" y2="908" stroke="#D6D2C9"/>
+<text x="48.0" y="892.0" font-size="19" fill="#1D3B66" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="700">ordering</text>
+<text x="536.0" y="891.0" font-size="12.5" fill="#1D3B66" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">BR-003  ·  UC-19 → 24, 26, 27</text>
+<text x="48.0" y="933.0" font-size="12.5" fill="#1F2328" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">Đặt hàng COD hoặc chuyển khoản QR (trừ tồn, áp khuyến mãi, tạo đơn trong 1</text>
+<text x="48.0" y="951.0" font-size="12.5" fill="#1F2328" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">transaction), sinh VietQR, theo dõi và hủy đơn, Nhân viên xác nhận đơn, tự</text>
+<text x="48.0" y="969.0" font-size="12.5" fill="#1F2328" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">hủy đơn QR quá 24 giờ, tự xuất hóa đơn khi giao thành công.</text>
+<line x1="48" y1="986" x2="536" y2="986" stroke="#ECE9E3"/>
+<text x="48.0" y="1006.0" font-size="11" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" font-weight="700">BẢNG  ·  schema ordering</text>
+<rect x="48" y="1016" width="6" height="6" rx="1" fill="#1D3B66"/>
+<text x="62.0" y="1023.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="600">payment</text>
+<text x="220.0" y="1023.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">phương thức: COD | QR</text>
+<rect x="48" y="1037" width="6" height="6" rx="1" fill="#1D3B66"/>
+<text x="62.0" y="1044.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="600">order</text>
+<text x="220.0" y="1044.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">đơn hàng</text>
+<rect x="48" y="1058" width="6" height="6" rx="1" fill="#1D3B66"/>
+<text x="62.0" y="1065.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="600">order_detail</text>
+<text x="220.0" y="1065.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">dòng đơn, giá và giá vốn đã chụp</text>
+<rect x="48" y="1079" width="6" height="6" rx="1" fill="#1D3B66"/>
+<text x="62.0" y="1086.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="600">order_status_history</text>
+<text x="220.0" y="1086.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">lịch sử trạng thái, lý do hủy</text>
+<rect x="48" y="1100" width="6" height="6" rx="1" fill="#1D3B66"/>
+<text x="62.0" y="1107.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="600">invoice</text>
+<text x="220.0" y="1107.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">hóa đơn HD-&lt;mã đơn&gt;</text>
+<line x1="48" y1="1131" x2="536" y2="1131" stroke="#ECE9E3"/>
+<text x="48.0" y="1151.0" font-size="11" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" font-weight="700">SERVICE  ·  app/modules/ordering/service.py</text>
+<circle cx="51" cy="1163" r="3.5" fill="#9AA1AA"/>
+<text x="62.0" y="1168.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">preview_checkout()</text>
+<text x="246.0" y="1168.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">tạm tính, mức giảm, phí ship</text>
+<text x="536.0" y="1168.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-19, 20</text>
+<circle cx="51" cy="1184" r="3.5" fill="#9AA1AA"/>
+<text x="62.0" y="1189.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">place_order_cod()</text>
+<text x="246.0" y="1189.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">tạo đơn trong 1 transaction</text>
+<text x="536.0" y="1189.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-19</text>
+<circle cx="51" cy="1205" r="3.5" fill="#9AA1AA"/>
+<text x="62.0" y="1210.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">place_order_qr()</text>
+<text x="246.0" y="1210.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">tạo đơn chuyển khoản QR</text>
+<text x="536.0" y="1210.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-20</text>
+<circle cx="51" cy="1226" r="3.5" fill="#9AA1AA"/>
+<text x="62.0" y="1231.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">build_vietqr()</text>
+<text x="246.0" y="1231.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">tài khoản, số tiền, SOBIE + mã đơn</text>
+<text x="536.0" y="1231.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-20, 21</text>
+<circle cx="51" cy="1247" r="3.5" fill="#9AA1AA"/>
+<text x="62.0" y="1252.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">get_my_orders()</text>
+<text x="246.0" y="1252.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">theo dõi đơn</text>
+<text x="536.0" y="1252.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-21</text>
+<circle cx="51" cy="1268" r="3.5" fill="#9AA1AA"/>
+<text x="62.0" y="1273.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">cancel_order()</text>
+<text x="246.0" y="1273.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">hủy, cộng tồn, trả lượt KM</text>
+<text x="536.0" y="1273.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-22</text>
+<circle cx="51" cy="1289" r="3.5" fill="#9AA1AA"/>
+<text x="62.0" y="1294.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">confirm_order()</text>
+<text x="246.0" y="1294.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">nhân viên xác nhận</text>
+<text x="536.0" y="1294.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-23</text>
+<circle cx="51" cy="1310" r="3.5" fill="#9AA1AA"/>
+<text x="62.0" y="1315.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">auto_cancel_overdue_qr()</text>
+<text x="246.0" y="1315.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">jobs.py: đơn QR quá 24 giờ</text>
+<text x="536.0" y="1315.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-24</text>
+<circle cx="51" cy="1331" r="3.5" fill="#9AA1AA"/>
+<text x="62.0" y="1336.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">issue_invoice()</text>
+<text x="246.0" y="1336.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">tự xuất khi giao thành công</text>
+<text x="536.0" y="1336.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-26</text>
+<circle cx="51" cy="1352" r="3.5" fill="#9AA1AA"/>
+<text x="62.0" y="1357.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">get_invoice()</text>
+<text x="246.0" y="1357.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">khách, nhân viên xem</text>
+<text x="536.0" y="1357.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-27</text>
+<rect x="40" y="1362.5" width="504" height="20" rx="4" fill="#FFF1E3"/>
+<circle cx="51" cy="1373" r="3.5" fill="#C2410C"/>
+<text x="62.0" y="1378.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">mark_paid()</text>
+<text x="246.0" y="1378.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">tìm đơn QR, → Đã thanh toán</text>
+<text x="536.0" y="1378.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-25</text>
+<rect x="40" y="1383.5" width="504" height="20" rx="4" fill="#FFF1E3"/>
+<circle cx="51" cy="1394" r="3.5" fill="#C2410C"/>
+<text x="62.0" y="1399.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">hand_over()</text>
+<text x="246.0" y="1399.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">đơn → Chờ lấy hàng</text>
+<text x="536.0" y="1399.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-40</text>
+<rect x="40" y="1404.5" width="504" height="20" rx="4" fill="#FFF1E3"/>
+<circle cx="51" cy="1415" r="3.5" fill="#C2410C"/>
+<text x="62.0" y="1420.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">update_shipment_status()</text>
+<text x="246.0" y="1420.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">kéo theo hóa đơn / cộng tồn</text>
+<text x="536.0" y="1420.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-36</text>
+<rect x="40" y="1425.5" width="504" height="20" rx="4" fill="#FFF1E3"/>
+<circle cx="51" cy="1436" r="3.5" fill="#C2410C"/>
+<text x="62.0" y="1441.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">list_shipping_orders()</text>
+<text x="246.0" y="1441.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">đơn cho trang giả lập</text>
+<text x="536.0" y="1441.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-36</text>
+<rect x="40" y="1446.5" width="504" height="20" rx="4" fill="#FFF1E3"/>
+<circle cx="51" cy="1457" r="3.5" fill="#C2410C"/>
+<text x="62.0" y="1462.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">get_sales_stats()</text>
+<text x="246.0" y="1462.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">đơn Giao thành công theo kỳ</text>
+<text x="536.0" y="1462.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-37</text>
+<rect x="40" y="1467.5" width="504" height="20" rx="4" fill="#FFF1E3"/>
+<circle cx="51" cy="1478" r="3.5" fill="#C2410C"/>
+<text x="62.0" y="1483.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">get_units_sold()</text>
+<text x="246.0" y="1483.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">SL bán 7 ngày, trừ đơn Đã hủy</text>
+<text x="536.0" y="1483.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-09</text>
+<line x1="48" y1="1507" x2="536" y2="1507" stroke="#ECE9E3"/>
+<text x="48.0" y="1525.0" font-size="12" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" font-weight="700">Gọi sang:</text>
+<text x="114.0" y="1525.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">identity, catalog, shopping, promotion, inventory</text>
+</g>
+<g id="module-promotion">
+<rect x="576" y="862" width="520" height="688" rx="10" fill="#FFFFFF" stroke="#D6D2C9"/>
+<path d="M576,872 a10,10 0 0 1 10,-10 h500 a10,10 0 0 1 10,10 v36 h-520 z" fill="#E8EFF8"/>
+<line x1="576" y1="908" x2="1096" y2="908" stroke="#D6D2C9"/>
+<text x="592.0" y="892.0" font-size="19" fill="#1D3B66" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="700">promotion</text>
+<text x="1080.0" y="891.0" font-size="12.5" fill="#1D3B66" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">BR-004  ·  UC-28 → 31</text>
+<text x="592.0" y="933.0" font-size="12.5" fill="#1F2328" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">Quản lý 3 loại khuyến mãi giảm theo phần trăm: theo sản phẩm, theo giá trị</text>
+<text x="592.0" y="951.0" font-size="12.5" fill="#1F2328" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">hóa đơn, voucher. Tính mức giảm cho đơn, tự chọn giữa khuyến mãi hóa đơn</text>
+<text x="592.0" y="969.0" font-size="12.5" fill="#1F2328" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">và voucher cái có lợi hơn cho khách.</text>
+<line x1="592" y1="986" x2="1080" y2="986" stroke="#ECE9E3"/>
+<text x="592.0" y="1006.0" font-size="11" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" font-weight="700">BẢNG  ·  schema promotion</text>
+<rect x="592" y="1016" width="6" height="6" rx="1" fill="#1D3B66"/>
+<text x="606.0" y="1023.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="600">promotion</text>
+<text x="743.0" y="1023.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">thông tin chung, % giảm, lượt</text>
+<rect x="592" y="1037" width="6" height="6" rx="1" fill="#1D3B66"/>
+<text x="606.0" y="1044.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="600">product_promotion</text>
+<text x="743.0" y="1044.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">KM theo sản phẩm</text>
+<rect x="592" y="1058" width="6" height="6" rx="1" fill="#1D3B66"/>
+<text x="606.0" y="1065.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="600">order_promotion</text>
+<text x="743.0" y="1065.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">KM theo giá trị hóa đơn</text>
+<rect x="592" y="1079" width="6" height="6" rx="1" fill="#1D3B66"/>
+<text x="606.0" y="1086.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="600">code_promotion</text>
+<text x="743.0" y="1086.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">voucher</text>
+<line x1="592" y1="1110" x2="1080" y2="1110" stroke="#ECE9E3"/>
+<text x="592.0" y="1130.0" font-size="11" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" font-weight="700">SERVICE  ·  app/modules/promotion/service.py</text>
+<circle cx="595" cy="1142" r="3.5" fill="#9AA1AA"/>
+<text x="606.0" y="1147.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">manage_product_promotion()</text>
+<text x="804.0" y="1147.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">1 KM = 1 SP; tạo, kết thúc</text>
+<text x="1080.0" y="1147.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-28</text>
+<circle cx="595" cy="1163" r="3.5" fill="#9AA1AA"/>
+<text x="606.0" y="1168.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">manage_order_promotion()</text>
+<text x="804.0" y="1168.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">tạo, kết thúc KM hóa đơn</text>
+<text x="1080.0" y="1168.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-29</text>
+<circle cx="595" cy="1184" r="3.5" fill="#9AA1AA"/>
+<text x="606.0" y="1189.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">manage_voucher()</text>
+<text x="804.0" y="1189.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">tạo, kết thúc voucher</text>
+<text x="1080.0" y="1189.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-30</text>
+<rect x="584" y="1194.5" width="504" height="20" rx="4" fill="#FFF1E3"/>
+<circle cx="595" cy="1205" r="3.5" fill="#C2410C"/>
+<text x="606.0" y="1210.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">get_product_discounts()</text>
+<text x="804.0" y="1210.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">KM đang hiệu lực, cache Redis</text>
+<text x="1080.0" y="1210.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-12, 19</text>
+<rect x="584" y="1215.5" width="504" height="20" rx="4" fill="#FFF1E3"/>
+<circle cx="595" cy="1226" r="3.5" fill="#C2410C"/>
+<text x="606.0" y="1231.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">calculate_order_discount()</text>
+<text x="804.0" y="1231.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">bằng nhau ưu tiên voucher</text>
+<text x="1080.0" y="1231.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-31</text>
+<rect x="584" y="1236.5" width="504" height="20" rx="4" fill="#FFF1E3"/>
+<circle cx="595" cy="1247" r="3.5" fill="#C2410C"/>
+<text x="606.0" y="1252.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">reserve_usage()</text>
+<text x="804.0" y="1252.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">+1 lượt khi đặt hàng</text>
+<text x="1080.0" y="1252.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-31</text>
+<rect x="584" y="1257.5" width="504" height="20" rx="4" fill="#FFF1E3"/>
+<circle cx="595" cy="1268" r="3.5" fill="#C2410C"/>
+<text x="606.0" y="1273.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">release_usage()</text>
+<text x="804.0" y="1273.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">trả lượt khi hủy đơn</text>
+<text x="1080.0" y="1273.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-22, 24</text>
+<line x1="592" y1="1297" x2="1080" y2="1297" stroke="#ECE9E3"/>
+<text x="592.0" y="1315.0" font-size="12" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" font-weight="700">Gọi sang:</text>
+<text x="658.0" y="1315.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">catalog</text>
+</g>
+<g id="module-inventory">
+<rect x="1120" y="862" width="520" height="688" rx="10" fill="#FFFFFF" stroke="#D6D2C9"/>
+<path d="M1120,872 a10,10 0 0 1 10,-10 h500 a10,10 0 0 1 10,10 v36 h-520 z" fill="#E8EFF8"/>
+<line x1="1120" y1="908" x2="1640" y2="908" stroke="#D6D2C9"/>
+<text x="1136.0" y="892.0" font-size="19" fill="#1D3B66" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="700">inventory</text>
+<text x="1624.0" y="891.0" font-size="12.5" fill="#1D3B66" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">BR-005  ·  UC-32 → 35, 39</text>
+<text x="1136.0" y="933.0" font-size="12.5" fill="#1F2328" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">Quản lý nhà cung cấp, lập và xác nhận phiếu nhập. Giữ tồn kho và giá vốn</text>
+<text x="1136.0" y="951.0" font-size="12.5" fill="#1F2328" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">bình quân theo biến thể (tồn không bao giờ âm); cộng lại tồn khi hủy đơn</text>
+<text x="1136.0" y="969.0" font-size="12.5" fill="#1F2328" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">hoặc giao không thành công.</text>
+<line x1="1136" y1="986" x2="1624" y2="986" stroke="#ECE9E3"/>
+<text x="1136.0" y="1006.0" font-size="11" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" font-weight="700">BẢNG  ·  schema inventory</text>
+<rect x="1136" y="1016" width="6" height="6" rx="1" fill="#1D3B66"/>
+<text x="1150.0" y="1023.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="600">supplier</text>
+<text x="1308.0" y="1023.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">nhà cung cấp</text>
+<rect x="1136" y="1037" width="6" height="6" rx="1" fill="#1D3B66"/>
+<text x="1150.0" y="1044.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="600">goods_receipt</text>
+<text x="1308.0" y="1044.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">phiếu nhập</text>
+<rect x="1136" y="1058" width="6" height="6" rx="1" fill="#1D3B66"/>
+<text x="1150.0" y="1065.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="600">goods_receipt_detail</text>
+<text x="1308.0" y="1065.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">dòng phiếu nhập</text>
+<rect x="1136" y="1079" width="6" height="6" rx="1" fill="#1D3B66"/>
+<text x="1150.0" y="1086.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="600">stock</text>
+<text x="1308.0" y="1086.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">tồn kho + giá vốn theo biến thể</text>
+<line x1="1136" y1="1110" x2="1624" y2="1110" stroke="#ECE9E3"/>
+<text x="1136.0" y="1130.0" font-size="11" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" font-weight="700">SERVICE  ·  app/modules/inventory/service.py</text>
+<circle cx="1139" cy="1142" r="3.5" fill="#9AA1AA"/>
+<text x="1150.0" y="1147.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">manage_supplier()</text>
+<text x="1327.0" y="1147.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">thêm, sửa, ngừng hợp tác</text>
+<text x="1624.0" y="1147.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-32</text>
+<circle cx="1139" cy="1163" r="3.5" fill="#9AA1AA"/>
+<text x="1150.0" y="1168.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">create_goods_receipt()</text>
+<text x="1327.0" y="1168.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">lập phiếu nháp</text>
+<text x="1624.0" y="1168.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-33</text>
+<circle cx="1139" cy="1184" r="3.5" fill="#9AA1AA"/>
+<text x="1150.0" y="1189.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">confirm_goods_receipt()</text>
+<text x="1327.0" y="1189.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">cộng tồn, giá vốn bình quân</text>
+<text x="1624.0" y="1189.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-34</text>
+<circle cx="1139" cy="1205" r="3.5" fill="#9AA1AA"/>
+<text x="1150.0" y="1210.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">list_stock()</text>
+<text x="1327.0" y="1210.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">nhân viên xem tồn</text>
+<text x="1624.0" y="1210.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-39</text>
+<rect x="1128" y="1215.5" width="504" height="20" rx="4" fill="#FFF1E3"/>
+<circle cx="1139" cy="1226" r="3.5" fill="#C2410C"/>
+<text x="1150.0" y="1231.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">create_stock()</text>
+<text x="1327.0" y="1231.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">khi tạo biến thể</text>
+<text x="1624.0" y="1231.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-15</text>
+<rect x="1128" y="1236.5" width="504" height="20" rx="4" fill="#FFF1E3"/>
+<circle cx="1139" cy="1247" r="3.5" fill="#C2410C"/>
+<text x="1150.0" y="1252.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">get_stock()</text>
+<text x="1327.0" y="1252.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">còn / hết hàng, tồn thấp</text>
+<text x="1624.0" y="1252.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-12, 18, 37</text>
+<rect x="1128" y="1257.5" width="504" height="20" rx="4" fill="#FFF1E3"/>
+<circle cx="1139" cy="1268" r="3.5" fill="#C2410C"/>
+<text x="1150.0" y="1273.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">decrease_stock()</text>
+<text x="1327.0" y="1273.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">trừ tồn, không để âm</text>
+<text x="1624.0" y="1273.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-19, 20</text>
+<rect x="1128" y="1278.5" width="504" height="20" rx="4" fill="#FFF1E3"/>
+<circle cx="1139" cy="1289" r="3.5" fill="#C2410C"/>
+<text x="1150.0" y="1294.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">increase_stock()</text>
+<text x="1327.0" y="1294.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">hủy đơn, giao thất bại</text>
+<text x="1624.0" y="1294.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-22, 24, 35</text>
+<rect x="1128" y="1299.5" width="504" height="20" rx="4" fill="#FFF1E3"/>
+<circle cx="1139" cy="1310" r="3.5" fill="#C2410C"/>
+<text x="1150.0" y="1315.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">get_cost_price()</text>
+<text x="1327.0" y="1315.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">chụp vào dòng đơn, báo cáo</text>
+<text x="1624.0" y="1315.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-19, 37</text>
+<rect x="1128" y="1320.5" width="504" height="20" rx="4" fill="#FFF1E3"/>
+<circle cx="1139" cy="1331" r="3.5" fill="#C2410C"/>
+<text x="1150.0" y="1336.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">get_purchase_totals()</text>
+<text x="1327.0" y="1336.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">tiền nhập theo NCC</text>
+<text x="1624.0" y="1336.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-37</text>
+<line x1="1136" y1="1360" x2="1624" y2="1360" stroke="#ECE9E3"/>
+<text x="1136.0" y="1378.0" font-size="12" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" font-weight="700">Gọi sang:</text>
+<text x="1202.0" y="1378.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">catalog</text>
+</g>
+<g id="module-payment">
+<rect x="32" y="1574" width="520" height="373" rx="10" fill="#FFFFFF" stroke="#D6D2C9"/>
+<path d="M32,1584 a10,10 0 0 1 10,-10 h500 a10,10 0 0 1 10,10 v36 h-520 z" fill="#E8EFF8"/>
+<line x1="32" y1="1620" x2="552" y2="1620" stroke="#D6D2C9"/>
+<text x="48.0" y="1604.0" font-size="19" fill="#1D3B66" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="700">payment</text>
+<text x="536.0" y="1603.0" font-size="12.5" fill="#1D3B66" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">BR-006  ·  UC-25</text>
+<text x="48.0" y="1645.0" font-size="12.5" fill="#1F2328" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">Nhận webhook SePay khi tài khoản cửa hàng có tiền vào, chống xử lý trùng,</text>
+<text x="48.0" y="1663.0" font-size="12.5" fill="#1F2328" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">tự khớp giao dịch với đơn QR theo nội dung SOBIE + mã đơn và chuyển đơn</text>
+<text x="48.0" y="1681.0" font-size="12.5" fill="#1F2328" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">sang Đã thanh toán.</text>
+<line x1="48" y1="1698" x2="536" y2="1698" stroke="#ECE9E3"/>
+<text x="48.0" y="1718.0" font-size="11" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" font-weight="700">BẢNG  ·  schema payment</text>
+<rect x="48" y="1728" width="6" height="6" rx="1" fill="#1D3B66"/>
+<text x="62.0" y="1735.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="600">bank_transaction</text>
+<text x="192.0" y="1735.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">giao dịch SePay, khớp / không khớp</text>
+<line x1="48" y1="1759" x2="536" y2="1759" stroke="#ECE9E3"/>
+<text x="48.0" y="1779.0" font-size="11" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" font-weight="700">SERVICE  ·  app/modules/payment/service.py</text>
+<circle cx="51" cy="1791" r="3.5" fill="#9AA1AA"/>
+<text x="62.0" y="1796.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">handle_sepay_webhook()</text>
+<text x="232.0" y="1796.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">xác thực API key, chống trùng</text>
+<text x="536.0" y="1796.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-25</text>
+<circle cx="51" cy="1812" r="3.5" fill="#9AA1AA"/>
+<text x="62.0" y="1817.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">match_transaction()</text>
+<text x="232.0" y="1817.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">nội dung SOBIE + mã đơn, số tiền</text>
+<text x="536.0" y="1817.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-25</text>
+<line x1="48" y1="1841" x2="536" y2="1841" stroke="#ECE9E3"/>
+<text x="48.0" y="1859.0" font-size="12" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" font-weight="700">Gọi sang:</text>
+<text x="114.0" y="1859.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">ordering</text>
+</g>
+<g id="module-shipping">
+<rect x="576" y="1574" width="520" height="373" rx="10" fill="#FFFFFF" stroke="#D6D2C9"/>
+<path d="M576,1584 a10,10 0 0 1 10,-10 h500 a10,10 0 0 1 10,10 v36 h-520 z" fill="#EEEAF6"/>
+<line x1="576" y1="1620" x2="1096" y2="1620" stroke="#D6D2C9"/>
+<text x="592.0" y="1604.0" font-size="19" fill="#3E2F66" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="700">shipping</text>
+<text x="1080.0" y="1603.0" font-size="12.5" fill="#3E2F66" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">BR-006  ·  UC-36, 40</text>
+<text x="592.0" y="1645.0" font-size="12.5" fill="#1F2328" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">Nhân viên bàn giao đơn đã xác nhận cho vận chuyển. Trang giả lập đơn vị</text>
+<text x="592.0" y="1663.0" font-size="12.5" fill="#1F2328" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">vận chuyển (không cần đăng nhập) có nút Đã nhận hàng, Đã giao, Giao không</text>
+<text x="592.0" y="1681.0" font-size="12.5" fill="#1F2328" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">thành công.</text>
+<line x1="592" y1="1698" x2="1080" y2="1698" stroke="#ECE9E3"/>
+<text x="592.0" y="1718.0" font-size="11" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" font-weight="700">BẢNG</text>
+<text x="592.0" y="1738.0" font-size="12.5" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" font-style="italic">Không có bảng: đổi trạng thái đơn qua service của ordering</text>
+<line x1="592" y1="1759" x2="1080" y2="1759" stroke="#ECE9E3"/>
+<text x="592.0" y="1779.0" font-size="11" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" font-weight="700">SERVICE  ·  app/modules/shipping/service.py</text>
+<circle cx="595" cy="1791" r="3.5" fill="#9AA1AA"/>
+<text x="606.0" y="1796.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">hand_over_to_shipping()</text>
+<text x="783.0" y="1796.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">nhân viên bàn giao đơn</text>
+<text x="1080.0" y="1796.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-40</text>
+<circle cx="595" cy="1812" r="3.5" fill="#9AA1AA"/>
+<text x="606.0" y="1817.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">list_simulator_orders()</text>
+<text x="783.0" y="1817.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">Chờ lấy hàng, Đang giao</text>
+<text x="1080.0" y="1817.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-36</text>
+<circle cx="595" cy="1833" r="3.5" fill="#9AA1AA"/>
+<text x="606.0" y="1838.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">mark_picked_up()</text>
+<text x="783.0" y="1838.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">nút Đã nhận hàng</text>
+<text x="1080.0" y="1838.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-36</text>
+<circle cx="595" cy="1854" r="3.5" fill="#9AA1AA"/>
+<text x="606.0" y="1859.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">mark_delivered()</text>
+<text x="783.0" y="1859.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">nút Đã giao</text>
+<text x="1080.0" y="1859.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-36</text>
+<circle cx="595" cy="1875" r="3.5" fill="#9AA1AA"/>
+<text x="606.0" y="1880.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">mark_delivery_failed()</text>
+<text x="783.0" y="1880.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">nút Giao không thành công</text>
+<text x="1080.0" y="1880.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-36</text>
+<line x1="592" y1="1904" x2="1080" y2="1904" stroke="#ECE9E3"/>
+<text x="592.0" y="1922.0" font-size="12" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" font-weight="700">Gọi sang:</text>
+<text x="658.0" y="1922.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">ordering</text>
+</g>
+<g id="module-reporting">
+<rect x="1120" y="1574" width="520" height="373" rx="10" fill="#FFFFFF" stroke="#D6D2C9"/>
+<path d="M1120,1584 a10,10 0 0 1 10,-10 h500 a10,10 0 0 1 10,10 v36 h-520 z" fill="#EEEAF6"/>
+<line x1="1120" y1="1620" x2="1640" y2="1620" stroke="#D6D2C9"/>
+<text x="1136.0" y="1604.0" font-size="19" fill="#3E2F66" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-weight="700">reporting</text>
+<text x="1624.0" y="1603.0" font-size="12.5" fill="#3E2F66" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">BR-007, 002  ·  UC-37, 09</text>
+<text x="1136.0" y="1645.0" font-size="12.5" fill="#1F2328" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">Chỉ đọc số liệu tổng hợp từ module khác: dashboard cho Nhân viên (doanh</text>
+<text x="1136.0" y="1663.0" font-size="12.5" fill="#1F2328" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">thu, lợi nhuận gộp, đơn theo trạng thái, bán chạy, tồn thấp, tiền nhập</text>
+<text x="1136.0" y="1681.0" font-size="12.5" fill="#1F2328" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">theo NCC) và khối bán chạy trên trang chủ [GD].</text>
+<line x1="1136" y1="1698" x2="1624" y2="1698" stroke="#ECE9E3"/>
+<text x="1136.0" y="1718.0" font-size="11" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" font-weight="700">BẢNG</text>
+<text x="1136.0" y="1738.0" font-size="12.5" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" font-style="italic">Không có bảng: đọc qua service module khác; bán chạy lưu Redis</text>
+<line x1="1136" y1="1759" x2="1624" y2="1759" stroke="#ECE9E3"/>
+<text x="1136.0" y="1779.0" font-size="11" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" font-weight="700">SERVICE  ·  app/modules/reporting/service.py</text>
+<circle cx="1139" cy="1791" r="3.5" fill="#9AA1AA"/>
+<text x="1150.0" y="1796.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">get_dashboard()</text>
+<text x="1320.0" y="1796.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">6 chỉ số theo kỳ, không cache</text>
+<text x="1624.0" y="1796.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-37</text>
+<circle cx="1139" cy="1812" r="3.5" fill="#9AA1AA"/>
+<text x="1150.0" y="1817.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">refresh_bestsellers()</text>
+<text x="1320.0" y="1817.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">job 10 phút: top 15 → Redis</text>
+<text x="1624.0" y="1817.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-09</text>
+<rect x="1128" y="1822.5" width="504" height="20" rx="4" fill="#FFF1E3"/>
+<circle cx="1139" cy="1833" r="3.5" fill="#C2410C"/>
+<text x="1150.0" y="1838.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">get_home_bestsellers()</text>
+<text x="1320.0" y="1838.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">bỏ SP Ngừng bán, lấy 5</text>
+<text x="1624.0" y="1838.0" font-size="11.5" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" text-anchor="end">UC-09</text>
+<line x1="1136" y1="1862" x2="1624" y2="1862" stroke="#ECE9E3"/>
+<text x="1136.0" y="1880.0" font-size="12" fill="#6B7280" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif" font-weight="700">Gọi sang:</text>
+<text x="1202.0" y="1880.0" font-size="12.5" fill="#1F2328" font-family="Consolas, 'Cascadia Mono', Menlo, monospace">ordering, inventory, catalog</text>
+</g>
+<text x="32.0" y="1987.0" font-size="12" fill="#5F6670" font-family="Segoe UI, 'Helvetica Neue', Arial, sans-serif">Module chỉ đọc / ghi bảng trong schema cùng tên; cần dữ liệu module khác thì gọi service công khai của module đó (AGENTS.md). Khóa ngoại giữa các schema vẫn giữ ở DB.</text>
+</svg>

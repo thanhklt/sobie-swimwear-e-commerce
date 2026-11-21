@@ -30,7 +30,7 @@ Nhân viên chọn "Lập phiếu nhập" khi cửa hàng nhập hàng từ nhà
 
 ## Exceptions
 - **E1. Phiếu không có dòng nào:** hệ thống báo lỗi, không lưu.
-- **E2. Số lượng hoặc giá nhập không hợp lệ:** số lượng không phải số nguyên dương, hoặc giá nhập không phải số nguyên VND dương → hệ thống báo lỗi tại dòng tương ứng, không lưu.
+- **E2. Số lượng hoặc giá nhập không hợp lệ:** số lượng không phải số nguyên dương, hoặc giá nhập không phải số nguyên VND không âm (giá nhập bằng 0 hợp lệ) → hệ thống báo lỗi tại dòng tương ứng, không lưu.
 - **E3. Trùng biến thể trong phiếu:** một biến thể xuất hiện ở hai dòng → hệ thống báo lỗi, yêu cầu gộp thành một dòng `[GD]`.
 - **E4. Nhà cung cấp đã ngừng hợp tác:** không chọn được (chỉ nhà cung cấp "Đang hợp tác" được chọn); nếu nhà cung cấp chuyển sang ngừng hợp tác khi phiếu đang nháp thì báo lỗi khi lưu `[GD]`.
 - **E5. Sửa phiếu không còn ở trạng thái "Nháp":** hệ thống từ chối.
@@ -84,6 +84,7 @@ Then: danh sách có X và không có Y
 **Quyết định đã chốt**
 - Phiếu nhập lưu nhà cung cấp, Nhân viên lập phiếu, ngày tạo, trạng thái, tổng tiền; mỗi dòng chi tiết gồm biến thể, số lượng, đơn giá nhập thực tế, thành tiền (theo ERD).
 - Chỉ nhà cung cấp "Đang hợp tác" được chọn khi lập phiếu nhập (đã chốt 15/11/2026, UC-32).
+- Giá nhập là số nguyên VND ≥ 0, khớp CHECK `goods_receipt_detail_unit_price >= 0` của data model (đã chốt 21/11/2026).
 
 **Giả định [GD]**
 - Phiếu nhập có trạng thái: Nháp → Đã xác nhận | Đã hủy; chỉ sửa và hủy được khi còn "Nháp".
@@ -94,3 +95,4 @@ Then: danh sách có X và không có Y
 - v1 (2026-11-15): initial
 - v2 (2026-11-15): khớp thông tin phiếu nhập và chi tiết phiếu theo ERD
 - v3 (2026-11-15): chốt chỉ chọn nhà cung cấp "Đang hợp tác"; thêm AC-6
+- v4 (2026-11-21): chốt giá nhập là số nguyên VND không âm, chấp nhận giá nhập bằng 0

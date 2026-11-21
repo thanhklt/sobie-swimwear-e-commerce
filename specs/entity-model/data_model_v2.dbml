@@ -21,14 +21,16 @@
 //         default gen_random_uuid(). Mọi khóa ngoại cũng là uuid, hậu tố _key.
 //       * Bảng nối product_collection dùng PK ghép từ 2 khóa ngoại;
 //         3 bảng con của promotion dùng promotion_key làm PK + FK.
-//   - Mã tự nhiên (đã chốt): 9 bảng supplier, customer, employee, admin,
-//     product, variant, goods_receipt, promotion, invoice có thêm cột <x>_id
+//   - Mã tự nhiên (đã chốt): 7 bảng account, supplier, product, variant,
+//     goods_receipt, promotion, invoice có thêm cột <x>_id
 //     varchar, NOT NULL, UNIQUE — hệ thống tự cấp, không cho sửa.
-//     Phần "4 số" là bộ đếm chung cho cả bảng, tăng dần 0001 -> 0002 -> ...
-//     (không đếm lại theo ngày hay theo họ tên). Trường hợp vượt 9999: chưa xử lý.
-//       * Nhân viên : NV-<HỌ TÊN>-<YYYYMMDD ngày sinh>-<4 số>
-//       * Admin     : AD-<HỌ TÊN>-<YYYYMMDD ngày sinh>-<4 số>
-//       * Khách hàng: KH-<YYYYMMDD ngày đăng ký>-<4 số>
+//     Phần "4 số" là bộ đếm tăng dần 0001 -> 0002 -> ... (không đếm lại theo ngày
+//     hay theo họ tên): chung cho cả bảng, riêng account đếm theo từng tiền tố
+//     KH, NV, AD. Trường hợp vượt 9999: chưa xử lý.
+//       * Tài khoản Nhân viên : NV-<HỌ TÊN>-<YYYYMMDD ngày sinh>-<4 số>
+//       * Tài khoản Admin     : AD-<HỌ TÊN>-<YYYYMMDD ngày sinh>-<4 số>
+//       * Tài khoản Khách hàng: KH-<YYYYMMDD ngày đăng ký>-<4 số>
+//         (đổi vai trò NV <-> AD thì cấp mã mới — ngoại lệ duy nhất của "không sửa")
 //       * NCC       : NCC-<4 số>
 //       * Sản phẩm  : SP-<4 số>
 //       * Biến thể  : <mã SP>-<MÀU>-<SIZE> (không có bộ đếm)
@@ -38,7 +40,7 @@
 //     <HỌ TÊN>, <MÀU>, <SIZE>: bỏ dấu (Đ -> D), viết hoa, bỏ khoảng trắng.
 //   - Module (đã chốt 20/11/2026): 1 module = 1 schema PostgreSQL = 1 TableGroup
 //     = 1 thư mục specs/use-cases/<module>/ = 1 package app/modules/<module>/.
-//       identity  : role, account, customer, employee, admin
+//       identity  : role, account, session
 //       catalog   : category, collection, gender, size, color, product,
 //                   product_collection, variant, gallery
 //       shopping  : cart, cart_item, wishlist, wishlist_item
@@ -83,7 +85,7 @@ Project soobin_swimwear {
 //  bank_transaction.match_status       MATCHED Khớp | UNMATCHED Không khớp
 
 // ---------------------------------------------------------------------
-// 1. IDENTITY — vai trò, tài khoản và hồ sơ (BR-001)
+// 1. IDENTITY — vai trò, tài khoản (BR-001)
 // ---------------------------------------------------------------------
 
 Table identity.role {
@@ -102,24 +104,34 @@ Table identity.role {
 
 Table identity.account {
   account_key           uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
+  account_id            varchar(100) [not null, unique, note: '[KEY][MOI] mã tự nhiên theo vai trò, hệ thống cấp (chuyển từ customer_id / employee_id / admin_id). KH-<YYYYMMDD ngày đăng ký>-<4 số>; NV- / AD-<HỌ TÊN>-<YYYYMMDD ngày sinh>-<4 số>. Bộ đếm 4 số riêng cho từng tiền tố KH, NV, AD. Không sửa, trừ khi đổi vai trò NV <-> AD thì cấp mã mới (Q16, Q32). Ngày đăng ký lấy theo giờ Asia/Ho_Chi_Minh (đã chốt 21/11/2026).']
   account_role_key      uuid [not null, note: '[RBAC] mỗi tài khoản đúng 1 vai trò (đã chốt Q17)']
-  account_email         varchar(255) [not null, unique, note: '[MOI] chuyển từ hồ sơ lên account; đăng nhập bằng email']
-  account_phone_number  varchar(20)  [not null, unique, note: '[MOI] chuyển từ hồ sơ lên account; đăng nhập bằng SĐT']
-  account_hash_password varchar(255) [not null]
-  account_status        varchar(20) [not null, default: 'ACTIVE', note: '[MOI] chuyển từ hồ sơ lên account (khóa / mở khóa). CHECK IN (ACTIVE, LOCKED)']
+  account_email         varchar(255) [not null, unique, note: '[MOI] đăng nhập bằng email']
+  account_phone_number  varchar(20)  [not null, unique, note: '[MOI] đăng nhập bằng SĐT; là SĐT của người dùng (Q5)']
+  account_hash_password varchar(255) [not null, note: 'Băm bcrypt (đã chốt 21/11/2026)']
+  account_status        varchar(20)  [not null, default: 'ACTIVE', note: '[MOI] khóa / mở khóa. CHECK IN (ACTIVE, LOCKED)']
+  account_name          varchar(255) [not null, note: '[MOI] họ tên (chuyển từ customer_name / employee_name / admin_name)']
+  account_date_of_birth date [note: '[MOI] ngày sinh. Bắt buộc với Nhân viên / Admin (mã dùng ngày sinh), không bắt buộc với Khách hàng — service kiểm tra theo vai trò']
+  account_house_number  varchar(255) [note: '[MOI] số nhà, đường']
+  account_ward          varchar(100) [note: '[MOI] phường / xã']
+  account_city          varchar(255) [note: '[MOI] tỉnh / thành phố']
+  account_country       varchar(100) [note: '[MOI] quốc gia']
+  account_created_at    timestamptz  [not null, default: `now()`, note: '[MOI] thời điểm tạo tài khoản (đã chốt Q33) — "ngày đăng ký" trong mã KH- lấy từ đây; dùng để sắp danh sách tài khoản mới nhất']
 
   indexes {
     account_role_key
   }
   Note: '''
-  Chỉ giữ thông tin đăng nhập (BR-001, chốt 15/11/2026).
+  Thông tin đăng nhập và thông tin cá nhân nằm chung 1 bảng (đã chốt 21/11/2026):
+  [BO] 3 bảng hồ sơ identity.customer, identity.employee, identity.admin vì có cùng
+  các trường; thay quyết định BR-001 ngày 15/11 "tài khoản tách khỏi hồ sơ".
   [BO] account_username — BR: không có username riêng.
-  [RBAC] Vai trò lấy từ identity.role qua account_role_key. Hồ sơ phải khớp vai trò:
-  role customer có customer, employee có employee, admin có admin (service kiểm tra).
+  Địa chỉ: với Khách hàng là địa chỉ nhận hàng mặc định (chụp vào order khi đặt).
+  [RBAC] Vai trò lấy từ identity.role qua account_role_key.
   Đổi vai trò: chỉ giữa employee và admin (BR-001, chốt 20/11/2026); không đổi
-  customer <-> employee / admin. Cập nhật account_role_key + tạo hồ sơ ở bảng của
-  vai trò mới (cấp mã mới NV-... <-> AD-..., đã chốt Q16) + xóa hồ sơ cũ, cùng 1
-  transaction; phiên đang đăng nhập bị đăng xuất (BR-001).
+  customer <-> employee / admin. Cập nhật account_role_key và cấp account_id mới
+  (NV-... <-> AD-..., mã cũ không dùng lại), cùng 1 transaction; phiên đang đăng
+  nhập bị đăng xuất (BR-001).
   Admin được tự khóa chính mình khi còn Admin khác đang hoạt động.
   Quy tắc (service, đã chốt Q23b, Q24): Admin được tự đổi vai trò của mình; ràng
   buộc duy nhất là hệ thống luôn có ít nhất 1 Admin đang hoạt động (role admin +
@@ -127,70 +139,47 @@ Table identity.account {
   đổi vai trò của Admin đó sang vai trò khác, hoặc khóa (LOCKED) tài khoản đó.
   Kiểm tra trong cùng transaction, khóa các dòng account Admin (SELECT ... FOR UPDATE)
   để 2 thao tác đồng thời không cùng vượt qua kiểm tra.
+  Phiên đăng nhập: lưu ở identity.session (BR-GIAIDOAN1, Constraints chung — Xác thực,
+  đã chốt 21/11/2026). Đổi vai trò (UC-07), khóa (UC-08), đổi mật khẩu (UC-05) xóa mọi
+  session của tài khoản trong cùng transaction với thao tác đó.
+  [BO] account_token_version (Q34) — thay bằng xóa session (Q35).
   '''
 }
 
 Ref: identity.account.account_role_key > identity.role.role_key [delete: restrict]
 
-Table identity.customer {
-  customer_key           uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
-  customer_id            varchar(20) [not null, unique, note: '[KEY] mã tự nhiên, hệ thống cấp, không sửa (đã chốt Q14): KH-<YYYYMMDD ngày đăng ký>-<4 số, bộ đếm chung cả bảng>, ví dụ KH-20261120-0001']
-  customer_account_key   uuid [not null, unique, note: '[KEY] 1 account - 1 hồ sơ']
-  customer_name          varchar(255) [not null]
-  customer_date_of_birth date
-  customer_house_number  varchar(255)
-  customer_ward          varchar(100)
-  customer_city          varchar(255)
-  customer_country       varchar(100)
+Table identity.session {
+  session_key          uuid [pk, default: `gen_random_uuid()`, note: '[KEY][MOI]']
+  session_account_key  uuid [not null, note: '[MOI] tài khoản đang đăng nhập']
+  session_token_hash   varchar(64) [not null, unique, note: '[MOI] SHA-256 (hex) của mã phiên ngẫu nhiên trong cookie; không lưu mã gốc']
+  session_created_at   timestamptz [not null, default: `now()`, note: '[MOI] lúc đăng nhập']
+  session_last_seen_at timestamptz [not null, default: `now()`, note: '[MOI] lần cuối có request dùng phiên này']
+  session_expires_at   timestamptz [not null, note: '[MOI] = last_seen_at + 30 phút (Khách hàng) hoặc + 1 giờ (Nhân viên, Admin). CHECK expires_at > created_at']
 
+  indexes {
+    session_account_key [note: 'xóa mọi phiên của 1 tài khoản (UC-05, UC-07, UC-08)']
+    session_expires_at  [note: 'dọn phiên hết hạn']
+  }
   Note: '''
-  Hồ sơ Khách hàng: họ tên, ngày sinh, địa chỉ (BR-001). Ngày sinh, địa chỉ
-  bổ sung sau khi đăng ký (UC-01, UC-04).
-  [BO] customer_email, customer_status — đã có ở account.
-  [BO] customer_phone_number — SĐT của khách là account_phone_number (đã chốt Q5);
-  khi đặt hàng, SĐT nhận hàng mặc định lấy từ account và chụp vào order.
+  [MOI] Phiên đăng nhập phía server cho ứng dụng SSR (đã chốt 21/11/2026, Q35); thay
+  access token JWT + refresh token Redis của v2.14.
+    - Đăng nhập (UC-02): sinh mã phiên ngẫu nhiên, lưu băm vào bảng này, gửi mã gốc
+      trong cookie HttpOnly, Secure, SameSite=Lax. Mỗi tài khoản có thể có nhiều phiên
+      (nhiều thiết bị).
+    - Mỗi request: tìm theo session_token_hash với expires_at > now(); hợp lệ thì gia
+      hạn expires_at theo vai trò (hạn tính từ lần thao tác cuối, không phải từ lúc
+      đăng nhập — đã chốt 21/11/2026). Vai trò và trạng thái đọc từ account mỗi request.
+    - Đăng xuất (UC-03): xóa dòng của phiên hiện tại; có hiệu lực ngay.
+    - Đổi mật khẩu (UC-05), đổi vai trò (UC-07), khóa (UC-08): xóa mọi dòng của tài
+      khoản trong cùng transaction.
+  [GD] Chỉ ghi lại last_seen_at / expires_at khi lần ghi trước đã cách hơn 1 phút,
+  để không ghi DB ở mọi request.
+  [GD] Dòng hết hạn được xóa bởi tác vụ định kỳ (mỗi giờ); request gặp dòng hết hạn
+  coi như chưa đăng nhập.
   '''
 }
 
-Table identity.employee {
-  employee_key           uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
-  employee_id            varchar(100) [not null, unique, note: '[KEY] mã tự nhiên, hệ thống cấp, không sửa (đã chốt): NV-<HỌ TÊN>-<YYYYMMDD ngày sinh>-<4 số, bộ đếm chung cả bảng>. Ví dụ NV-NGUYENVANAN-19990105-0001']
-  employee_account_key   uuid [not null, unique, note: '[KEY] 1 account - 1 hồ sơ']
-  employee_name          varchar(255) [not null]
-  employee_date_of_birth date [not null, note: '[SUA] NOT NULL vì mã dùng ngày sinh']
-  employee_house_number  varchar(255)
-  employee_ward          varchar(100)
-  employee_city          varchar(255)
-  employee_country       varchar(100)
-
-  Note: '''
-  Hồ sơ Nhân viên, schema auth (đã chốt Q9).
-  [BO] employee_email, employee_phone_number, employee_status — đã có ở account.
-  Mã giữ nguyên khi sửa họ tên / ngày sinh (mã không cho sửa).
-  '''
-}
-
-Table identity.admin {
-  admin_key           uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
-  admin_id            varchar(100) [not null, unique, note: '[KEY] mã tự nhiên, hệ thống cấp, không sửa (đã chốt): AD-<HỌ TÊN>-<YYYYMMDD ngày sinh>-<4 số, bộ đếm chung cả bảng>. Ví dụ AD-TRANTHIBINH-19950312-0001']
-  admin_account_key   uuid [not null, unique, note: '[KEY] 1 account - 1 hồ sơ']
-  admin_name          varchar(255) [not null]
-  admin_date_of_birth date [not null, note: '[SUA] NOT NULL vì mã dùng ngày sinh']
-  admin_house_number  varchar(255)
-  admin_ward          varchar(100)
-  admin_city          varchar(255)
-  admin_country       varchar(100)
-
-  Note: '''
-  Hồ sơ Admin, schema auth (đã chốt Q9).
-  [BO] admin_email, admin_phone_number, admin_status — đã có ở account.
-  Mã giữ nguyên khi sửa họ tên / ngày sinh (mã không cho sửa).
-  '''
-}
-
-Ref: identity.customer.customer_account_key - identity.account.account_key [delete: restrict]
-Ref: identity.employee.employee_account_key - identity.account.account_key [delete: restrict]
-Ref: identity.admin.admin_account_key - identity.account.account_key [delete: restrict]
+Ref: identity.session.session_account_key > identity.account.account_key [delete: cascade]
 
 // ---------------------------------------------------------------------
 // 2. CATALOG — sản phẩm, biến thể (BR-002); wishlist ở cuối mục thuộc module SHOPPING
@@ -295,12 +284,12 @@ Ref: catalog.gallery.gallery_product_key > catalog.product.product_key [delete: 
 
 Table shopping.wishlist {
   wishlist_key          uuid [pk, default: `gen_random_uuid()`, note: '[KEY] int -> uuid']
-  wishlist_customer_key uuid [not null, unique, note: '1 khách 1 wishlist']
+  wishlist_account_key  uuid [not null, unique, note: '[SUA] trỏ tới account (vai trò Khách hàng) thay cho customer. 1 khách 1 wishlist']
 
-  Note: 'Danh sách yêu thích của khách, cấu trúc giống cart / cart_item (đã chốt Q11).'
+  Note: 'Danh sách yêu thích của khách, cấu trúc giống cart / cart_item (đã chốt Q11). Tạo cùng lúc tạo tài khoản Khách hàng (UC-01, UC-06), identity gọi service của shopping (đã chốt 21/11/2026, Q39).'
 }
 
-Ref: shopping.wishlist.wishlist_customer_key - identity.customer.customer_key [delete: cascade]
+Ref: shopping.wishlist.wishlist_account_key - identity.account.account_key [delete: cascade]
 
 Table shopping.wishlist_item {
   wishlist_item_key          uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
@@ -352,7 +341,7 @@ Table inventory.goods_receipt_detail {
   goods_receipt_detail_goods_receipt_key uuid [not null, note: '[KEY]']
   goods_receipt_detail_variant_key       uuid [not null]
   goods_receipt_detail_quantity          int  [not null, note: 'CHECK > 0']
-  goods_receipt_detail_unit_price        numeric(12,0) [not null, note: 'Giá nhập thực tế. CHECK >= 0']
+  goods_receipt_detail_unit_price        numeric(12,0) [not null, note: 'Giá nhập thực tế. CHECK >= 0 (giá nhập bằng 0 hợp lệ, đã chốt 21/11/2026)']
   goods_receipt_detail_total_price       numeric(12,0) [not null, note: '= quantity x unit_price']
 
   indexes {
@@ -479,12 +468,12 @@ Ref: promotion.product_promotion.product_promotion_product_key > catalog.product
 
 Table shopping.cart {
   cart_key          uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
-  cart_customer_key uuid [not null, unique, note: 'Mỗi khách 1 giỏ']
+  cart_account_key  uuid [not null, unique, note: '[SUA] trỏ tới account (vai trò Khách hàng) thay cho customer. Mỗi khách 1 giỏ']
 
-  Note: 'Chỉ khách đã đăng nhập có giỏ trong DB; giỏ của khách vãng lai lưu ở localStorage của trình duyệt (đã chốt Q23d).'
+  Note: 'Chỉ khách đã đăng nhập có giỏ trong DB; giỏ của khách vãng lai lưu ở localStorage của trình duyệt (đã chốt Q23d). Tạo cùng lúc tạo tài khoản Khách hàng (UC-01, UC-06), identity gọi service của shopping (đã chốt 21/11/2026, Q39).'
 }
 
-Ref: shopping.cart.cart_customer_key - identity.customer.customer_key [delete: cascade]
+Ref: shopping.cart.cart_account_key - identity.account.account_key [delete: cascade]
 
 Table shopping.cart_item {
   cart_item_key         uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
@@ -627,9 +616,7 @@ Ref: payment.bank_transaction.bank_transaction_order_key > ordering.order.order_
 TableGroup identity {
   identity.role
   identity.account
-  identity.customer
-  identity.employee
-  identity.admin
+  identity.session
 }
 
 TableGroup catalog {
@@ -835,6 +822,35 @@ TableGroup inventory {
 // 84  | catalog.variant                                  | Bỏ variant_quantity, variant_cost_price (chuyển sang inventory.stock)
 // 85  | TableGroup                                       | Đổi từ 5 nhóm context sang 7 nhóm module (shipping, reporting không có bảng)
 //
+// v2.13 — Gộp hồ sơ vào account (đã chốt 21/11/2026)
+//  #  | Bảng / cột                                       | Thay đổi
+// 86  | identity.customer, identity.employee,            | Xóa 3 bảng hồ sơ (cùng các trường)
+//     | identity.admin                                   |
+// 87  | identity.account                                 | Thêm account_id (mã KH- / NV- / AD-), account_name,
+//     |                                                  | account_date_of_birth, account_house_number, account_ward,
+//     |                                                  | account_city, account_country, account_created_at (Q33)
+// 88  | shopping.cart.cart_customer_key                  | -> cart_account_key, FK -> identity.account
+// 89  | shopping.wishlist.wishlist_customer_key          | -> wishlist_account_key, FK -> identity.account
+// 90  | Quy ước mã tự nhiên (header)                     | 7 bảng có mã; account đếm 4 số riêng theo tiền tố KH, NV, AD
+//
+// v2.14 — Xác thực bằng access / refresh token (đã chốt 21/11/2026)
+//  #  | Bảng / cột                                       | Thay đổi
+// 91  | identity.account.account_token_version           | Cột mới int NOT NULL DEFAULT 0 (Q34)
+// 92  | account (note)                                   | Ghi cơ chế phiên: refresh token chỉ ở Redis, không có bảng session
+//
+// v2.15 — Phiên đăng nhập phía server cho SSR (đã chốt 21/11/2026, thay v2.14)
+//  #  | Bảng / cột                                       | Thay đổi
+// 93  | identity.account.account_token_version           | Xóa (Q34 thay bởi Q35)
+// 94  | identity.session                                 | Bảng mới: token_hash, created_at, last_seen_at, expires_at (Q35)
+// 95  | TableGroup identity                              | Thêm identity.session
+//
+// v2.16 — Chốt câu hỏi mở của init.sql / seed.sql (21/11/2026)
+//  #  | Bảng / cột                                       | Thay đổi
+// 96  | identity.account.account_id                       | Ghi ngày đăng ký trong mã KH- theo giờ Asia/Ho_Chi_Minh (Q37)
+// 97  | identity.account.account_hash_password             | Ghi thuật toán băm bcrypt (Q36)
+// 98  | shopping.cart / shopping.wishlist                 | Ghi thời điểm tạo giỏ hàng và danh sách yêu thích (Q39)
+// 99  | inventory.goods_receipt_detail.goods_receipt_detail_unit_price | Ghi rõ giá nhập bằng 0 hợp lệ (Q38)
+//
 // OPEN QUESTIONS [GD]
 //  Q1. [ĐÃ CHỐT] Bỏ product_supplier_id.
 //  Q2. [ĐÃ CHỐT] Mỗi khuyến mãi theo sản phẩm gắn đúng 1 sản phẩm (cách của ERD ảnh).
@@ -880,4 +896,20 @@ TableGroup inventory {
 //  Q31. [ĐÃ CHỐT] Bảng ordering.payment (danh sách phương thức COD / QR) thuộc module ordering,
 //       giữ tên payment (không đổi thành payment_method). Module payment chỉ xử lý giao dịch
 //       tiền vào (SePay).
+//  Q32. [ĐÃ CHỐT] Gộp 3 bảng hồ sơ vào account; mã KH- / NV- / AD- nằm ở account_id, bộ đếm
+//       4 số riêng cho từng tiền tố; đổi vai trò NV <-> AD thì cấp mã mới.
+//  Q33. [ĐÃ CHỐT] Thêm account_created_at (timestamptz, NOT NULL, DEFAULT now()) làm ngày đăng ký
+//       cho mã KH-.
+//  Q34. [ĐÃ CHỐT, thay bởi Q35] Thêm account_token_version (int, NOT NULL, DEFAULT 0) để kết thúc
+//       ngay mọi phiên khi đổi vai trò, khóa tài khoản, đổi mật khẩu. Chỉ bảng account cần cột này;
+//       refresh token lưu ở Redis, không thêm bảng.
+//  Q35. [ĐÃ CHỐT 21/11/2026] Ứng dụng SSR dùng phiên phía server: bảng identity.session, cookie
+//       HttpOnly + Secure + SameSite=Lax, request ghi (POST / PUT / PATCH / DELETE) kiểm tra
+//       header Origin. Hạn phiên: Khách hàng 30 phút, Nhân viên / Admin 1 giờ. Kết thúc mọi
+//       phiên = xóa các dòng session của tài khoản; bỏ account_token_version.
+//       Hạn tính từ lần thao tác cuối, gia hạn khi còn dùng (đã chốt 21/11/2026).
+//  Q36. [ĐÃ CHỐT 21/11/2026] Băm mật khẩu bằng bcrypt.
+//  Q37. [ĐÃ CHỐT 21/11/2026] Ngày trong mã KH- theo giờ Asia/Ho_Chi_Minh.
+//  Q38. [ĐÃ CHỐT 21/11/2026] Giá nhập >= 0.
+//  Q39. [ĐÃ CHỐT 21/11/2026] Giỏ hàng và danh sách yêu thích tạo cùng lúc tạo tài khoản Khách hàng.
 // =====================================================================

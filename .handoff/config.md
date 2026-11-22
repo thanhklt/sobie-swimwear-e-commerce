@@ -20,7 +20,7 @@ convention_docs:   AGENTS.md
 ## Project Documentation Index
 
 ### Agent guidance
-- [AGENTS.md](AGENTS.md) — quy tắc agent (3 tầng, envelope, tiền, giờ, [GD])
+- [AGENTS.md](AGENTS.md) — quy tắc agent (3 tầng, tiền, giờ, [GD])
 - [CLAUDE.md](CLAUDE.md) — trỏ tới AGENTS.md
 
 ### Project docs

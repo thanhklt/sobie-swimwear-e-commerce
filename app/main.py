@@ -7,11 +7,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.shared.web.session import (
-    SessionAccessError,
-    SessionMiddleware,
-    session_access_error,
-)
+from app.error.handlers import register_error_handlers
+from app.shared.web.session import SessionMiddleware
 
 version = "v1"
 
@@ -30,7 +27,7 @@ app = FastAPI(
     lifespan=life_span,
 )
 app.add_middleware(SessionMiddleware)
-app.add_exception_handler(SessionAccessError, session_access_error)
+register_error_handlers(app)
 
 
 @app.get("/")

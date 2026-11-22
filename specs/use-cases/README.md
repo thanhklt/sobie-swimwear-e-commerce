@@ -249,7 +249,7 @@ Mỗi dòng là một giả định đang có trong mục *Notes* của UC, ch�
 | UC-31 | Mức giảm theo hóa đơn hoặc voucher tính trên tạm tính (đã gồm khuyến mãi theo sản phẩm), không áp vào phí vận chuyển, và không vượt quá tạm tính. |
 | UC-31 | Số tiền thay đổi giữa lúc xem và lúc xác nhận thì không tạo đơn, yêu cầu khách xác nhận lại. |
 | UC-31 | Đơn bị hủy thì hoàn cả lượt khuyến mãi theo hóa đơn. |
-| UC-33 | Phiếu nhập có trạng thái: Nháp → Đã xác nhận | Đã hủy; chỉ sửa và hủy được khi còn "Nháp". |
+| UC-33 | Phiếu nhập có trạng thái: Nháp → Đã xác nhận \| Đã hủy; chỉ sửa và hủy được khi còn "Nháp". |
 | UC-33 | Mỗi biến thể chỉ xuất hiện một dòng trong một phiếu. |
 | UC-33 | Danh sách phiếu nhập lọc được theo trạng thái và nhà cung cấp. |
 | UC-35 | Cộng tồn chạy trong cùng transaction với cập nhật trạng thái đơn. |

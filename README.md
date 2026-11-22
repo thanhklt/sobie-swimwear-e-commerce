@@ -44,7 +44,7 @@ soobin-swimwear-e-commerce/
 │   │   │   └── transaction.py      # Transaction đi qua nhiều module
 │   │   ├── security/               # Băm mật khẩu, mã phiên, kiểm tra Origin
 │   │   ├── web/
-│   │   │   ├── response.py         # Envelope success / data / error / meta
+│   │   │   ├── session.py          # Middleware phiên, kiểm tra vai trò
 │   │   │   ├── templates/base.html
 │   │   │   └── static/css/
 │   │   └── money.py                # VND / Decimal, ROUND_HALF_UP

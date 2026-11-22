@@ -1,1 +1,14 @@
-<!-- Layout chung của giao diện; chưa triển khai. -->
+{# Layout chung của giao diện. Header, menu, footer làm cùng UC-09. -#}
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Sobie{% endblock %}</title>
+</head>
+<body>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

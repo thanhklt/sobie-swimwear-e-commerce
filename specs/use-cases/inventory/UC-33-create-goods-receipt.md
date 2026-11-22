@@ -22,24 +22,24 @@ Nhân viên chọn "Lập phiếu nhập" khi cửa hàng nhập hàng từ nhà
 2. Nhân viên thêm các dòng: chọn biến thể (sản phẩm × màu × size), nhập số lượng và đơn giá nhập thực tế.
 3. Hệ thống tính thành tiền từng dòng = số lượng × đơn giá nhập thực tế, và tổng tiền phiếu = tổng thành tiền các dòng.
 4. Nhân viên lưu phiếu.
-5. Hệ thống lưu phiếu ở trạng thái "Nháp" `[GD]`, kèm nhà cung cấp, Nhân viên lập phiếu, ngày tạo và tổng tiền. Tồn kho và giá vốn chưa thay đổi.
+5. Hệ thống lưu phiếu ở trạng thái "Nháp", kèm nhà cung cấp, Nhân viên lập phiếu, ngày tạo và tổng tiền. Tồn kho và giá vốn chưa thay đổi.
 
 ## Alternative Flows
-- **4a. Sửa phiếu nháp:** Nhân viên thêm, sửa, xóa dòng hoặc đổi nhà cung cấp khi phiếu còn "Nháp" `[GD]`.
+- **4a. Sửa phiếu nháp:** Nhân viên thêm, sửa, xóa dòng hoặc đổi nhà cung cấp khi phiếu còn "Nháp".
   1. Khi Nhân viên lưu sửa, hệ thống mở database transaction, khóa dòng phiếu trong `inventory.goods_receipt` bằng `SELECT ... FOR UPDATE`.
   2. Sau khi lấy được khóa, hệ thống kiểm tra lại trạng thái `DRAFT`; nếu không còn `DRAFT`, xử lý E5. Không dùng trạng thái đã đọc trước khi lấy khóa để cho phép sửa.
   3. Hệ thống kiểm tra dữ liệu và trạng thái nhà cung cấp tại thời điểm lưu sửa theo E1–E4. Nhà cung cấp của phiếu phải đang hợp tác; nếu đã ngừng hợp tác thì từ chối lưu sửa với nhà cung cấp đó, kể cả khi giữ nguyên nhà cung cấp của phiếu nháp cũ.
   4. Chỉ sau các kiểm tra trên, hệ thống mới sửa phiếu và các dòng chi tiết, tính lại thành tiền từng dòng và tổng tiền, rồi commit cùng một transaction. Giữ khóa dòng phiếu đến khi commit/rollback; lỗi lưu sửa xử lý E6. Tồn kho và giá vốn không thay đổi.
-- **4b. Hủy phiếu nháp:** phiếu chuyển sang "Đã hủy", không ảnh hưởng tồn kho `[GD]`.
+- **4b. Hủy phiếu nháp:** phiếu chuyển sang "Đã hủy", không ảnh hưởng tồn kho.
   1. Hệ thống mở database transaction, khóa cùng dòng phiếu trong `inventory.goods_receipt` bằng `SELECT ... FOR UPDATE`.
   2. Sau khi lấy được khóa, hệ thống kiểm tra lại trạng thái `DRAFT`; nếu không còn `DRAFT`, xử lý E5.
   3. Chỉ sau khi kiểm tra hợp lệ, hệ thống mới chuyển phiếu sang `CANCELLED` và commit. Giữ khóa dòng phiếu đến khi commit/rollback; lỗi ghi hoặc commit xử lý E6. Tồn kho và giá vốn không thay đổi. Trạng thái nhà cung cấp không ngăn hủy phiếu nháp.
-- **4c. Xem danh sách phiếu nhập:** Nhân viên xem danh sách phiếu nhập, lọc theo trạng thái và nhà cung cấp `[GD]`.
+- **4c. Xem danh sách phiếu nhập:** Nhân viên xem danh sách phiếu nhập, lọc theo trạng thái và nhà cung cấp.
 
 ## Exceptions
 - **E1. Phiếu không có dòng nào:** hệ thống báo lỗi, không lưu.
 - **E2. Số lượng hoặc giá nhập không hợp lệ:** số lượng không phải số nguyên dương, hoặc giá nhập không phải số nguyên VND không âm (giá nhập bằng 0 hợp lệ) → hệ thống báo lỗi tại dòng tương ứng, không lưu.
-- **E3. Trùng biến thể trong phiếu:** một biến thể xuất hiện ở hai dòng → hệ thống báo lỗi, yêu cầu gộp thành một dòng `[GD]`.
+- **E3. Trùng biến thể trong phiếu:** một biến thể xuất hiện ở hai dòng → hệ thống báo lỗi, yêu cầu Nhân viên tự gộp số lượng và giá nhập thành một dòng.
 - **E4. Nhà cung cấp đã ngừng hợp tác:** không được chọn hoặc lưu trên phiếu; chỉ nhà cung cấp "Đang hợp tác" được chọn/lưu khi lập phiếu hoặc lưu sửa. Nếu nhà cung cấp ngừng hợp tác sau khi lập phiếu nháp, hệ thống chặn lưu sửa với nhà cung cấp đó; phiếu nháp cũ đã lưu vẫn được xác nhận qua UC-34 (đã chốt 22/11/2026).
 - **E5. Sửa hoặc hủy phiếu không còn ở trạng thái "Nháp":** sau khi lấy được khóa dòng phiếu, nếu trạng thái không còn `DRAFT` (đã `CONFIRMED` hoặc `CANCELLED`) thì hệ thống từ chối cả sửa và hủy, kết thúc transaction mà không ghi thay đổi. Quy tắc áp dụng cả khi yêu cầu phải chờ UC-34 xác nhận xong mới lấy được khóa. Khi từ chối, phiếu và toàn bộ chi tiết không đổi bởi yêu cầu bị từ chối; tồn kho và giá vốn không bị thay đổi bởi yêu cầu đó.
 - **E6. Lỗi khi lưu sửa hoặc hủy:** lỗi ghi phiếu, ghi một dòng chi tiết khi sửa, ghi trạng thái khi hủy hoặc commit → rollback toàn bộ transaction, phiếu và mọi dòng chi tiết giữ nguyên như trước thao tác, không lưu dở thay đổi; giải phóng khóa khi transaction kết thúc, báo lỗi và không thông báo thành công. Tồn kho và giá vốn không thay đổi.
@@ -169,10 +169,12 @@ And: dữ liệu phiếu, các dòng chi tiết, tồn kho và giá vốn không
 - Nhà cung cấp ngừng hợp tác không được chọn/lưu trên phiếu; nếu ngừng hợp tác sau khi lập phiếu nháp thì chặn lưu sửa với nhà cung cấp đó. Phiếu nháp cũ đã lưu vẫn được xác nhận qua UC-34 (đã chốt 22/11/2026).
 - Giá nhập là số nguyên VND ≥ 0, khớp CHECK `goods_receipt_detail_unit_price >= 0` của data model (đã chốt 21/11/2026).
 
+- Phiếu nhập có trạng thái: Nháp → Đã xác nhận hoặc Đã hủy; chỉ sửa và hủy được khi còn "Nháp" (đã chốt 22/11/2026).
+- Mỗi biến thể chỉ xuất hiện một dòng trong một phiếu; trùng biến thể thì báo lỗi, Nhân viên tự gộp số lượng và giá nhập (đã chốt 22/11/2026).
+- Xem danh sách phiếu nhập và lọc theo trạng thái, nhà cung cấp thuộc phạm vi UC-33 (đã chốt 22/11/2026).
+
 **Giả định [GD]**
-- Phiếu nhập có trạng thái: Nháp → Đã xác nhận | Đã hủy; chỉ sửa và hủy được khi còn "Nháp".
-- Mỗi biến thể chỉ xuất hiện một dòng trong một phiếu.
-- Danh sách phiếu nhập lọc được theo trạng thái và nhà cung cấp.
+- Không còn giả định chờ quyết định trong UC-33.
 
 ## History
 - v1 (2026-11-15): initial
@@ -181,3 +183,4 @@ And: dữ liệu phiếu, các dòng chi tiết, tồn kho và giá vốn không
 - v4 (2026-11-21): chốt giá nhập là số nguyên VND không âm, chấp nhận giá nhập bằng 0
 - v5 (2026-11-22): đồng bộ khóa dòng phiếu, kiểm tra lại DRAFT và tính nguyên tử khi sửa/hủy với UC-34; mở rộng E5, thêm E6 và AC-7–AC-9; chốt E4 về chặn lưu sửa với nhà cung cấp ngừng hợp tác nhưng vẫn cho xác nhận phiếu nháp cũ
 - v6 (2026-11-22): giới hạn điều kiện nhà cung cấp theo thao tác; hoàn thiện hậu điều kiện, xử lý lỗi hủy và AC-10–AC-14 cho sửa/hủy thành công, từ chối phiếu không còn nháp, rollback khi hủy lỗi và tra cứu khi không còn nhà cung cấp đang hợp tác
+- v7 (2026-11-22): chuyển ba giả định về vòng đời phiếu, trùng biến thể và lọc danh sách sang quyết định đã chốt; bỏ tag giả định tương ứng trong luồng và ngoại lệ

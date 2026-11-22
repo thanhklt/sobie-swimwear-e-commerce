@@ -13,7 +13,7 @@ Khách vãng lai, Khách hàng
 Khách bấm "Thêm vào giỏ" trên trang chi tiết sản phẩm, hoặc mở trang giỏ hàng.
 
 ## Preconditions
-- Biến thể (màu × size) đang được bán và còn hàng.
+- Biến thể (màu × size) tồn tại trong hệ thống.
 
 ## Main Flow
 1. Khách chọn màu, size, số lượng trên trang chi tiết sản phẩm và bấm "Thêm vào giỏ".
@@ -25,15 +25,18 @@ Khách bấm "Thêm vào giỏ" trên trang chi tiết sản phẩm, hoặc mở
 ## Alternative Flows
 - **2a. Khách vãng lai:** giỏ hàng lưu ở `localStorage` của trình duyệt; khách vẫn thêm, sửa, xóa được như Khách hàng.
 - **2b. Khách vãng lai đăng nhập:** giỏ trong `localStorage` được gộp vào giỏ của tài khoản; dòng trùng biến thể thì cộng dồn nhưng không vượt tồn kho `[GD]`.
+- **2c. Tồn kho thay đổi khi gộp giỏ:** hệ thống kiểm tra lại tồn kho và trạng thái bán của từng biến thể. Với biến thể còn bán và còn hàng, số lượng gộp không vượt tồn kho. Với biến thể hết hàng hoặc ngừng bán, giữ số lượng khách đã chọn (cộng dồn nếu trùng), gắn nhãn tương ứng, không tính vào tạm tính và không cho đặt; không đổi số lượng thành 0 `[GD]`.
+- **2d. Hoàn tất gộp giỏ:** chỉ làm trống giỏ trong `localStorage` sau khi lưu giỏ tài khoản thành công; nếu lưu thất bại, giữ giỏ trình duyệt để khách thử lại.
 - **4a. Giá hoặc khuyến mãi đã thay đổi:** giỏ luôn hiển thị giá hiện tại, không giữ giá lúc thêm vào giỏ `[GD]`.
 
 ## Exceptions
 - **E1. Vượt tồn kho:** số lượng thêm hoặc sửa lớn hơn tồn kho của biến thể → hệ thống không cập nhật, báo "Chỉ còn N sản phẩm".
 - **E2. Biến thể hết hàng hoặc ngừng bán:** dòng trong giỏ được đánh dấu "Hết hàng/Ngừng bán", không tính vào tạm tính và không đặt hàng được cho tới khi khách xóa `[GD]`.
 - **E3. Số lượng không hợp lệ:** số lượng ≤ 0 hoặc không phải số nguyên → hệ thống từ chối.
+- **E4. Lỗi lưu hoặc đồng bộ giỏ:** hệ thống giữ nguyên giỏ trước thao tác và thông báo cập nhật không thành công.
 
 ## Postconditions
-- Giỏ hàng chứa đúng các biến thể và số lượng khách đã chọn, không dòng nào vượt tồn kho.
+- Giỏ lưu số lượng đã được chấp nhận ở lần cập nhật; kiểm tra tồn kho tại thời điểm thêm, sửa hoặc gộp giỏ. Giỏ không giữ chỗ tồn kho; dòng hết hàng/ngừng bán vẫn được giữ và đánh dấu không thể đặt.
 - Với Khách hàng đã đăng nhập, giỏ được lưu trong DB; mỗi biến thể chỉ có 1 dòng trong giỏ.
 
 ## Acceptance Criteria
@@ -81,6 +84,12 @@ Given: Khách hàng đã đăng nhập thêm "Đỏ / M" số lượng 1 vào gi
 When: Khách hàng đăng nhập trên máy B và mở giỏ hàng
 Then: giỏ có dòng "Đỏ / M" số lượng 1
 
+### AC-9: Gộp giỏ khi tồn kho thay đổi
+Given: giỏ trình duyệt có biến thể "Đỏ / M" số lượng 2 nhưng tồn kho hiện tại chỉ còn 1
+When: khách đăng nhập và hệ thống gộp hai giỏ
+Then: số lượng trong giỏ tài khoản là 1
+And: số lượng không vượt tồn kho hiện tại
+
 ## Dependencies
 - **Upstream UC:** UC-01 Đăng ký tài khoản, UC-06 Tạo tài khoản, UC-12 Xem chi tiết sản phẩm, UC-15 Quản lý biến thể màu × size, UC-16 Quản lý giá bán theo size, UC-28 Quản lý khuyến mãi theo sản phẩm
 - **Downstream UC:** UC-19 Đặt hàng thanh toán COD, UC-20 Đặt hàng thanh toán chuyển khoản QR
@@ -107,3 +116,7 @@ Then: giỏ có dòng "Đỏ / M" số lượng 1
 - v3 (2026-11-20): theo data model v2 — chốt giỏ khách vãng lai lưu ở `localStorage` (2a, 2b); chốt giỏ không lưu giá
 - v4 (2026-11-21): bổ sung giả định tạo giỏ hàng cùng lúc tạo tài khoản Khách hàng
 - v5 (2026-11-21): chốt tạo giỏ hàng cùng lúc tạo tài khoản Khách hàng (Q39)
+- v6 (2026-11-22): cho phép mở giỏ có biến thể hết hàng; bổ sung xử lý lỗi lưu và AC-9.
+- v7 (2026-11-22): bổ sung kiểm tra tồn kho và trạng thái bán khi gộp giỏ; thêm AC-10.
+- v8 (2026-11-22): gộp tiêu chí hết hàng trùng vào AC-7; đánh lại tiêu chí gộp giỏ thành AC-9.
+- v9 (2026-11-22): làm rõ số lượng của dòng hết hàng khi gộp và chỉ xóa giỏ trình duyệt sau khi lưu thành công.

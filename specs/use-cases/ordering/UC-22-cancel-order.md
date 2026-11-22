@@ -20,10 +20,10 @@
 - Nhân viên: đơn đang "Chưa xử lý", "Đã xác nhận" hoặc "Chờ lấy hàng" (đơn vị vận chuyển chưa nhận hàng).
 
 ## Main Flow
-1. Người thao tác bấm "Hủy đơn".
+1. Hệ thống chỉ hiển thị nút "Hủy đơn" cho Khách hàng trên đơn của mình ở trạng thái "Chưa xử lý"; cho Nhân viên trên đơn "Chưa xử lý", "Đã xác nhận" hoặc "Chờ lấy hàng". Người thao tác bấm nút này; yêu cầu gửi trực tiếp vẫn phải được kiểm tra quyền và trạng thái ở bước 4.
 2. Hệ thống hiển thị popup xác nhận hủy:
    - Khách hàng: chỉ hỏi xác nhận.
-   - Nhân viên: bắt buộc nhập lý do hủy.
+   - Nhân viên: bắt buộc nhập lý do hủy, tối đa 500 ký tự `[GD]`.
 3. Người thao tác bấm xác nhận.
 4. Trong cùng một transaction, hệ thống: khóa và kiểm tra lại trạng thái đơn còn được phép hủy theo vai trò, chuyển đơn sang "Đã hủy", cộng lại tồn kho các dòng hàng, hoàn lượt của voucher hoặc khuyến mãi theo hóa đơn đã áp cho đơn, và lưu lịch sử trạng thái đơn (kèm lý do nếu Nhân viên hủy).
 5. Hệ thống báo hủy thành công. Nếu đơn đang "Chờ lấy hàng", đơn biến mất khỏi Trang giả lập vận chuyển.
@@ -35,8 +35,10 @@
 ## Exceptions
 - **E1. Khách hủy đơn không còn "Chưa xử lý":** Nhân viên vừa xác nhận hoặc hủy, hay hệ thống vừa tự hủy → hệ thống từ chối, báo trạng thái hiện tại của đơn.
 - **E2. Nhân viên hủy đơn đã được đơn vị vận chuyển nhận hàng hoặc đã kết thúc:** đơn ở "Đang giao", "Giao thành công", "Giao không thành công" hoặc "Đã hủy" → hệ thống từ chối, không hiển thị nút "Hủy đơn" cho các trạng thái này.
-- **E3. Nhân viên để trống lý do hủy:** hệ thống báo lỗi ở ô lý do, không hủy.
+- **E3. Lý do hủy không hợp lệ:** Nhân viên để trống hoặc nhập quá 500 ký tự `[GD]` → hệ thống báo lỗi ở ô lý do, không hủy.
 - **E4. Đơn không thuộc khách:** hệ thống từ chối.
+- **E5. Lỗi hoàn tồn kho, hoàn lượt hoặc lưu lịch sử:** rollback toàn bộ transaction; trạng thái đơn và dữ liệu liên quan giữ nguyên, thông báo hủy không thành công.
+- **E6. Yêu cầu hủy lặp:** đơn đã "Đã hủy" không được xử lý lại; không hoàn tồn kho hoặc lượt khuyến mãi lần thứ hai.
 
 ## Postconditions
 - Đơn ở trạng thái "Đã hủy"; tồn kho và lượt của khuyến mãi đã áp (voucher hoặc khuyến mãi theo hóa đơn) đã được hoàn.
@@ -110,6 +112,16 @@ Given: Nhân viên đã hủy đơn của khách A với lý do "Nghi ngờ đơ
 When: khách A mở chi tiết đơn (UC-21)
 Then: khách thấy trạng thái "Đã hủy" và không thấy lý do
 
+### AC-13: Hủy thất bại phải rollback
+Given: đơn được phép hủy nhưng việc hoàn tồn kho hoặc lượt khuyến mãi thất bại
+When: người thao tác xác nhận hủy
+Then: transaction rollback; đơn, tồn kho, lượt khuyến mãi và lịch sử giữ nguyên
+
+### AC-14: Hủy lặp không hoàn dữ liệu lần hai
+Given: đơn đã "Đã hủy" và đã hoàn tồn kho, lượt khuyến mãi
+When: người thao tác gửi lại yêu cầu hủy
+Then: hệ thống từ chối và không hoàn tồn kho hoặc lượt khuyến mãi thêm lần nữa
+
 ## Dependencies
 - **Upstream UC:** UC-19 Đặt hàng thanh toán COD, UC-20 Đặt hàng thanh toán chuyển khoản QR, UC-21 Theo dõi đơn hàng, UC-23 Xác nhận đơn hàng, UC-40 Bàn giao đơn cho vận chuyển
 - **Downstream UC:** UC-37 Xem dashboard (số đơn theo trạng thái), UC-39 Xem tồn kho
@@ -137,3 +149,6 @@ Then: khách thấy trạng thái "Đã hủy" và không thấy lý do
 - v3 (2026-11-15): hoàn lượt khuyến mãi theo hóa đơn khi hủy; lưu lịch sử trạng thái đơn (theo ERD); thêm AC-3, AC-4
 - v4 (2026-11-20): thêm actor Nhân viên — hủy được đến trước khi đơn vị vận chuyển nhận hàng, bắt buộc nhập lý do qua popup, khách không thấy lý do; bỏ "Bị từ chối"; thêm AC-8 → AC-12
 - v5 (2026-11-20): theo data model v2 — chốt lý do hủy lưu ở `order_status_history_note`
+- v6 (2026-11-22): bổ sung rollback khi hủy thất bại và chống xử lý hủy lặp; thêm AC-13, AC-14.
+- v7 (2026-11-22): làm rõ điều kiện hiển thị nút hủy theo vai trò và kiểm tra yêu cầu trực tiếp.
+- v8 (2026-11-22): đưa giới hạn lý do hủy 500 ký tự vào luồng và ngoại lệ.

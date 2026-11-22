@@ -154,7 +154,7 @@ Chưa xử lý ──(UC-23 xác nhận)──► Đã xác nhận ──(UC-40 
 | Phiếu nhập — xử lý đồng thời | Sửa/hủy/xác nhận cùng khóa dòng phiếu rồi kiểm tra lại DRAFT trong transaction; xác nhận khóa inventory.stock và tăng phiên bản cache catalog sau commit thành công (22/11/2026) | UC-33, UC-34 |
 | Phiếu nhập — lỗi cache sau commit | Vẫn báo xác nhận thành công, giữ dữ liệu đã commit, ghi log lỗi cache kèm mã phiếu; chờ TTL dự phòng 5 phút, không retry (22/11/2026) | UC-34 |
 | Phiếu nhập — NCC ngừng hợp tác | Chặn chọn/lưu với NCC ngừng hợp tác; vẫn cho xác nhận phiếu nháp đã lưu trước khi NCC ngừng hợp tác (22/11/2026) | UC-33, UC-34 |
-| Hàng hoàn | Chống cộng tồn hai lần bằng trạng thái đơn, không có cột đánh dấu | UC-35 |
+| Hàng hoàn | Khóa và kiểm tra trạng thái đơn để chống cộng tồn hai lần; cộng tồn, đổi trạng thái và ghi lịch sử cùng transaction. Hàng ngừng bán vẫn được cộng tồn; lỗi đã xác định không commit thì rollback và cho gửi lại. Kết quả commit chưa xác định phải kiểm tra lại Database; lỗi cache sau commit chỉ thử lại cache, giữ kết quả nghiệp vụ thành công (22/11/2026) | UC-35 |
 
 ## Data model
 
@@ -255,9 +255,6 @@ Mỗi dòng là một giả định đang có trong mục *Notes* của UC, ch�
 | UC-33 | Phiếu nhập có trạng thái: Nháp → Đã xác nhận \| Đã hủy; chỉ sửa và hủy được khi còn "Nháp". |
 | UC-33 | Mỗi biến thể chỉ xuất hiện một dòng trong một phiếu. |
 | UC-33 | Danh sách phiếu nhập lọc được theo trạng thái và nhà cung cấp. |
-| UC-35 | Cộng tồn chạy trong cùng transaction với cập nhật trạng thái đơn. |
-| UC-35 | Biến thể hoặc sản phẩm đã ngừng bán vẫn được cộng lại tồn kho. |
-| UC-35 | Khi lỗi, Trang giả lập vận chuyển nhận lỗi và có thể gửi lại. |
 | UC-36 | Danh sách trên trang giả lập gồm: mã đơn, trạng thái, người nhận, số điện thoại, địa chỉ, người gửi, số tiền thu khi giao với đơn COD. |
 | UC-37 | Kỳ báo cáo mặc định là tháng hiện tại, chọn được khoảng thời gian. |
 | UC-37 | Tồn kho thấp: tồn kho ≤ ngưỡng. |

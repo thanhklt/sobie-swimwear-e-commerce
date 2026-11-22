@@ -146,6 +146,9 @@ Chưa xử lý ──(UC-23 xác nhận)──► Đã xác nhận ──(UC-40 
 | Sửa khuyến mãi | Khuyến mãi đã tạo không được sửa, chỉ ngừng; tạo có popup xác nhận | UC-28 → UC-31 |
 | Tra cứu khuyến mãi | Không có tên, nhận diện bằng mã `KM-<4 số>`; danh sách khuyến mãi theo hóa đơn và voucher lọc theo khoảng thời gian — hiện khuyến mãi có thời gian hiệu lực giao với khoảng chọn (kể cả một phần); khuyến mãi theo sản phẩm không lọc theo thời gian (20/11/2026) | UC-28, UC-29, UC-30 |
 | Nhà cung cấp | Có trạng thái Đang hợp tác / Ngừng hợp tác; chỉ chọn nhà cung cấp Đang hợp tác khi lập phiếu | UC-32, UC-33 |
+| Xóa nhà cung cấp | Cho phép xóa hẳn khi chưa có phiếu nhập; nếu có phiếu tham chiếu ở bất kỳ trạng thái nào thì từ chối xóa và gợi ý ngừng hợp tác (22/11/2026) | UC-32 |
+| Tên nhà cung cấp | Bắt buộc, không trùng với NCC khác kể cả NCC ngừng hợp tác; so sánh bỏ khoảng trắng đầu/cuối, không phân biệt hoa/thường nhưng phân biệt dấu tiếng Việt; khi sửa loại trừ chính NCC đang sửa (22/11/2026) | UC-32 |
+| Danh sách nhà cung cấp | Có phân trang, tìm theo tên chứa từ khóa; tìm kiếm bỏ khoảng trắng đầu/cuối của tên và từ khóa, không phân biệt hoa/thường nhưng phân biệt dấu tiếng Việt (22/11/2026) | UC-32 |
 | Giá nhập | Số nguyên VND ≥ 0 (21/11/2026) | UC-33 |
 | Phiếu nhập | Không lưu người / thời điểm xác nhận | UC-34 |
 | Hàng hoàn | Chống cộng tồn hai lần bằng trạng thái đơn, không có cột đánh dấu | UC-35 |
@@ -246,9 +249,6 @@ Mỗi dòng là một giả định đang có trong mục *Notes* của UC, ch�
 | UC-31 | Mức giảm theo hóa đơn hoặc voucher tính trên tạm tính (đã gồm khuyến mãi theo sản phẩm), không áp vào phí vận chuyển, và không vượt quá tạm tính. |
 | UC-31 | Số tiền thay đổi giữa lúc xem và lúc xác nhận thì không tạo đơn, yêu cầu khách xác nhận lại. |
 | UC-31 | Đơn bị hủy thì hoàn cả lượt khuyến mãi theo hóa đơn. |
-| UC-32 | Tên nhà cung cấp là bắt buộc và không trùng. |
-| UC-32 | Danh sách có phân trang và tìm theo tên. |
-| UC-32 | Nhà cung cấp đã có phiếu nhập không xóa được, chỉ ngừng hợp tác; chưa có phiếu nhập thì xóa hẳn được. |
 | UC-33 | Phiếu nhập có trạng thái: Nháp → Đã xác nhận | Đã hủy; chỉ sửa và hủy được khi còn "Nháp". |
 | UC-33 | Mỗi biến thể chỉ xuất hiện một dòng trong một phiếu. |
 | UC-33 | Danh sách phiếu nhập lọc được theo trạng thái và nhà cung cấp. |

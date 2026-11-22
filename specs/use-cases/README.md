@@ -147,6 +147,10 @@ Chưa xử lý ──(UC-23 xác nhận)──► Đã xác nhận ──(UC-40 
 | Nhà cung cấp | Có trạng thái Đang hợp tác / Ngừng hợp tác; chỉ chọn nhà cung cấp Đang hợp tác khi lập phiếu | UC-32, UC-33 |
 | Giá nhập | Số nguyên VND ≥ 0 (21/11/2026) | UC-33 |
 | Phiếu nhập | Không lưu người / thời điểm xác nhận | UC-34 |
+| Phiếu nhập — xử lý đồng thời | Sửa/hủy/xác nhận cùng khóa dòng phiếu rồi kiểm tra lại DRAFT trong transaction; xác nhận khóa inventory.stock và tăng phiên bản cache catalog sau commit thành công (22/11/2026) | UC-33, UC-34 |
+| Phiếu nhập — lỗi cache sau commit | Vẫn báo xác nhận thành công, giữ dữ liệu đã commit, ghi log lỗi cache kèm mã phiếu; chờ TTL dự phòng 5 phút, không retry (22/11/2026) | UC-34 |
+| Phiếu nhập — NCC ngừng hợp tác | Chặn chọn/lưu với NCC ngừng hợp tác; vẫn cho xác nhận phiếu nháp đã lưu trước khi NCC ngừng hợp tác (22/11/2026) | UC-33, UC-34 |
+| Tiền nhập hàng theo NCC | Theo ngày tạo phiếu, chỉ tính phiếu đã xác nhận tại thời điểm xem; xác nhận muộn có thể làm tăng số liệu kỳ cũ (22/11/2026) | UC-34, UC-37 |
 | Hàng hoàn | Chống cộng tồn hai lần bằng trạng thái đơn, không có cột đánh dấu | UC-35 |
 
 ## Data model

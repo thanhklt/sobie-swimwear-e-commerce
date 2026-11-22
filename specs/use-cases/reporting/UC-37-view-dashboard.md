@@ -24,7 +24,7 @@ Nhân viên mở trang dashboard trong khu vực quản trị.
    3. **Số đơn theo trạng thái:** số đơn tạo trong kỳ theo từng trạng thái (Chưa xử lý, Đã xác nhận, Chờ lấy hàng, Đang giao, Giao thành công, Giao không thành công, Đã hủy).
    4. **Sản phẩm bán chạy:** top 10 sản phẩm theo số lượng bán của các đơn "Giao thành công" trong kỳ `[GD]`.
    5. **Tồn kho thấp:** các biến thể có tồn kho ≤ ngưỡng tồn kho thấp (hard-code) tại thời điểm xem `[GD]`.
-   6. **Tiền nhập hàng theo nhà cung cấp:** tổng tiền các phiếu nhập "Đã xác nhận" trong kỳ, nhóm theo nhà cung cấp.
+   6. **Tiền nhập hàng theo nhà cung cấp:** tổng tiền các phiếu nhập có ngày tạo (`goods_receipt_created_date`) thuộc kỳ báo cáo theo múi giờ `Asia/Ho_Chi_Minh` và ở trạng thái "Đã xác nhận" tại thời điểm xem, nhóm theo nhà cung cấp. Xác nhận muộn có thể làm tăng số liệu kỳ cũ.
 4. Thời gian hiển thị theo múi giờ `Asia/Ho_Chi_Minh`.
 
 ## Alternative Flows
@@ -61,7 +61,7 @@ When: Nhân viên xem dashboard
 Then: danh sách tồn kho thấp gồm X và Y, không có Z
 
 ### AC-5: Tiền nhập hàng theo nhà cung cấp
-Given: trong kỳ nhà cung cấp X có 2 phiếu "Đã xác nhận" tổng 5.000.000đ và 1 phiếu "Nháp" 1.000.000đ
+Given: nhà cung cấp X có 3 phiếu được tạo trong kỳ; tại thời điểm xem có 2 phiếu "Đã xác nhận" tổng 5.000.000đ và 1 phiếu "Nháp" 1.000.000đ
 When: Nhân viên xem dashboard
 Then: tiền nhập của X = 5.000.000đ
 
@@ -80,6 +80,12 @@ Given: người dùng đăng nhập với vai trò Khách hàng hoặc Admin
 When: người dùng truy cập dashboard
 Then: hệ thống từ chối truy cập
 
+### AC-9: Xác nhận muộn làm tăng tiền nhập của kỳ tạo phiếu
+Given: nhà cung cấp X chỉ có phiếu P tổng 1.000.000đ, tạo ngày 30/11/2026 theo múi giờ `Asia/Ho_Chi_Minh`; P còn "Nháp" nên tiền nhập tháng 11 của X đang là 0đ
+When: Nhân viên xác nhận P ngày 01/12/2026 rồi xem lại dashboard tháng 11 và tháng 12
+Then: tiền nhập tháng 11 của X = 1.000.000đ
+And: tiền nhập tháng 12 của X = 0đ
+
 ## Dependencies
 - **Upstream UC:** UC-19, UC-20, UC-23, UC-26, UC-31, UC-32, UC-34, UC-35, UC-36
 - **Downstream UC:** không có
@@ -95,6 +101,7 @@ Then: hệ thống từ chối truy cập
 **Quyết định đã chốt**
 - Chỉ Nhân viên xem dashboard; Khách hàng và Admin không xem được (đã chốt 15/11/2026).
 - Không làm chỉ số "Hiệu quả khuyến mãi"; chuyển sang Out of Scope (đã chốt 15/11/2026).
+- Tiền nhập hàng theo nhà cung cấp lọc theo ngày tạo phiếu, chỉ tính phiếu đã xác nhận tại thời điểm xem; số liệu kỳ cũ có thể tăng khi xác nhận muộn. Không bổ sung thời điểm xác nhận phiếu nhập (đã chốt 22/11/2026, UC-34).
 
 **Giả định [GD]**
 - Kỳ báo cáo mặc định là tháng hiện tại, chọn được khoảng thời gian.
@@ -109,3 +116,4 @@ Then: hệ thống từ chối truy cập
 - v4 (2026-11-20): đồng bộ BR-GIAIDOAN1 — số đơn theo trạng thái: thêm "Chờ lấy hàng", bỏ "Bị từ chối"
 - v5 (2026-11-21): chốt dashboard không cache phía server; phân biệt với khối bán chạy trang chủ
 - v6 (2026-11-21): theo BR-GIAIDOAN1 v22 — trang dashboard trả `no-store` thay cho `private, no-cache` + `ETag`
+- v7 (2026-11-22): chốt kỳ tiền nhập hàng theo ngày tạo phiếu và trạng thái đã xác nhận tại thời điểm xem; thêm AC-9 cho xác nhận khác kỳ tạo

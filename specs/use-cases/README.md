@@ -138,6 +138,7 @@ Chưa xử lý ──(UC-23 xác nhận)──► Đã xác nhận ──(UC-40 
 | Hóa đơn | Tự xuất khi giao thành công; khách và Nhân viên chỉ xem (20/11/2026) | UC-26, UC-27 |
 | Hóa đơn (ERD) | Lưu snapshot thông tin đơn lúc xuất | UC-26 |
 | Dashboard | Bỏ chỉ số hiệu quả khuyến mãi | UC-37 |
+| Kỳ ghi nhận trên dashboard | Doanh thu, lợi nhuận gộp và Top 10 sản phẩm bán chạy tính theo ngày đơn chuyển sang "Giao thành công" (22/11/2026). Doanh thu là tiền hàng sau giảm, không gồm phí vận chuyển. Top 10 xếp theo số lượng bán. | UC-37 |
 | Bảng size | Một bảng size chung, nội dung cố định | UC-12, UC-14 |
 | Giá theo size | Giữ `variant_sell_price`; đặt giá cho size thì ghi cùng giá cho mọi màu của size đó | UC-16 |
 | Từ chối đơn | Bỏ hẳn thao tác từ chối; Nhân viên dùng "Hủy đơn" có lý do (cập nhật 20/11/2026) | UC-22, UC-23 |
@@ -260,8 +261,6 @@ Mỗi dòng là một giả định đang có trong mục *Notes* của UC, ch�
 | UC-35 | Khi lỗi, Trang giả lập vận chuyển nhận lỗi và có thể gửi lại. |
 | UC-36 | Danh sách trên trang giả lập gồm: mã đơn, trạng thái, người nhận, số điện thoại, địa chỉ, người gửi, số tiền thu khi giao với đơn COD. |
 | UC-37 | Kỳ báo cáo mặc định là tháng hiện tại, chọn được khoảng thời gian. |
-| UC-37 | Doanh thu tính trên đơn "Giao thành công", tiền hàng sau giảm, không gồm phí vận chuyển. |
-| UC-37 | Sản phẩm bán chạy: top 10 theo số lượng bán từ đơn "Giao thành công". |
 | UC-37 | Tồn kho thấp: tồn kho ≤ ngưỡng. |
 | UC-38 | Nút tim có trên cả thẻ sản phẩm và trang chi tiết. |
 | UC-38 | Khách vãng lai bấm tim thì được yêu cầu đăng nhập; sau đăng nhập quay lại trang đang xem, không tự lưu sản phẩm. |

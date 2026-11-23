@@ -115,19 +115,20 @@ When: khách xác nhận đặt hàng và hệ thống kiểm tra lại lượt 
 Then: đơn được tạo với cùng mức giảm và tổng thanh toán, không yêu cầu xác nhận lại
 And: lượt còn lại giảm từ 9 xuống 8 do đơn này, không ghi đè theo số lượt cũ
 ### AC-12: Chặn đặt COD cho biến thể đã ngừng bán dù cache còn hàng
-Given: khách đã mở trang thanh toán với "Đỏ / M" số lượng 1 và tồn kho 5; Nhân viên chuyển biến thể sang INACTIVE, DB commit thành công nhưng Redis lỗi nên storefront vẫn hiển thị dữ liệu cũ
+Given: dữ liệu kiểm thử có sản phẩm cha ACTIVE, "Đỏ / M" đã INACTIVE từ trước khi phiếu nhập chuyển CONFIRMED và hiện tồn 5; khách gửi yêu cầu đặt số lượng 1 từ dữ liệu thanh toán cũ thể hiện biến thể đang bán
 When: khách xác nhận đặt hàng COD
 Then: trong transaction tạo đơn, hệ thống kiểm tra trạng thái hiện hành qua Service công khai của catalog và từ chối theo E7, báo dòng "Đỏ / M" không còn được bán
 And: không tạo đơn hoặc lịch sử đơn, tồn kho vẫn là 5, lượt dùng khuyến mãi và giỏ hàng giữ nguyên
 
-### AC-13: Đồng bộ kiểm tra đặt COD với thao tác ngừng bán biến thể
-Given: transaction UC-15 đang giữ khóa sản phẩm cha của "Đỏ / M" để chuyển biến thể sang INACTIVE và chưa commit
+### AC-13: Ngừng bán sau CONFIRMED bị chặn, đặt COD đọc lại trạng thái sau chờ
+Given: sản phẩm cha và "Đỏ / M" đều ACTIVE, đã có phiếu CONFIRMED, tồn 5 và giá hợp lệ; khách đặt 1 sản phẩm với các điều kiện COD khác hợp lệ, không áp dụng khuyến mãi; transaction UC-15 đang giữ khóa cha để xử lý yêu cầu ngừng bán và chưa kết thúc
 When: khách xác nhận đặt COD cho "Đỏ / M" và transaction tạo đơn yêu cầu cùng khóa qua Service catalog
-Then: transaction tạo đơn chờ UC-15 kết thúc; sau khi UC-15 commit, hệ thống đọc trạng thái mới là INACTIVE và từ chối theo E7
-And: không tạo đơn, không trừ tồn kho hoặc tăng lượt dùng khuyến mãi, giỏ giữ nguyên
+Then: UC-15 kiểm tra CONFIRMED, từ chối ngừng bán theo E7 của UC-15 và rollback, giữ nguyên trạng thái ACTIVE; transaction tạo đơn chờ đến khi khóa được giải phóng
+And: sau chờ, UC-19 đọc lại cả sản phẩm và biến thể vẫn ACTIVE, tiếp tục đặt COD thành công theo Main Flow; không từ chối với E7 của UC-19
+And: chỉ một đơn và lịch sử tương ứng được tạo, tồn còn 4 và các dòng đã đặt được xóa khỏi giỏ trong transaction tạo đơn; yêu cầu ngừng bán không thay đổi dữ liệu
 
 ### AC-14: Chặn đặt COD khi sản phẩm cha ngừng bán nhưng biến thể vẫn ACTIVE
-Given: khách đang giữ trang thanh toán cũ với "Đỏ / M" số lượng 1; sản phẩm cha đã INACTIVE sau khi UC-14 commit, biến thể vẫn ACTIVE và tồn kho vẫn là 5
+Given: dữ liệu kiểm thử có sản phẩm cha đã INACTIVE từ trước khi phiếu nhập chuyển CONFIRMED, biến thể "Đỏ / M" vẫn ACTIVE và hiện tồn 5; khách gửi yêu cầu đặt số lượng 1 từ dữ liệu thanh toán cũ thể hiện sản phẩm đang bán
 When: khách xác nhận đặt COD
 Then: sau khi có khóa, Service catalog đọc trạng thái hiện hành của cả sản phẩm và biến thể; hệ thống từ chối theo E7 vì sản phẩm cha INACTIVE
 And: transaction tạo đơn rollback toàn bộ; không tạo đơn/lịch sử đơn, tồn kho vẫn là 5, lượt dùng khuyến mãi và giỏ hàng giữ nguyên
@@ -170,3 +171,4 @@ And: transaction tạo đơn rollback toàn bộ; không tạo đơn/lịch sử
 - v10 (2026-11-23): theo yêu cầu xử lý rà soát vòng 3 tại Codex, kiểm tra product_status cùng variant_status sau khi giữ khóa đồng bộ UC-14/15 trong transaction; bổ sung AC-14 chặn đặt COD khi sản phẩm cha INACTIVE dù biến thể còn ACTIVE/còn hàng. Giữ nguyên các giả định khác.
 
 - v11 (2026-11-23): merge main, giữ kiểm tra trạng thái Catalog dưới khóa cha (E7, AC-12..14) cùng kiểm tra lại giá/khuyến mãi và xóa giỏ trong transaction; không thay các giả định chưa chốt.
+- v12 (2026-11-23): sửa AC liên UC theo quy tắc chỉ sửa Mô tả sau CONFIRMED: trạng thái INACTIVE trong fixture được đặt trước xác nhận nhập; thao tác ngừng bán sau CONFIRMED bị từ chối, đặt hàng chờ khóa rồi đọc lại ACTIVE và tiếp tục khi đủ điều kiện. Không đổi luồng nghiệp vụ hoặc các giả định khác.

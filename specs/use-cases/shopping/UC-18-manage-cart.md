@@ -107,7 +107,7 @@ Given: giỏ tài khoản có số lượng 1, dữ liệu gộp có số lượ
 When: hai yêu cầu cùng mã gộp và cùng dữ liệu được xử lý đồng thời cho tài khoản đó
 Then: dữ liệu gộp chỉ được áp dụng một lần và số lượng cuối cùng là 3
 ### AC-12: Chặn thêm biến thể ngừng bán từ giao diện cũ
-Given: trang chi tiết đang hiển thị dữ liệu cũ cho biến thể "Đỏ / M" còn hàng; Nhân viên đã chuyển biến thể này sang INACTIVE và DB đã commit, nhưng tăng catalog_version thất bại nên cache cũ chưa hết TTL
+Given: dữ liệu kiểm thử có sản phẩm cha ACTIVE, biến thể "Đỏ / M" đã INACTIVE từ trước khi phiếu nhập chuyển CONFIRMED và hiện tồn 5; dữ liệu cũ trong trình duyệt vẫn thể hiện biến thể đang bán
 When: Khách hàng đã đăng nhập hoặc Khách vãng lai bấm thêm biến thể "Đỏ / M" từ trang cũ
 Then: server đọc trạng thái hiện hành qua Service công khai của catalog và từ chối thêm theo E7
 And: giỏ trong DB hoặc localStorage giữ nguyên, tồn kho không bị trừ, khách nhận thông báo biến thể không còn được bán
@@ -119,7 +119,7 @@ Then: hệ thống lấy tồn kho hiện hành qua Service công khai của inv
 And: giỏ trong DB hoặc localStorage giữ nguyên và tồn kho không bị trừ
 
 ### AC-14: Chặn thêm giỏ khi sản phẩm cha ngừng bán nhưng biến thể vẫn ACTIVE
-Given: trang chi tiết cũ vẫn hiển thị "Đỏ / M" còn hàng; sản phẩm cha đã được chuyển sang INACTIVE tại UC-14 và DB đã commit, trong khi biến thể vẫn ACTIVE với tồn kho 5
+Given: dữ liệu kiểm thử có sản phẩm cha đã INACTIVE từ trước khi phiếu nhập chuyển CONFIRMED, biến thể "Đỏ / M" vẫn ACTIVE và hiện tồn 5; trình duyệt đang giữ dữ liệu cũ thể hiện sản phẩm đang bán
 When: Khách hàng đã đăng nhập hoặc Khách vãng lai yêu cầu thêm 1 sản phẩm "Đỏ / M"
 Then: Service catalog đọc trạng thái hiện hành của cả sản phẩm và biến thể; hệ thống từ chối thêm theo E7 do sản phẩm cha INACTIVE
 And: giỏ trong DB hoặc localStorage giữ nguyên, tồn kho vẫn là 5 và khách nhận thông báo dòng không còn được bán
@@ -162,3 +162,4 @@ And: giỏ trong DB hoặc localStorage giữ nguyên, tồn kho vẫn là 5 và
 - v12 (2026-11-23): theo yêu cầu xử lý rà soát vòng 3 tại Codex, bổ sung kiểm tra product_status cùng variant_status ở bước 2/E7 và AC-14 chặn thêm giỏ khi sản phẩm cha INACTIVE dù biến thể còn ACTIVE/còn hàng; giữ nguyên các giả định khác.
 
 - v13 (2026-11-23): merge main, giữ xử lý gộp giỏ chống cộng lặp cùng kiểm tra DB hiện hành từ Catalog; E7 và AC-12..14 giữ các ca dữ liệu storefront cũ.
+- v14 (2026-11-23): sửa AC liên UC theo quy tắc chỉ sửa Mô tả sau CONFIRMED: trạng thái INACTIVE trong fixture được đặt trước xác nhận nhập; thao tác ngừng bán sau CONFIRMED bị từ chối, đặt hàng chờ khóa rồi đọc lại ACTIVE và tiếp tục khi đủ điều kiện. Không đổi luồng nghiệp vụ hoặc các giả định khác.

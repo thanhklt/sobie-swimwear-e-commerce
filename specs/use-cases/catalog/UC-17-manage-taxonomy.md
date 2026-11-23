@@ -4,7 +4,7 @@
 - **ID:** UC-17
 - **Module:** catalog
 - **Liên quan tới BR:** BR-002
-- **Status:** ready
+- **Status:** draft
 
 ## Actor
 Nhân viên
@@ -223,7 +223,7 @@ And: dữ liệu "Kính bơi" đã được lưu vĩnh viễn trong cơ sở d�
 - Xử lý lỗi Redis sau khi commit DB: ghi log cảnh báo, không rollback DB, vẫn thông báo thành công cho Nhân viên; cache storefront tự làm mới qua cơ chế TTL dự phòng 5 phút (đã chốt 22/11/2026, UC-17-Q6).
 
 ### Giả định [GD]
-*(Không còn giả định mở chưa giải quyết)*
+- [GD] UC-17-Q7 (review PR #7, mục 3): Chờ quyết định UC-14-Q11 về mốc "đã nhập kho" và phạm vi khóa thuộc tính. Cần đồng bộ điều kiện chặn đổi tên mục dùng chung (đặc biệt Màu/Size) nếu thay đổi đó tác động sản phẩm đã nhập kho; chưa coi giữ nguyên SKU là đủ để bảo toàn thuộc tính hiển thị. Chưa sửa hành vi đã chốt của Flow 3a/AC-9/AC-11 cho đến khi developer chốt quy tắc này.
 
 ## History
 - v1 (2026-11-15): initial
@@ -232,3 +232,4 @@ And: dữ liệu "Kính bơi" đã được lưu vĩnh viễn trong cơ sở d�
 - v4 (2026-11-22): hoàn thiện xử lý lỗi DB/Redis (tách biệt commit DB trước khi tăng Redis version), kiểm tra ràng buộc concurrency tại thời điểm xóa/sửa trong DB; bổ sung AC-21 (256 ký tự), AC-22 (51 ký tự), AC-23 (concurrency delete) và AC-24 (lỗi Redis); mở câu hỏi UC-17-Q6.
 - v5 (2026-11-22): chốt câu hỏi UC-17-Q6 với developer — xử lý lỗi Redis sau khi commit DB bằng cảnh báo log và tận dụng TTL 5 phút, gỡ toàn bộ nhãn [GD] trong UC-17.
 - v6 (2026-11-22): làm rõ postconditions theo nhánh thành công/lỗi Redis (E4); chuẩn hóa diễn đạt kiểm tra trùng tên case-insensitive nguyên tử khi ghi; cập nhật Status: ready.
+- v7 (2026-11-23): ghi nhận review PR #7 mục 3 và mở UC-17-Q7 phụ thuộc UC-14-Q11 về khóa thuộc tính sản phẩm đã nhập kho; chuyển draft chờ developer xác nhận phạm vi.

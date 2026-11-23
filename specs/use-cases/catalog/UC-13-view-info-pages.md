@@ -20,7 +20,7 @@ Người dùng bấm vào liên kết Giới thiệu, Chính sách hoặc FAQ (�
 2. Trình duyệt gửi request HTMX (kèm header `HX-Request: true`) đến endpoint tương ứng của hệ thống.
 3. Hệ thống tiếp nhận và render nội dung template HTML tĩnh của trang thông tin được yêu cầu.
 4. Hệ thống trả về mảnh HTML nội dung tương ứng kèm HTTP header `Cache-Control: private, no-cache` và `Vary: HX-Request` (không có header `ETag`).
-5. Trình duyệt nạp mảnh nội dung vào vùng hiển thị chính (`#main-content`) và cập nhật URL trên thanh địa chỉ theo đường dẫn của trang (`hx-push-url="true"`).
+5. Trình duyệt nạp mảnh nội dung vào vùng hiển thị chính (`#main-content`) và cập nhật URL trên thanh địa chỉ theo đường dẫn của trang (`hx-push-url="true"`). Trước khi rời trang, layout chứa nội dung gắn với phiên phải có `hx-history="false"` để HTMX không lưu DOM vào lịch sử `localStorage`, kể cả khi điều hướng từ checkout sang FAQ; `Cache-Control: no-store` không thay thế cơ chế này.
 6. Nội dung trang thông tin hiển thị hoàn chỉnh theo đúng loại trang được chọn:
    - **Trang Giới thiệu (`/about`):** Thông tin thương hiệu đồ bơi Soobie, sứ mệnh, hotline và thông tin liên hệ của cửa hàng.
    - **Trang Chính sách (`/policy`):** Quy định mua hàng, vận chuyển, bảo mật thông tin và hướng dẫn giải quyết đổi/trả ngoài hệ thống.
@@ -107,12 +107,21 @@ When: thao tác xem trang hoàn tất
 Then: không có bất kỳ dữ liệu nghiệp vụ nào (thông tin trang, sản phẩm, giỏ hàng, đơn hàng...) bị thay đổi hoặc thêm mới  
 And: ngoại trừ thao tác kỹ thuật gia hạn phiên đăng nhập (`identity.session`) đối với người dùng đã đăng nhập theo quy định tại BR-GIAIDOAN1  
 
+### AC-9: Back sau đăng xuất không khôi phục DOM của phiên cũ
+Given: Khách hàng đang xem checkout với địa chỉ và thông tin tài khoản riêng; tài liệu có `hx-history="false"` trước khi rời checkout  
+When: Khách hàng bấm FAQ qua HTMX với `hx-push-url="true"`, đăng xuất thành công rồi bấm Back về checkout  
+Then: lịch sử HTMX trong `localStorage` không chứa bản chụp DOM checkout có dữ liệu riêng của phiên vừa đăng xuất  
+And: trình duyệt gửi request khôi phục tới server; cấu hình `historyRestoreAsHxRequest = false` để yêu cầu trang đầy đủ thay vì mảnh HTML  
+And: server kiểm tra lại phiên hiện hành, xử lý phiên đã đăng xuất theo luồng xác thực hiện có và không trả dữ liệu checkout của phiên cũ  
+And: DOM sau thao tác Back không hiển thị địa chỉ, tài khoản hoặc nội dung checkout riêng của phiên cũ  
+
 ## Dependencies
 - **Upstream UC:** không có
 - **Downstream UC:** [UC-09: Xem trang chủ](UC-09-view-home-page.md) (liên kết quay lại trang chủ từ trang lỗi 404)
 - **External Systems:** không có
 
 ## Notes
+- Lịch sử HTMX: layout chứa thông tin gắn với phiên (kể cả header cá nhân hóa trên trang công khai) phải có `hx-history="false"` trước khi HTMX chụp DOM. Giữ điều hướng Back/Forward nhưng khôi phục qua server và kiểm tra lại phiên; đặt `historyRestoreAsHxRequest = false` để server trả trang đầy đủ. Đây là hợp đồng cho layout chung khi triển khai, không chỉ thuộc tính trên mảnh FAQ được tải sau đó. Tham chiếu [hx-history](https://htmx.org/attributes/hx-history/) và [History Support](https://htmx.org/docs/#history).
 - Áp dụng constraint cache & SSR (BR-GIAIDOAN1, Constraints chung — Cache): Website render phía server (FastAPI + Jinja + HTMX). Không lưu dữ liệu các trang thông tin cố định trong Redis; HTML render trực tiếp từ template và trả HTTP header `Cache-Control: private, no-cache`, `Vary: HX-Request`, không dùng `ETag` (đã chốt 21/11/2026).
 - Áp dụng constraint xác thực & phiên (BR-GIAIDOAN1, Constraints chung — Xác thực): Mỗi request hợp lệ từ tài khoản đã đăng nhập gia hạn `identity.session` (tính từ lần thao tác cuối).
 - Out of Scope (BR-GIAIDOAN1): blog, trang cộng đồng, góp ý, CMS chỉnh sửa nội dung trang thông tin.
@@ -135,3 +144,4 @@ And: ngoại trừ thao tác kỹ thuật gia hạn phiên đăng nhập (`ident
 - v4 (2026-11-22): làm rõ AC-8 và Postconditions về việc không thay đổi dữ liệu nghiệp vụ, đồng bộ với cơ chế kỹ thuật gia hạn identity.session theo BR-GIAIDOAN1; chi tiết hóa xử lý lỗi HTTP 404 cho cả request thông thường và request HTMX (AC-5, AC-6)
 - v5 (2026-11-23): ghi nhận [GD] cho phát hiện #8 về contract swap 404 qua HTMX (E1.3, AC-6, UC-13-Q5); chuẩn hóa dùng sự kiện htmx:beforeSwap (detail.shouldSwap / isError) theo tài liệu chính thức HTMX; chuyển status về draft chờ developer chốt phương án
 - v6 (2026-11-23): developer duyệt chốt xử lý swap 404 HTMX bằng sự kiện htmx:beforeSwap (Phương án 1), gỡ bỏ nhãn [GD] tại E1.3 và AC-6, cập nhật mục Quyết định đã chốt, chuyển trạng thái sang ready
+- v7 (2026-11-23): xử lý review PR #7 về lịch sử HTMX: ngăn lưu DOM gắn với phiên và bổ sung AC-9 kiểm tra Back sau đăng xuất, phân biệt lịch sử HTMX với HTTP cache.

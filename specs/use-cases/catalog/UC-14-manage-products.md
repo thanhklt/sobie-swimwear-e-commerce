@@ -4,7 +4,7 @@
 - **ID:** UC-14
 - **Module:** catalog
 - **Liên quan tới BR:** BR-002
-- **Status:** ready
+- **Status:** draft
 
 ## Actor
 Nhân viên (Khách hàng và Admin không có quyền truy cập chức năng này).
@@ -57,8 +57,8 @@ Nhân viên mở mục Sản phẩm trong portal quản trị.
    - Nếu thỏa mãn: cập nhật trạng thái sản phẩm sang `ACTIVE` (Đang bán) trong bảng `catalog.product`, cập nhật `product_updated_at = now()`.
    - Commit Database Transaction.
 10. Sau khi Database Transaction commit thành công:
-    - **Nhánh thông thường:** Hệ thống gọi Redis tăng số phiên bản catalog (`catalog_version`) để làm mới cache công khai; sản phẩm bắt đầu hiển thị trên storefront ở các request tiếp theo (khách hàng đã mở sẵn trang cần tải lại trang để thấy dữ liệu mới).
-    - **Nhánh lỗi Redis sau commit:** Nếu Redis bị lỗi kết nối hoặc timeout khi tăng `catalog_version`, hệ thống ghi log cảnh báo (warning log), KHÔNG rollback Database Transaction đã commit, và vẫn hiển thị thông báo thành công cho Nhân viên (Exception E9). Lưu ý về độ trễ: độ trễ tối đa theo TTL dự phòng (5 phút) hoặc lần tăng version thành công tiếp theo chỉ áp dụng cho các dữ liệu thực sự đọc từ cache công khai (danh sách danh mục UC-10, chi tiết sản phẩm UC-12); các truy vấn trực tiếp Database không qua cache (tìm kiếm UC-11, wishlist UC-38, giỏ hàng UC-18, đặt hàng UC-19/20) luôn đọc trạng thái mới nhất từ Database ngay sau khi commit.
+    - **Nhánh thông thường:** Hệ thống gọi Redis tăng số phiên bản catalog (`catalog_version`) để làm mới cache công khai. Ở request tiếp theo, sản phẩm chỉ đủ điều kiện xuất hiện trong danh sách storefront nếu có ít nhất một biến thể `ACTIVE` giá > 0; nếu mọi biến thể đều `INACTIVE`, sản phẩm vẫn mở bán thành công nhưng bị ẩn khỏi danh sách và URL chi tiết xử lý theo UC-12 Alternative Flow 2c. Khách hàng đã mở sẵn trang cần tải lại để thấy dữ liệu mới.
+    - **Nhánh lỗi Redis sau commit:** Nếu Redis bị lỗi kết nối hoặc timeout khi tăng `catalog_version`, hệ thống ghi log cảnh báo (warning log), KHÔNG rollback Database Transaction đã commit, và vẫn hiển thị thông báo thành công cho Nhân viên (Exception E9). Lưu ý về độ trễ: độ trễ tối đa theo TTL dự phòng (5 phút) hoặc lần tăng version thành công tiếp theo chỉ áp dụng cho các dữ liệu thực sự đọc từ cache công khai (Hàng mới và Bộ sưu tập UC-09, danh sách danh mục UC-10, chi tiết sản phẩm UC-12); các truy vấn trực tiếp Database không qua cache (tìm kiếm UC-11, wishlist UC-38, giỏ hàng UC-18, đặt hàng UC-19/20) luôn đọc trạng thái mới nhất từ Database ngay sau khi commit.
     - Lưu ý: Nếu Database Transaction bị rollback (ở bước 9), hệ thống tuyệt đối không gọi Redis tăng `catalog_version`.
 11. **Quy tắc bất biến khi sản phẩm ở trạng thái Đang bán (`ACTIVE`):**
     - Các điều kiện mở bán (ít nhất 1 ảnh trong gallery, ít nhất 1 biến thể tồn tại, mọi size có giá bán > 0) là bất biến trong suốt thời gian sản phẩm ở trạng thái `ACTIVE`.
@@ -100,7 +100,7 @@ Nhân viên mở mục Sản phẩm trong portal quản trị.
          + Danh sách yêu thích của khách hàng đã đăng nhập (UC-38, không cache) lập tức hiển thị nhãn "Ngừng bán" và vô hiệu hóa nút xem chi tiết.
          + Khối Top 5 bán chạy trên trang chủ khi render (UC-09, BR-002) luôn lọc theo trạng thái sản phẩm hiện hành từ Database nên sản phẩm tự động biến mất ngay mà không cần chờ tác vụ định kỳ 10 phút của reporting.
          + Mọi thao tác mua hàng (thêm vào giỏ UC-18, đặt hàng COD UC-19, đặt hàng QR UC-20) luôn đọc trạng thái trực tiếp từ Database và lập tức từ chối khi sản phẩm cha ở trạng thái `INACTIVE`.
-       - **Đối với dữ liệu đọc từ cache công khai (UC-10 danh mục, UC-12 chi tiết sản phẩm):**
+       - **Đối với dữ liệu đọc từ cache công khai (UC-09 Hàng mới và Bộ sưu tập, UC-10 danh mục, UC-12 chi tiết sản phẩm):**
          + Khi Redis tăng version thành công: cache được làm mới ở request tiếp theo (sản phẩm không còn trong danh mục; truy cập chi tiết báo "Không tìm thấy sản phẩm" UC-12 E1).
          + Khi Redis lỗi sau commit: chỉ các dữ liệu cache công khai này mới có thể trễ tối đa theo TTL dự phòng còn lại (tối đa 5 phút) hoặc cho đến lần tăng version thành công tiếp theo.
        - **Lưu ý về client đang mở sẵn:** Khách hàng đang mở sẵn màn hình trên trình duyệt cần tải lại trang (reload) để thấy trạng thái mới; cơ chế hết hạn cache TTL không tự động làm thay đổi giao diện trình duyệt đã nạp sẵn DOM.
@@ -194,7 +194,7 @@ Nhân viên mở mục Sản phẩm trong portal quản trị.
     + Hệ thống ghi log cảnh báo mức warning kèm chi tiết lỗi Redis để đội ngũ kỹ thuật theo dõi.
     + Tuyệt đối KHÔNG rollback Database Transaction đã commit (Database là nguồn sự thật duy nhất).
     + Vẫn trả về thông báo thành công cho Nhân viên bình thường.
-    + Giới hạn độ trễ: Chỉ các dữ liệu thực sự đọc từ cache công khai (danh mục UC-10, chi tiết sản phẩm UC-12) mới có thể phản ánh trễ tối đa trong thời gian TTL dự phòng còn lại (tối đa 5 phút) hoặc cho đến lần tăng version thành công tiếp theo. Các nghiệp vụ và truy vấn đọc trực tiếp Database (tìm kiếm UC-11, wishlist UC-38, giỏ hàng UC-18, đặt hàng UC-19/20, khối bán chạy UC-09) luôn thấy dữ liệu và trạng thái mới nhất ngay sau khi SQL commit.
+    + Giới hạn độ trễ: Chỉ các dữ liệu thực sự đọc từ cache công khai (Hàng mới và Bộ sưu tập UC-09, danh mục UC-10, chi tiết sản phẩm UC-12) mới có thể phản ánh trễ tối đa trong thời gian TTL dự phòng còn lại (tối đa 5 phút) hoặc cho đến lần tăng version thành công tiếp theo. Các nghiệp vụ và truy vấn đọc trực tiếp Database (tìm kiếm UC-11, wishlist UC-38, giỏ hàng UC-18, đặt hàng UC-19/20, khối bán chạy UC-09) luôn thấy dữ liệu và trạng thái mới nhất ngay sau khi SQL commit.
 
 ## Postconditions
 - Sản phẩm được tạo, cập nhật, đổi trạng thái hoặc xóa đúng theo thao tác.
@@ -243,11 +243,18 @@ And: mã sản phẩm `SP-0001` được giữ nguyên không đổi
 And: cache version ở Redis được tăng lên sau khi commit DB thành công
 
 ### AC-6: Chuyển Đang bán thành công
-Given: sản phẩm A có ít nhất 1 ảnh gallery, ít nhất 1 biến thể và mọi size của A đều đã có giá bán > 0 (kể cả khi tồn kho = 0)
+Given: sản phẩm A có ít nhất 1 ảnh gallery, ít nhất 1 biến thể `ACTIVE` có giá bán > 0 và mọi size của A đều đã có giá bán > 0 (kể cả khi tồn kho = 0); Redis hoạt động bình thường
 When: Nhân viên bấm chuyển A sang Đang bán
 Then: hệ thống thực hiện trong một Database Transaction xuyên suốt: khóa dòng sản phẩm A FOR UPDATE, kiểm tra đủ điều kiện và cập nhật A sang trạng thái `ACTIVE`
 And: cache version ở Redis được tăng lên sau khi commit DB thành công
-And: sản phẩm A hiển thị công khai trên storefront
+And: sản phẩm A đủ điều kiện xuất hiện trong danh sách storefront ở request tiếp theo (theo bộ lọc và giới hạn của từng khối/danh sách); khi hết tồn kho vẫn hiển thị nhãn "Hết hàng"
+
+### AC-6b: Mở bán thành công khi mọi biến thể đều Ngừng bán
+Given: sản phẩm B có ảnh gallery, ít nhất 1 biến thể tồn tại, mọi size có giá bán > 0 nhưng mọi biến thể đều `INACTIVE`; Redis hoạt động bình thường
+When: Nhân viên chuyển sản phẩm B sang Đang bán
+Then: hệ thống kiểm tra điều kiện dưới khóa dòng sản phẩm trong cùng transaction và commit `product_status = ACTIVE` thành công, sau đó tăng `catalog_version`
+And: B bị loại khỏi danh sách trang chủ, danh mục và tìm kiếm trước khi tính tổng số hoặc giới hạn hiển thị vì không có biến thể `ACTIVE` có giá hợp lệ
+And: truy cập URL chi tiết B trả HTTP 200 với tên, mô tả và gallery, không hiển thị giá bán, vô hiệu hóa màu/size/số lượng/thêm giỏ và báo "Sản phẩm tạm ngừng kinh doanh" theo UC-12
 
 ### AC-7: Chặn chuyển Đang bán khi chưa có biến thể
 Given: sản phẩm A mới tạo, đã có ảnh gallery nhưng chưa có biến thể nào
@@ -369,13 +376,15 @@ And: Khi hai nhân viên đồng thời sửa sản phẩm A thành "Bikini Spor
 Then: đúng một sản phẩm được cập nhật tên thành công, sản phẩm còn lại bị từ chối với thông báo lỗi E1 "Tên sản phẩm đã tồn tại"
 
 ### AC-26: Xử lý lỗi Redis cache version sau khi commit DB thành công
-Given: sản phẩm A đang ở trạng thái `ACTIVE` (hoặc nhân viên thực hiện đổi thông tin / ngừng bán / xóa sản phẩm A)
-When: Database Transaction cập nhật dữ liệu thành công và đã commit xong vào PostgreSQL, nhưng lệnh tăng `catalog_version` ở Redis bị timeout hoặc lỗi kết nối
+Given: sản phẩm A đang `ACTIVE`, có biến thể `ACTIVE` giá hợp lệ, đang xuất hiện trong cache Hàng mới và Bộ sưu tập UC-09, danh mục UC-10, chi tiết UC-12 và trong top 15 Bán chạy của reporting; các cache công khai còn TTL không quá 5 phút và Redis vẫn đọc được
+When: Nhân viên Ngừng bán A, Database Transaction đã commit `product_status = INACTIVE` vào PostgreSQL, nhưng lệnh tăng `catalog_version` ở Redis bị timeout hoặc lỗi kết nối
 Then: hệ thống ghi nhận log cảnh báo (warning log) kèm chi tiết lỗi Redis
 And: toàn bộ thay đổi dữ liệu trong PostgreSQL được giữ nguyên, tuyệt đối KHÔNG rollback Database Transaction đã commit
 And: hệ thống vẫn trả về thông báo thao tác thành công cho Nhân viên
 And: các truy vấn đọc trực tiếp Database (tìm kiếm UC-11, wishlist UC-38, giỏ hàng UC-18, đặt hàng UC-19/20, lọc khối bán chạy UC-09) lập tức thấy trạng thái mới nhất từ Database
-And: chỉ các dữ liệu đọc từ cache công khai (danh mục UC-10, chi tiết sản phẩm UC-12) chấp nhận có thể cũ (stale cache) tối đa trong thời gian TTL dự phòng còn lại (tối đa 5 phút) hoặc cho đến lần tăng `catalog_version` thành công tiếp theo
+And: chỉ các dữ liệu đọc từ cache công khai (Hàng mới và Bộ sưu tập UC-09, danh mục UC-10, chi tiết sản phẩm UC-12) chấp nhận có thể cũ (stale cache) tối đa trong thời gian TTL dự phòng còn lại (tối đa 5 phút) hoặc cho đến lần tăng `catalog_version` thành công tiếp theo
+And: với thao tác Ngừng bán A, request trang chủ ngay sau commit có thể còn thấy A trong Hàng mới và Bộ sưu tập từ cache cũ, nhưng khối Bán chạy phải loại A ngay qua kiểm tra trạng thái DB hiện hành, dù cache top 15 của reporting vẫn chứa A
+And: khi cache cũ hết TTL hoặc phiên bản được tăng thành công, request mới cho Hàng mới và Bộ sưu tập không còn trả A; TTL không tự thay DOM đã mở trên trình duyệt
 
 ## Dependencies
 - **Upstream UC:**
@@ -402,7 +411,7 @@ And: chỉ các dữ liệu đọc từ cache công khai (danh mục UC-10, chi 
 - **Quy tắc Cache (BR-GIAIDOAN1):** 
   - Khi sản phẩm thay đổi thông tin, đổi trạng thái hoặc bị xóa, hệ thống tăng số phiên bản catalog (`catalog_version`) ở Redis để toàn bộ cache Redis công khai (trang chủ, danh mục, chi tiết) tự động được làm mới ở request tiếp theo. Việc tăng cache version chỉ được thực hiện sau khi Database Transaction đã commit thành công (không gọi Redis trong SQL transaction).
   - Nếu Database Transaction bị rollback: tuyệt đối không gọi Redis tăng `catalog_version`.
-  - Nếu Database Transaction commit thành công nhưng Redis bị lỗi/timeout: hệ thống ghi log warning, không rollback DB, vẫn thông báo thành công cho Nhân viên; độ trễ tối đa TTL 5 phút chỉ áp dụng cho dữ liệu thực sự đọc từ cache công khai (danh mục, chi tiết). Các truy vấn trực tiếp Database không cache (tìm kiếm, wishlist, giỏ hàng, đặt hàng, lọc khối bán chạy) luôn nhận trạng thái mới nhất từ DB. Cache TTL không tự động làm mới giao diện trình duyệt của khách hàng nếu khách hàng không tải lại trang.
+  - Nếu Database Transaction commit thành công nhưng Redis bị lỗi/timeout: hệ thống ghi log warning, không rollback DB, vẫn thông báo thành công cho Nhân viên; độ trễ tối đa TTL 5 phút chỉ áp dụng cho dữ liệu thực sự đọc từ cache công khai (Hàng mới, Bộ sưu tập, danh mục, chi tiết). Các truy vấn trực tiếp Database không cache (tìm kiếm, wishlist, giỏ hàng, đặt hàng, lọc khối bán chạy) luôn nhận trạng thái mới nhất từ DB. Cache TTL không tự động làm mới giao diện trình duyệt của khách hàng nếu khách hàng không tải lại trang.
   - Màn hình quản trị sản phẩm tuyệt đối không cache, luôn đọc Database trực tiếp với `Cache-Control: no-store`.
 - **Ranh giới Modular Monolith (AGENTS.md):** Module `catalog` không truy cập trực tiếp các bảng của `ordering`, `inventory`, `promotion` hay `shopping`. Việc kiểm tra ràng buộc giao dịch hoặc dọn dữ liệu liên quan được thực hiện qua Service công khai của các module đó.
 - **Toàn vẹn Transaction & Đồng bộ chống cạnh tranh (AGENTS.md):** 
@@ -423,10 +432,10 @@ And: chỉ các dữ liệu đọc từ cache công khai (danh mục UC-10, chi 
 - Chặn xóa ảnh cuối cùng trong bộ ảnh (gallery) nếu sản phẩm đang ở trạng thái `ACTIVE` (Đang bán) để bảo đảm điều kiện mở bán; không tự động chuyển trạng thái ngầm (đã chốt 22/11/2026, UC-14-Q7).
 - Điều kiện mở bán (ít nhất 1 ảnh, ít nhất 1 biến thể tồn tại, mọi size có giá bán > 0) là bất biến trong suốt thời gian sản phẩm ở trạng thái ACTIVE. Hệ thống chặn mọi thao tác làm mất điều kiện mở bán (chặn xóa ảnh cuối cùng, chặn xóa biến thể cuối cùng, chặn thêm biến thể có size mới chưa có giá bán khi sản phẩm đang ACTIVE), yêu cầu nhân viên chuyển sang Ngừng bán trước; hệ thống tuyệt đối không tự động chuyển trạng thái ngầm. Dùng chung cơ chế khóa dòng sản phẩm cha `catalog.product FOR UPDATE` giữa UC-14, UC-15, UC-16 khi ghi để chống race condition (đã chốt 23/11/2026, UC-14-Q8).
 - Bảo đảm tính duy nhất nguyên tử của tên sản phẩm lúc ghi trong cùng một Database Transaction (phân biệt tạo mới và sửa giữ nguyên tên chính nó; 2 request gửi đồng thời thì đúng một request thành công và một request báo lỗi E1) (đã chốt 23/11/2026, UC-14-Q9).
-- Xử lý lỗi Redis sau khi Database Transaction đã commit: Database commit thành công trước rồi mới gọi Redis tăng `catalog_version`. Nếu Redis bị timeout hoặc lỗi kết nối: ghi log warning, không rollback Database Transaction, vẫn trả thông báo thành công cho Nhân viên; độ trễ tối đa theo TTL dự phòng (5 phút) hoặc lần tăng version thành công tiếp theo chỉ áp dụng cho dữ liệu đọc từ cache công khai (UC-10, UC-12). Các luồng đọc trực tiếp Database không cache (tìm kiếm UC-11, wishlist UC-38, giỏ hàng UC-18, đặt hàng UC-19/20, lọc khối bán chạy UC-09) luôn thấy trạng thái mới nhất ngay sau khi DB commit. Nếu Database Transaction bị rollback thì tuyệt đối không gọi Redis tăng `catalog_version`. Cache TTL không tự động làm mới giao diện trình duyệt của khách hàng nếu khách hàng không tải lại trang (đã chốt 23/11/2026, UC-14-Q10).
+- Xử lý lỗi Redis sau khi Database Transaction đã commit: Database commit thành công trước rồi mới gọi Redis tăng `catalog_version`. Nếu Redis bị timeout hoặc lỗi kết nối: ghi log warning, không rollback Database Transaction, vẫn trả thông báo thành công cho Nhân viên; độ trễ tối đa theo TTL dự phòng (5 phút) hoặc lần tăng version thành công tiếp theo chỉ áp dụng cho dữ liệu đọc từ cache công khai (Hàng mới và Bộ sưu tập UC-09, UC-10, UC-12). Các luồng đọc trực tiếp Database không cache (tìm kiếm UC-11, wishlist UC-38, giỏ hàng UC-18, đặt hàng UC-19/20, lọc khối bán chạy UC-09) luôn thấy trạng thái mới nhất ngay sau khi DB commit. Nếu Database Transaction bị rollback thì tuyệt đối không gọi Redis tăng `catalog_version`. Cache TTL không tự động làm mới giao diện trình duyệt của khách hàng nếu khách hàng không tải lại trang (đã chốt 23/11/2026, UC-14-Q10).
 
 ### Giả định [GD]
-- Hiện tại không còn giả định hoặc câu hỏi mở nào bị chặn cho UC-14.
+- [GD] UC-14-Q11 (review PR #7, mục 3): Cần developer chốt phạm vi "sản phẩm đã nhập kho chỉ được sửa mô tả": khóa cả giá/trạng thái/thêm biến thể hay chỉ thông tin sản phẩm, gallery và tên taxonomy liên quan? Mốc khóa là có phiếu CONFIRMED hay mọi liên kết phiếu nhập kể cả DRAFT/CANCELLED? Chưa áp dụng quy tắc mới vào Flow/AC trước khi chốt vì có thể thay thế hành vi đã duyệt tại UC-15/16; UC-17-Q7 phụ thuộc cùng quyết định.
 
 ## History
 - v1 (2026-11-15): initial
@@ -440,3 +449,4 @@ And: chỉ các dữ liệu đọc từ cache công khai (danh mục UC-10, chi 
 - v9 (2026-11-23): developer phê duyệt chốt dứt điểm vòng 2 (UC-14-Q8: điều kiện mở bán là bất biến suốt khi ACTIVE, chặn mọi thao tác làm mất điều kiện và yêu cầu Ngừng bán trước, không tự đổi trạng thái ngầm, đồng bộ qua khóa dòng cha FOR UPDATE; UC-14-Q9: bảo đảm tính duy nhất nguyên tử tên sản phẩm lúc ghi); gỡ bỏ toàn bộ nhãn [GD]; chuyển Status sang ready.
 - v10 (2026-11-23): rà soát theo ý kiến Coordinator: làm rõ quy trình nguyên tử trong CÙNG một transaction ở Main 5 và Alt 2a.3, quy trình xuyên suốt giữ khóa từ trước kiểm tra đến commit ở Main 9-10; làm rõ điều kiện là có ít nhất 1 biến thể tồn tại (không bắt buộc biến thể ACTIVE); bổ sung AC-24 (chặn thêm size mới chưa có giá khi parent ACTIVE) và AC-25 (sửa giữ nguyên tên chính nó và cạnh tranh đổi tên), nâng tổng số AC lên 26 AC (AC-1..AC-3, AC-3b, AC-4..AC-25) mà không renumber.
 - v11 (2026-11-23): rà soát logic vòng 3 (phát hiện #2): developer phê duyệt chốt dứt điểm UC-14-Q10; bổ sung nhánh xử lý lỗi Redis timeout/mất kết nối sau khi Database Transaction đã commit (ghi log warning, giữ nguyên DB, báo thành công cho nhân viên); làm rõ độ trễ TTL 5 phút chỉ áp dụng dữ liệu cache công khai, các luồng không cache (tìm kiếm, wishlist, mua hàng, khối bán chạy) luôn đọc trạng thái DB mới nhất; làm rõ không tăng version khi DB rollback; thêm Exception E9, AC-26; gỡ bỏ toàn bộ nhãn [GD]; chuyển Status sang ready.
+- v12 (2026-11-23): sửa review PR #7 mục 2/4: phân biệt điều kiện mở bán với hiển thị danh sách qua AC-6/AC-6b; bổ sung Hàng mới và Bộ sưu tập vào phạm vi cache và AC-26. Mở UC-14-Q11, giữ draft chờ chốt phạm vi khóa sản phẩm đã nhập kho (mục 3).

@@ -22,9 +22,9 @@ Nhân viên mở trang dashboard trong khu vực quản trị.
    1. **Doanh thu:** tổng tiền hàng sau giảm của các đơn có ngày chuyển sang "Giao thành công" nằm trong kỳ, không gồm phí vận chuyển.
    2. **Lợi nhuận gộp:** doanh thu − giá vốn hàng bán (tổng số lượng bán × giá vốn) của cùng các đơn đó.
    3. **Số đơn theo trạng thái:** số đơn tạo trong kỳ theo từng trạng thái (Chưa xử lý, Đã xác nhận, Chờ lấy hàng, Đang giao, Giao thành công, Giao không thành công, Đã hủy).
-   4. **Sản phẩm bán chạy:** top 10 sản phẩm theo số lượng bán của cùng nhóm đơn dùng để tính doanh thu.
+   4. **Sản phẩm bán chạy:** top 10 sản phẩm theo số lượng bán của cùng nhóm đơn dùng để tính doanh thu. Tính cả biến thể đã ngừng bán.
    5. **Tồn kho thấp:** các biến thể có tồn kho ≤ ngưỡng tồn kho thấp (hard-code) tại thời điểm xem.
-   6. **Tiền nhập hàng theo nhà cung cấp:** tổng tiền các phiếu nhập "Đã xác nhận" trong kỳ, nhóm theo nhà cung cấp.
+   6. **Tiền nhập hàng theo nhà cung cấp:** tổng tiền các phiếu nhập "Đã xác nhận" có ngày lập phiếu trong kỳ, nhóm theo nhà cung cấp.
 4. Ngày giao thành công dùng để xác định kỳ báo cáo và thời gian hiển thị đều theo múi giờ `Asia/Ho_Chi_Minh`.
 
 ## Alternative Flows
@@ -54,7 +54,7 @@ Then: số đơn hiển thị đúng 3, 2, 1 cho từng trạng thái, các tr�
 
 **Có dưới 10 sản phẩm bán chạy**
 
-Given: các đơn "Giao thành công" trong kỳ bán 6 đơn vị A, 8 đơn vị B và 2 đơn vị C
+Given: các đơn "Giao thành công" trong kỳ bán 6 đơn vị A, 8 đơn vị B và 2 đơn vị C. Biến thể đã bán của B hiện ở trạng thái "Ngừng bán".
 When: Nhân viên xem dashboard của kỳ đó
 Then: danh sách hiển thị lần lượt B (8), A (6), C (2)
 
@@ -70,7 +70,7 @@ When: Nhân viên xem dashboard
 Then: danh sách tồn kho thấp gồm X và Y, không có Z
 
 ### AC-5: Tiền nhập hàng theo nhà cung cấp
-Given: trong kỳ nhà cung cấp X có 2 phiếu "Đã xác nhận" tổng 5.000.000đ và 1 phiếu "Nháp" 1.000.000đ
+Given: nhà cung cấp X có 2 phiếu "Đã xác nhận" lập trong kỳ tổng 5.000.000đ, 1 phiếu "Nháp" lập trong kỳ trị giá 1.000.000đ và 1 phiếu "Đã xác nhận" lập trước kỳ trị giá 2.000.000đ
 When: Nhân viên xem dashboard
 Then: tiền nhập của X = 5.000.000đ
 
@@ -106,6 +106,7 @@ And: tháng 12 có doanh thu 400.000đ, lợi nhuận gộp 160.000đ và danh s
 - Cách lấy giá vốn tại thời điểm bán: Giá vốn dùng để tính lợi nhuận gộp là giá vốn bình quân gia quyền của từng biến thể, được ghi vào `order_detail_cost_price` khi khách đặt đơn. Giá vốn hàng bán trong kỳ bằng tổng `(số lượng × order_detail_cost_price)` của các dòng hàng thuộc các đơn giao thành công được tính trong kỳ.
 - Tiền tính bằng số nguyên VND; thời gian lưu UTC, hiển thị `Asia/Ho_Chi_Minh` (AGENTS.md).
 - Theo constraint cache (BR-GIAIDOAN1, Constraints chung — Cache): dashboard không cache — truy vấn trực tiếp Database và trả `Cache-Control: no-store` như mọi trang của portal quản trị (đã chốt 21/11/2026).
+- [Sơ đồ sequence của `GET /admin/dashboard`](../../../docs/sequence/uc-37-get-dashboard.md).
 - "Sản phẩm bán chạy" ở đây khác khối bán chạy trên trang chủ (UC-09): dashboard tính theo kỳ báo cáo, chỉ đơn "Giao thành công", top 10.
 
 **Quyết định đã chốt**
@@ -115,6 +116,11 @@ And: tháng 12 có doanh thu 400.000đ, lợi nhuận gộp 160.000đ và danh s
 - Doanh thu, lợi nhuận gộp và Top 10 sản phẩm bán chạy được ghi nhận vào kỳ chứa ngày đơn chuyển sang "Giao thành công" (đã chốt 22/11/2026).
 - Doanh thu là tiền hàng sau giảm, không gồm phí vận chuyển. Top 10 xếp theo số lượng bán.
 - Tồn kho thấp: tồn kho ≤ ngưỡng.
+- Tiền nhập hàng ghi nhận theo ngày lập phiếu và chỉ tính các phiếu đã xác nhận.
+
+## Câu hỏi mở
+- `[GD]` Ngưỡng tồn kho thấp trong triển khai là 5 theo dữ liệu nghiệm thu AC-4 và AC-6. Cửa hàng có dùng ngưỡng này không?
+- `[GD]` Khi hai sản phẩm có cùng số lượng bán, dashboard xếp theo mã sản phẩm tăng dần. Có cần dùng tiêu chí phụ khác không?
 
 ## History
 - v1 (2026-11-15): initial
@@ -124,3 +130,4 @@ And: tháng 12 có doanh thu 400.000đ, lợi nhuận gộp 160.000đ và danh s
 - v5 (2026-11-21): chốt dashboard không cache phía server; phân biệt với khối bán chạy trang chủ
 - v6 (2026-11-21): theo BR-GIAIDOAN1 v22 — trang dashboard trả `no-store` thay cho `private, no-cache` + `ETag`
 - v7 (2026-11-22): chốt ngày giao thành công làm mốc ghi nhận doanh thu, lợi nhuận gộp và Top 10
+- v8 (2026-11-22): chốt ngày lập phiếu làm mốc ghi nhận tiền nhập hàng và bổ sung AC-5

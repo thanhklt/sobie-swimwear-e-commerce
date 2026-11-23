@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Báo cáo cửa hàng · Sobie</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f0f4f8;
+      --paper: #fff;
+      --ink: #132839;
+      --muted: #4b6171;
+      --line: #dbe5ec;
+      --accent: #075b57;
+      --accent-light: #d9f0ec;
+      --danger: #952537;
+      font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); }
+    header { background: #112d3c; color: #fff; padding: 34px 0 64px; }
+    .wrap { width: min(1160px, calc(100% - 48px)); margin-inline: auto; }
+    .mast { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 14px; }
+    .brand { letter-spacing: .14em; font-size: .9rem; font-weight: 750; }
+    .caption { color: #bde1df; font-size: .85rem; }
+    h1 { font-size: clamp(2rem, 4vw, 3rem); line-height: 1.15; margin: 20px 0 8px; }
+    .intro { color: #d9e9f1; margin: 0; max-width: 64ch; }
+    main { position: relative; margin-top: -32px; padding-bottom: 42px; display: grid; gap: 18px; }
+    .panel { min-width: 0; padding: 21px 24px; border: 1px solid var(--line); border-radius: 16px; background: var(--paper); }
+    .toolbar { display: grid; gap: 15px; }
+    form, .presets { display: flex; flex-wrap: wrap; justify-content: flex-start; align-items: end; gap: 10px; }
+    label { display: grid; gap: 4px; font-size: .86rem; font-weight: 650; }
+    label input, select, button { font: inherit; }
+    input, select, button { min-height: 40px; border: 1px solid #b6c7d2; border-radius: 8px; padding: 6px 11px; background: #fff; color: var(--ink); }
+    input { min-width: 155px; }
+    button { cursor: pointer; font-weight: 650; }
+    button:hover { background: #e9f2f5; }
+    button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    button.primary:hover { background: #064d49; }
+    button[aria-pressed="true"] { background: var(--accent-light); color: #074d47; border-color: #83bfb6; }
+    :focus-visible { outline: 3px solid #147c78; outline-offset: 3px; }
+    .presets button { min-height: 35px; font-size: .84rem; }
+    #error { padding: 8px 12px; background: #fff0f1; color: var(--danger); border-radius: 8px; margin: 0; }
+    #period { margin: 0; font-size: .94rem; color: var(--muted); }
+    .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+    .metric { display: grid; gap: 5px; }
+    .metric h2 { font-size: .93rem; margin: 0; }
+    .metric output { font-size: clamp(1.42rem, 3vw, 2rem); font-weight: 760; line-height: 1.2; font-variant-numeric: tabular-nums; }
+    .metric small, .note, .empty { color: var(--muted); }
+    .content { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); align-items: start; gap: 14px; }
+    .stack { display: grid; gap: 14px; }
+    .head { margin: 0 0 3px; font-size: 1.03rem; line-height: 1.3; }
+    .note { margin: 0 0 11px; font-size: .84rem; }
+    .status { display: grid; grid-template-columns: 1fr auto; margin: 0; gap: 1px 8px; font-size: .91rem; }
+    .status dt, .status dd { padding: 6px 0; border-bottom: 1px solid var(--line); }
+    .status dd { margin: 0; text-align: right; font-weight: 700; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    th { text-align: left; color: var(--muted); font-weight: 650; }
+    th, td { padding: 8px 9px; vertical-align: top; border-bottom: 1px solid var(--line); }
+    th:first-child, td:first-child { padding-left: 0; }
+    th:last-child, td:last-child { padding-right: 0; }
+    tr:last-child td { border-bottom: 0; }
+    .number { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .sub { display: block; color: var(--muted); font-size: .76rem; margin-top: 2px; }
+    .bar { display: block; width: 100%; height: 5px; margin-top: 7px; border-radius: 10px; background: #e9f0f4; }
+    .bar b { display: block; height: 100%; border-radius: 10px; background: #1d8379; }
+    .mini-table td, .mini-table th { padding-top: 6px; padding-bottom: 6px; }
+    select { width: 100%; margin: 1px 0 8px; }
+    details summary { font-weight: 700; cursor: pointer; }
+    details > div { margin-top: 13px; }
+    details h3 { margin: 15px 0 3px; font-size: .91rem; }
+    code { font-size: .88em; }
+    footer { color: var(--muted); font-size: .8rem; }
+    @media (max-width: 805px) { .content { grid-template-columns: 1fr; } }
+    @media (max-width: 540px) {
+      .wrap { width: calc(100% - 28px); }
+      .panel { padding: 15px; }
+      .cards { grid-template-columns: 1fr; gap: 9px; }
+      .metric { grid-template-columns: 1fr auto; align-items: center; }
+      .metric small { grid-column: 1 / -1; }
+      input { min-width: 132px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <div class="mast"><span class="brand">SOBIE</span><span class="caption">UC-37 · Prototype dữ liệu mẫu</span></div>
+      <h1>Báo cáo cửa hàng</h1>
+      <p class="intro">Thử đổi kỳ để đối chiếu ngày ghi nhận doanh số và cách gộp các SKU theo mã sản phẩm.</p>
+    </div>
+  </header>
+  <main class="wrap">
+    <section class="panel toolbar" aria-label="Kỳ báo cáo">
+      <form id="period-form">
+        <label>Từ ngày <input id="start" type="date" required></label>
+        <label>Đến ngày <input id="end" type="date" required></label>
+        <button class="primary" type="submit">Xem báo cáo</button>
+      </form>
+      <div class="presets" aria-label="Kỳ mẫu">
+        <button type="button" data-range="2026-11-01,2026-11-30">Tháng 11</button>
+        <button type="button" data-range="2026-12-01,2026-12-31">Tháng 12</button>
+        <button type="button" data-range="2027-01-01,2027-01-31">Kỳ trống</button>
+      </div>
+      <p id="error" role="alert" hidden></p>
+      <p id="period" role="status"></p>
+    </section>
+
+    <div class="cards" aria-label="Tổng quan kỳ báo cáo">
+      <section class="panel metric"><h2>Doanh thu</h2><output id="revenue"></output><small>Tiền hàng sau giảm theo ngày giao, trừ phí vận chuyển</small></section>
+      <section class="panel metric"><h2>Lợi nhuận gộp</h2><output id="profit"></output><small>Doanh thu trừ giá vốn đã lưu lúc đặt</small></section>
+      <section class="panel metric"><h2>Số đơn tạo trong kỳ</h2><output id="orders"></output><small>Đếm theo ngày tạo đơn</small></section>
+    </div>
+
+    <div class="content">
+      <div class="stack">
+        <section class="panel" aria-labelledby="top-title">
+          <h2 class="head" id="top-title">10 sản phẩm bán chạy</h2>
+          <p class="note" id="top-note"></p>
+          <div class="table-wrap"><table>
+            <thead><tr><th scope="col">Hạng</th><th scope="col">Sản phẩm</th><th scope="col" class="number">Số lượng</th></tr></thead>
+            <tbody id="top"></tbody>
+          </table></div>
+        </section>
+        <section class="panel" aria-labelledby="purchase-title">
+          <h2 class="head" id="purchase-title">Tiền nhập theo nhà cung cấp</h2>
+          <p class="note">Phiếu đã xác nhận, tính theo ngày lập phiếu.</p>
+          <div class="table-wrap"><table class="mini-table">
+            <thead><tr><th scope="col">Nhà cung cấp</th><th scope="col" class="number">Tổng tiền</th></tr></thead>
+            <tbody id="purchases"></tbody>
+          </table></div>
+        </section>
+      </div>
+      <div class="stack">
+        <section class="panel" aria-labelledby="merge-title">
+          <h2 class="head" id="merge-title">Đối chiếu cách gộp SKU</h2>
+          <p class="note">Chọn một sản phẩm trong bảng xếp hạng để xem các SKU được cộng vào <code>product_id</code>.</p>
+          <label>Sản phẩm <select id="product-picker"></select></label>
+          <div class="table-wrap"><table class="mini-table">
+            <thead><tr><th scope="col">SKU và trạng thái</th><th scope="col" class="number">Đã bán</th></tr></thead>
+            <tbody id="variants"></tbody>
+          </table></div>
+          <p class="note" id="variant-total" style="margin: 9px 0 0"></p>
+        </section>
+        <section class="panel" aria-labelledby="status-title">
+          <h2 class="head" id="status-title">Số đơn theo trạng thái</h2>
+          <p class="note">Trạng thái hiện tại của các đơn được tạo trong kỳ.</p>
+          <dl class="status" id="statuses"></dl>
+        </section>
+        <section class="panel" aria-labelledby="stock-title">
+          <h2 class="head" id="stock-title">Tồn kho thấp hiện tại</h2>
+          <p class="note">Tồn theo SKU tại thời điểm xem. Ngưỡng mẫu ≤ 5 [GD].</p>
+          <div class="table-wrap"><table class="mini-table">
+            <thead><tr><th scope="col">Biến thể</th><th scope="col" class="number">Còn lại</th></tr></thead>
+            <tbody id="stock"></tbody>
+          </table></div>
+        </section>
+      </div>
+    </div>
+
+    <details class="panel">
+      <summary>Đối chiếu đơn hàng và phiếu nhập mẫu</summary>
+      <div>
+        <p class="note">Đơn DH-003 được tạo ngày 30/11 và giao ngày 01/12. Hãy chuyển giữa hai tháng để kiểm tra ngày ghi nhận.</p>
+        <h3>Đơn hàng mẫu</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th scope="col">Đơn</th><th scope="col">Ngày tạo</th><th scope="col">Ngày giao</th><th scope="col">Trạng thái</th><th scope="col" class="number">Tiền hàng sau giảm</th><th scope="col" class="number">Giá vốn đã lưu</th></tr></thead>
+          <tbody id="source-orders"></tbody>
+        </table></div>
+        <h3>Phiếu nhập mẫu</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th scope="col">Phiếu</th><th scope="col">Nhà cung cấp</th><th scope="col">Ngày lập</th><th scope="col">Trạng thái</th><th scope="col" class="number">Tổng tiền</th></tr></thead>
+          <tbody id="source-receipts"></tbody>
+        </table></div>
+      </div>
+    </details>
+    <footer>Dữ liệu mẫu [GD] theo giờ Việt Nam. Khi số lượng bán bằng nhau, bản mẫu xếp theo <code>product_id</code> tăng dần [GD].</footer>
+  </main>
+
+  <script>
+    "use strict";
+
+    const statusLabels = {
+      PENDING: "Chưa xử lý", CONFIRMED: "Đã xác nhận", AWAITING_PICKUP: "Chờ lấy hàng",
+      SHIPPING: "Đang giao", DELIVERED: "Giao thành công", DELIVERY_FAILED: "Giao không thành công",
+      CANCELLED: "Đã hủy"
+    };
+    const threshold = 5;
+    const lagunaRed = { sku: "SP-0001-DO-M", productId: "SP-0001", name: "Áo bơi Laguna", active: true, stock: 3 };
+    const lagunaBlack = { sku: "SP-0001-DEN-L", productId: "SP-0001", name: "Áo bơi Laguna", active: false, stock: 8 };
+    const otherProducts = [
+      "Đồ bơi Marina", "Bikini Coral", "Áo bơi Dune", "Quần bơi Coast", "Đồ bơi Pearl",
+      "Bikini Azure", "Áo bơi Reef", "Quần bơi Tide", "Bikini Cove", "Áo bơi Palm"
+    ].map((name, index) => {
+      const productId = `SP-${String(index + 2).padStart(4, "0")}`;
+      return { sku: `${productId}-XANH-M`, productId, name, active: true, stock: index === 0 ? 5 : 9 + index };
+    });
+    const variants = [lagunaRed, lagunaBlack, ...otherProducts];
+    const variantBySku = new Map(variants.map(variant => [variant.sku, variant]));
+
+    const line = (variant, quantity, unitPrice, unitCost) => ({ sku: variant.sku, quantity, unitPrice, unitCost });
+    const orders = [
+      { id: "DH-001", created: "2026-11-03", delivered: "2026-11-05", status: "DELIVERED", discount: 80_000,
+        lines: [line(lagunaRed, 6, 200_000, 120_000), line(lagunaBlack, 4, 220_000, 130_000)] },
+      { id: "DH-002", created: "2026-11-08", delivered: "2026-11-12", status: "DELIVERED", discount: 120_000,
+        lines: otherProducts.map((variant, index) => line(variant, Math.max(9 - index, 1), 180_000 + 10_000 * index, 100_000 + 5_000 * index)) },
+      { id: "DH-003", created: "2026-11-30", delivered: "2026-12-01", status: "DELIVERED", discount: 0,
+        lines: [line(lagunaRed, 2, 200_000, 120_000)] },
+      { id: "DH-004", created: "2026-11-20", delivered: null, status: "CANCELLED", discount: 0,
+        lines: [line(otherProducts[0], 3, 180_000, 100_000)] },
+      { id: "DH-005", created: "2026-11-23", delivered: null, status: "PENDING", discount: 0,
+        lines: [line(otherProducts[1], 1, 190_000, 105_000)] }
+    ].map(order => {
+      const merchandise = order.lines.reduce((total, item) => total + item.quantity * item.unitPrice, 0);
+      return { ...order, total: merchandise - order.discount + 12_000, shippingFee: 12_000 };
+    });
+    const receipts = [
+      { id: "PN-0001", supplierId: "NCC-0001", supplier: "Xưởng San Hô", created: "2026-11-04", confirmed: true, amount: 3_000_000 },
+      { id: "PN-0002", supplierId: "NCC-0001", supplier: "Xưởng San Hô", created: "2026-11-15", confirmed: true, amount: 2_000_000 },
+      { id: "PN-0003", supplierId: "NCC-0001", supplier: "Xưởng San Hô", created: "2026-11-21", confirmed: false, amount: 1_000_000 },
+      { id: "PN-0004", supplierId: "NCC-0002", supplier: "Dệt Biển Xanh", created: "2026-11-09", confirmed: true, amount: 1_800_000 }
+    ];
+
+    const inPeriod = (date, start, end) => date && start <= date && date <= end;
+    const savedCost = order => order.lines.reduce((total, item) => total + item.quantity * item.unitCost, 0);
+    const amountBeforeShipping = order => order.total - order.shippingFee;
+
+    function calculateReport(start, end) {
+      const delivered = orders.filter(order => order.status === "DELIVERED" && inPeriod(order.delivered, start, end));
+      const created = orders.filter(order => inPeriod(order.created, start, end));
+      const counts = Object.fromEntries(Object.keys(statusLabels).map(status => [status, 0]));
+      for (const order of created) counts[order.status]++;
+
+      const byProduct = new Map();
+      let revenue = 0;
+      let cost = 0;
+      for (const order of delivered) {
+        revenue += amountBeforeShipping(order);
+        cost += savedCost(order);
+        for (const item of order.lines) {
+          const variant = variantBySku.get(item.sku);
+          if (!byProduct.has(variant.productId)) {
+            byProduct.set(variant.productId, { name: variant.name, quantity: 0, skus: new Map() });
+          }
+          const product = byProduct.get(variant.productId);
+          product.quantity += item.quantity;
+          product.skus.set(item.sku, (product.skus.get(item.sku) ?? 0) + item.quantity);
+        }
+      }
+      const ranked = [...byProduct].sort(([codeA, a], [codeB, b]) => b.quantity - a.quantity || codeA.localeCompare(codeB));
+      const lowStock = variants.filter(variant => variant.stock <= threshold)
+        .sort((a, b) => a.stock - b.stock || a.sku.localeCompare(b.sku));
+
+      const purchaseBySupplier = new Map();
+      for (const receipt of receipts.filter(row => row.confirmed && inPeriod(row.created, start, end))) {
+        if (!purchaseBySupplier.has(receipt.supplierId)) {
+          purchaseBySupplier.set(receipt.supplierId, { supplier: receipt.supplier, amount: 0 });
+        }
+        purchaseBySupplier.get(receipt.supplierId).amount += receipt.amount;
+      }
+      const purchases = [...purchaseBySupplier].sort(([codeA], [codeB]) => codeA.localeCompare(codeB));
+      return { revenue, profit: revenue - cost, counts, orderCount: created.length, ranked, lowStock, purchases };
+    }
+
+    const $ = id => document.getElementById(id);
+    const numberFormat = new Intl.NumberFormat("vi-VN");
+    const money = value => `${numberFormat.format(value)}đ`;
+    const formatDate = iso => iso ? iso.split("-").reverse().join("/") : "—";
+    const emptyRow = (columns, message) => `<tr><td colspan="${columns}" class="empty">${message}</td></tr>`;
+    const presets = [...document.querySelectorAll("[data-range]")];
+    let currentReport;
+
+    function renderVariantBreakdown() {
+      const chosen = currentReport.ranked.find(([code]) => code === $("product-picker").value);
+      if (!chosen) {
+        $("variants").innerHTML = emptyRow(2, "Chưa có SKU bán trong kỳ.");
+        $("variant-total").textContent = "";
+        return;
+      }
+      const [code, product] = chosen;
+      $("variants").innerHTML = [...product.skus].map(([sku, quantity]) => `
+        <tr><td><code>${sku}</code><span class="sub">${variantBySku.get(sku).active ? "Đang bán" : "Ngừng bán hiện tại"}</span></td>
+            <td class="number">${quantity}</td></tr>`).join("");
+      $("variant-total").textContent = `${code} có ${product.quantity} đơn vị bán trong kỳ.`;
+    }
+
+    function updateReport(start, end) {
+      if (!start || !end || start >= end) {
+        $("error").hidden = false;
+        $("error").textContent = "Ngày bắt đầu phải nhỏ hơn ngày kết thúc. Kết quả kỳ trước vẫn được giữ.";
+        return;
+      }
+      $("error").hidden = true;
+      currentReport = calculateReport(start, end);
+      const { revenue, profit, counts, orderCount, ranked, lowStock, purchases } = currentReport;
+      const top = ranked.slice(0, 10);
+      for (const button of presets) button.setAttribute("aria-pressed", String(button.dataset.range === `${start},${end}`));
+      $("period").textContent = `Kỳ đang xem · ${formatDate(start)} – ${formatDate(end)}`;
+      $("revenue").textContent = money(revenue);
+      $("profit").textContent = money(profit);
+      $("orders").textContent = numberFormat.format(orderCount);
+      $("statuses").innerHTML = Object.entries(statusLabels).map(([status, label]) => `<dt>${label}</dt><dd>${counts[status]}</dd>`).join("");
+
+      $("top-note").textContent = `${ranked.length} sản phẩm có doanh số trong kỳ · hiển thị ${top.length}`;
+      $("top").innerHTML = top.map(([code, product], index) => `
+        <tr><td>${index + 1}</td><td>${product.name}<span class="sub"><code>${code}</code></span>
+          <span class="bar" aria-hidden="true"><b style="width: ${100 * product.quantity / top[0][1].quantity}%"></b></span></td>
+          <td class="number"><strong>${product.quantity}</strong></td></tr>`).join("") || emptyRow(3, "Chưa có sản phẩm bán chạy trong kỳ.");
+
+      const picker = $("product-picker");
+      const previousChoice = picker.value;
+      picker.innerHTML = top.map(([code, product]) => `<option value="${code}">${code} · ${product.name}</option>`).join("");
+      picker.disabled = top.length === 0;
+      if (top.some(([code]) => code === previousChoice)) picker.value = previousChoice;
+      renderVariantBreakdown();
+
+      $("stock").innerHTML = lowStock.map(variant => `
+        <tr><td>${variant.name}<span class="sub"><code>${variant.sku}</code></span></td>
+            <td class="number">${variant.stock}</td></tr>`).join("") || emptyRow(2, "Hiện tại không có biến thể tồn kho thấp.");
+      $("purchases").innerHTML = purchases.map(([code, row]) => `
+        <tr><td>${row.supplier}<span class="sub"><code>${code}</code></span></td>
+            <td class="number">${money(row.amount)}</td></tr>`).join("") || emptyRow(2, "Kỳ này chưa có phiếu nhập đủ điều kiện.");
+    }
+
+    $("source-orders").innerHTML = orders.map(order => `
+      <tr><td>${order.id}</td><td>${formatDate(order.created)}</td><td>${formatDate(order.delivered)}</td>
+          <td>${statusLabels[order.status]}</td><td class="number">${money(amountBeforeShipping(order))}</td>
+          <td class="number">${money(savedCost(order))}</td></tr>`).join("");
+    $("source-receipts").innerHTML = receipts.map(receipt => `
+      <tr><td>${receipt.id}</td><td>${receipt.supplier}</td><td>${formatDate(receipt.created)}</td>
+          <td>${receipt.confirmed ? "Đã xác nhận" : "Nháp"}</td><td class="number">${money(receipt.amount)}</td></tr>`).join("");
+
+    $("period-form").addEventListener("submit", event => {
+      event.preventDefault();
+      updateReport($("start").value, $("end").value);
+    });
+    $("product-picker").addEventListener("change", renderVariantBreakdown);
+    for (const button of presets) {
+      button.addEventListener("click", () => {
+        const [start, end] = button.dataset.range.split(",");
+        $("start").value = start;
+        $("end").value = end;
+        updateReport(start, end);
+      });
+    }
+    presets[0].click();
+  </script>
+</body>
+</html>

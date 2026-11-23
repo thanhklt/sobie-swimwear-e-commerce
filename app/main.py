@@ -1,4 +1,4 @@
-"""Điểm khởi tạo ứng dụng và đăng ký router của 9 module; chưa triển khai.
+"""Điểm khởi tạo ứng dụng và đăng ký router của các module.
 
 Module: identity, catalog, shopping, ordering, payment, promotion, inventory, shipping, reporting.
 """
@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.error.handlers import register_error_handlers
+from app.modules.reporting.router import router as reporting_router
 from app.shared.web.session import SessionMiddleware
 
 version = "v1"
@@ -28,6 +29,7 @@ app = FastAPI(
 )
 app.add_middleware(SessionMiddleware)
 register_error_handlers(app)
+app.include_router(reporting_router)
 
 
 @app.get("/")

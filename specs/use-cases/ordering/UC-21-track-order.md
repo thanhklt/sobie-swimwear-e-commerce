@@ -21,7 +21,7 @@ Khách mở trang "Đơn hàng của tôi".
 3. Hệ thống hiển thị chi tiết: các dòng hàng (tên, màu, size, số lượng, đơn giá), tạm tính, mức giảm, phí vận chuyển, tổng thanh toán, thông tin nhận hàng, trạng thái đơn hiện tại.
 
 ## Alternative Flows
-- **3a. Đơn QR chưa thanh toán, còn hạn:** chi tiết hiển thị thêm mã QR và hạn thanh toán (UC-20).
+- **3a. Đơn QR chưa thanh toán, còn hạn:** chỉ hiển thị mã QR và hạn thanh toán khi đơn ở "Chưa xử lý", "Chưa thanh toán" và còn hạn (UC-20); đơn đã hủy không hiển thị QR.
 - **3b. Đơn "Chưa xử lý":** chi tiết hiển thị nút "Hủy đơn" (UC-22).
 - **3c. Đơn "Giao thành công":** chi tiết hiển thị liên kết xem hóa đơn (UC-27).
 - **1a. Chưa có đơn nào:** hiển thị "Bạn chưa có đơn hàng nào".
@@ -40,7 +40,7 @@ When: khách A mở "Đơn hàng của tôi"
 Then: chỉ thấy 3 đơn của mình, đơn mới nhất ở đầu
 
 ### AC-2: Chi tiết đơn
-Given: đơn của khách có 2 dòng hàng, mức giảm 50.000đ, phí vận chuyển 30.000đ
+Given: đơn của khách có 2 dòng hàng, mức giảm 50.000đ, phí vận chuyển mặc định 12.000đ
 When: khách mở chi tiết đơn
 Then: thấy đủ 2 dòng hàng, tạm tính, mức giảm, phí vận chuyển, tổng thanh toán và trạng thái đơn
 
@@ -66,6 +66,7 @@ Then: không có nút "Hủy đơn"
 
 ## Notes
 - Áp dụng constraint cache danh sách (BR-GIAIDOAN1, Constraints chung). Trạng thái đơn hiển thị phải phản ánh cập nhật mới nhất từ trang giả lập.
+- Nhân viên xem và xử lý đơn qua UC-23; UC-21 chỉ dành cho Khách hàng xem các đơn thuộc tài khoản của mình.
 
 ### Quyết định đã chốt
 - Trạng thái đơn: Chưa xử lý → Đã xác nhận → Chờ lấy hàng → Đang giao → Giao thành công | Giao không thành công; Đã hủy (đã chốt 15/11/2026, cập nhật 20/11/2026: thêm "Chờ lấy hàng", bỏ "Bị từ chối").
@@ -78,3 +79,5 @@ Then: không có nút "Hủy đơn"
 - v2 (2026-11-15): chốt bộ trạng thái đơn
 - v3 (2026-11-15): "Đang giao" do Nhân viên bàn giao (UC-40), trang giả lập chỉ cập nhật kết quả giao (UC-36); sửa AC-3
 - v4 (2026-11-20): đồng bộ BR-GIAIDOAN1 — thêm trạng thái "Chờ lấy hàng", bỏ "Bị từ chối"; mã đơn ví dụ theo định dạng Crockford Base32
+- v5 (2026-11-22): thống nhất phí vận chuyển mặc định 12.000đ khi hiển thị chi tiết đơn.
+- v6 (2026-11-22): đồng bộ điều kiện hiển thị QR với UC-20, loại trừ đơn đã hủy.

@@ -18,18 +18,21 @@ Nhân viên mở mục Giá bán của một sản phẩm trong portal quản tr
 - Sản phẩm đã có ít nhất một biến thể (UC-15).
 
 ## Main Flow
+Các nhánh đổi/đặt giá thành công và fixture AC tương ứng chỉ áp dụng khi chưa có biến thể nào của sản phẩm thuộc phiếu nhập `CONFIRMED`. Khi đã có, bảng giá chỉ xem; mọi request đặt/sửa giá bị chặn theo E6.
+
 1. Hệ thống hiển thị danh sách tất cả các size hiện có của sản phẩm và giá bán hiện tại tương ứng của từng size (dưới dạng số nguyên VND).
 2. Nhân viên nhập hoặc chỉnh sửa giá bán cho các size trên form, sau đó bấm "Lưu bảng giá".
 3. Hệ thống kiểm tra dữ liệu giá của tất cả các size được sửa: mỗi giá bán phải là số nguyên VND lớn hơn 0 và không vượt giới hạn lưu trữ kiểu `numeric(12,0)` (< 10^12 VND); không cho phép để trống nếu size đó đã có giá trước đó.
-4. Trong cùng một Database Transaction, hệ thống thực hiện khóa bi quan dòng sản phẩm cha: `SELECT product_key FROM catalog.product WHERE product_key = :product_key FOR UPDATE;` trước khi đọc trạng thái hoặc cập nhật giá để chống tương tranh với UC-14 và UC-15. Sau đó, hệ thống cập nhật `variant_sell_price` cho tất cả các biến thể có cùng `variant_product_key` và `variant_size_key` tương ứng với giá mới đã nhập, và giữ khóa này cho đến khi commit/rollback transaction. Nếu xảy ra lỗi ghi dữ liệu giữa chừng thì rollback toàn bộ transaction (E4).
+4. Trong cùng một Database Transaction, hệ thống thực hiện khóa bi quan dòng sản phẩm cha: `SELECT product_key FROM catalog.product WHERE product_key = :product_key FOR UPDATE;` trước khi đọc trạng thái hoặc cập nhật giá để chống tương tranh với UC-14 và UC-15. Sau khóa, gọi Service công khai inventory dùng cùng transaction kiểm tra phiếu CONFIRMED của mọi biến thể; nếu có thì từ chối toàn bộ bảng giá theo E6. Nếu chưa có, cập nhật `variant_sell_price` cho tất cả biến thể cùng `variant_product_key` và `variant_size_key` tương ứng giá mới, giữ khóa đến commit/rollback. Nếu lỗi ghi dữ liệu giữa chừng thì rollback toàn bộ (E4).
 5. Sau khi commit Database Transaction thành công, hệ thống tăng số phiên bản catalog để hủy cache (invalidation) tại Redis (theo quy tắc cache BR-002 / Constraints chung). Nếu làm mới Redis thành công, giá mới hiển thị ngay lập tức trên storefront và giỏ hàng; nếu Redis gặp lỗi kết nối hoặc timeout thì chuyển sang nhánh E5. Hệ thống thông báo cập nhật giá thành công.
 
 ## Alternative Flows
 - **1a. Size chưa có giá:** Tại bước 1, nếu một size chưa được đặt giá (`variant_sell_price` là `NULL`), hệ thống hiển thị trạng thái "Chưa có giá"; Nhân viên có thể nhập giá mới cho size này ở bước 2 hoặc để trống (khi để trống thì bỏ qua không cập nhật size đó, size đó tiếp tục giữ `NULL`). Sản phẩm chưa thể chuyển trạng thái "Đang bán" nếu còn ít nhất một size chưa có giá (UC-14, E3).
-- **2a. Đổi giá sản phẩm đang bán (ACTIVE):** Nhân viên thực hiện sửa giá khi sản phẩm đang ở trạng thái "Đang bán". Sau khi lưu database thành công ở bước 4, sản phẩm vẫn giữ nguyên trạng thái "Đang bán". Nếu Redis làm mới thành công ở bước 5, giá mới hiển thị ngay trên storefront; nếu Redis gặp lỗi (E5), storefront có thể hiển thị giá cũ trong tối đa 5 phút (TTL dự phòng). Giỏ hàng và đặt hàng luôn đọc giá mới từ Database.
+- **2a. Đổi giá sản phẩm đang bán (ACTIVE) trước nhập kho xác nhận:** Nhân viên thực hiện sửa giá khi sản phẩm đang "Đang bán" và chưa có phiếu CONFIRMED. Sau khi lưu database thành công ở bước 4, sản phẩm vẫn giữ nguyên trạng thái "Đang bán". Nếu Redis làm mới thành công ở bước 5, giá mới hiển thị ngay trên storefront; nếu Redis gặp lỗi (E5), storefront có thể hiển thị giá cũ trong tối đa 5 phút (TTL dự phòng). Giỏ hàng và đặt hàng luôn đọc giá mới từ Database.
 - **2b. Nhân viên hủy thao tác:** Tại bước 2, Nhân viên không bấm lưu mà chuyển sang trang khác hoặc tải lại trang; hệ thống không bắt đầu ghi dữ liệu và giữ nguyên giá cũ.
 
 ## Exceptions
+- **E6. Khóa giá sau nhập kho:** Nếu bất kỳ biến thể nào của sản phẩm đã thuộc phiếu `CONFIRMED`, từ chối mọi thao tác đặt/sửa giá kể cả size chưa có giá, request trực tiếp hay form cũ; báo "Sản phẩm đã nhập kho, chỉ được phép sửa mô tả". Không thay đổi giá nào, không tăng catalog_version; tồn kho về 0 không mở khóa. Phiếu chỉ DRAFT/CANCELLED không kích hoạt E6.
 - **E1. Giá không hợp lệ:** Tại bước 3, nếu có bất kỳ size nào nhập giá ≤ 0, không phải số nguyên (số thập phân, chuỗi ký tự), vượt ngưỡng lưu trữ `numeric(12,0)` (≥ 1.000.000.000.000đ), hoặc xóa trắng ô giá của một size đã có giá trước đó: hệ thống từ chối lưu, không bắt đầu ghi dữ liệu vào database, và báo lỗi cụ thể tại size tương ứng ("Giá bán phải là số nguyên lớn hơn 0", "Giá vượt giới hạn cho phép", hoặc "Giá bán không được để trống").
 - **E2. Sản phẩm chưa có biến thể:** Tại bước 1, nếu sản phẩm chưa có bất kỳ biến thể nào (chưa tạo ở UC-15): hệ thống hiển thị thông báo "Sản phẩm chưa có biến thể, vui lòng tạo biến thể trước khi đặt giá" và không hiển thị bảng nhập giá.
 - **E3. Sai phân quyền (RBAC):** Người dùng không có vai trò Nhân viên (Khách hàng hoặc Admin) cố gắng truy cập màn hình hoặc API đặt giá: hệ thống từ chối truy cập và trả về mã lỗi 403 Forbidden.
@@ -83,16 +86,16 @@ Then: sản phẩm A vẫn giữ nguyên trạng thái "Đang bán"
 And: cache catalog tại Redis được làm mới ngay (tăng phiên bản catalog)
 And: khách hàng xem trang chi tiết sản phẩm thấy giá size S hiển thị ngay là 330.000đ
 
-### AC-7: Đổi giá không ảnh hưởng đơn đã tạo
-Given: đơn hàng X đã đặt sản phẩm A size M với giá 320.000đ
-When: Nhân viên đổi giá size M thành 350.000đ
-Then: đơn hàng X vẫn giữ giá 320.000đ
-And: đơn mới đặt sau đó dùng giá 350.000đ
+### AC-7: Chặn đổi giá sản phẩm đã nhập, bảo toàn đơn đã tạo
+Given: A đã có phiếu CONFIRMED, giá size M là 320.000đ và đơn hàng X đã lưu snapshot 320.000đ
+When: Nhân viên yêu cầu đổi giá size M thành 350.000đ
+Then: request bị từ chối theo E6, giá hiện hành và snapshot của X đều giữ 320.000đ
+And: không tăng catalog_version; đơn mới không dùng giá 350.000đ bị từ chối này
 
-### AC-8: Đổi giá cập nhật giá hiển thị trong giỏ hàng
-Given: khách hàng có biến thể Đỏ×M của sản phẩm A trong giỏ hàng lúc giá đang là 320.000đ
-When: Nhân viên đổi giá size M thành 350.000đ
-Then: khi khách hàng mở trang giỏ hàng (UC-18), đơn giá của dòng Đỏ×M hiển thị là 350.000đ và tạm tính giỏ hàng được tính lại theo đơn giá mới
+### AC-8: Giỏ hàng giữ giá DB sau khi yêu cầu đổi giá bị chặn
+Given: A đã có phiếu CONFIRMED và khách có Đỏ×M trong giỏ với giá DB hiện hành 320.000đ
+When: Nhân viên yêu cầu đổi giá M thành 350.000đ rồi khách mở giỏ hàng
+Then: request đổi giá bị từ chối theo E6; UC-18 đọc giá DB vẫn là 320.000đ và tính lại giỏ theo mức giá hiện hành này
 
 ### AC-9: Phân quyền truy cập (RBAC)
 Given: người dùng đăng nhập với vai trò Khách hàng hoặc Admin
@@ -157,7 +160,14 @@ Then: trong cả hai kịch bản, cả hai biến thể Đỏ×M và Xanh×M đ
 And: bất biến "mọi màu cùng size dùng chung một giá" luôn được bảo toàn tuyệt đối
 And: PostgreSQL commit thành công trước rồi mới tăng catalog_version ở Redis (Redis không nằm trong transaction SQL, nếu Redis gặp lỗi sau commit thì xử lý theo nhánh E5 như đã chốt)
 
+### AC-17: Khóa cả đặt giá lần đầu và cập nhật lô sau nhập kho
+Given: A đã có phiếu CONFIRMED, size S giá 300.000đ, M giá 320.000đ; B cũng có phiếu CONFIRMED nhưng size L chưa được đặt giá; tồn kho đã về 0
+When: Nhân viên gửi bảng giá mới hợp lệ cho S/M của A và yêu cầu đặt giá lần đầu cho L của B
+Then: cả hai request bị từ chối theo E6 sau kiểm tra lại dưới khóa sản phẩm, không ghi bất kỳ giá nào và không tăng catalog_version
+And: giá cũ A giữ nguyên, L của B vẫn NULL; bảng giá chỉ xem, request trực tiếp hoặc form mở trước xác nhận cũng không vượt được khóa
+
 ## Dependencies
+- **Internal Services:** inventory kiểm tra phiếu CONFIRMED của mọi biến thể thuộc sản phẩm qua Service công khai trong cùng transaction; hợp đồng tuần tự hóa với xác nhận nhập theo Notes UC-14.
 - **Upstream UC:** UC-02 Đăng nhập (xác thực và phân quyền Nhân viên), UC-14 Quản lý sản phẩm, UC-15 Quản lý biến thể màu × size
 - **Downstream UC:**
   - UC-10 Xem sản phẩm theo danh mục (hiển thị giá thấp nhất theo size)
@@ -169,17 +179,19 @@ And: PostgreSQL commit thành công trước rồi mới tăng catalog_version �
 - **External Systems:** Redis (lưu cache catalog và số phiên bản catalog)
 
 ## Notes
+- Quyết định UC-14-Q11 (23/11/2026): sau phiếu `CONFIRMED` chỉ được sửa Mô tả, bao gồm khóa mọi đặt/sửa giá. Quyền đổi giá khi ACTIVE chỉ còn áp dụng trước nhập kho xác nhận, ưu tiên hơn Q2 cũ. Kiểm tra qua Service công khai inventory trong cùng transaction sau khóa cha; tuần tự hóa với xác nhận nhập theo hợp đồng Notes UC-14. Không tự cấp ngoại lệ cho sản phẩm đã nhập khi chưa định giá.
 - Tiền tệ luôn biểu diễn bằng số nguyên VND, ánh xạ kiểu `Decimal` trong backend và `numeric(12,0)` trong database, làm tròn `ROUND_HALF_UP` (AGENTS.md, BR-GIAIDOAN1).
 - Thời gian lưu trữ UTC (`timestamptz`).
 - Thao tác cập nhật giá cho các biến thể cùng size phải thực thi trong cùng một Database Transaction và bắt buộc khóa dòng sản phẩm cha (`SELECT product_key FROM catalog.product WHERE product_key = :product_key FOR UPDATE;`) trước khi đọc trạng thái hoặc ghi dữ liệu để bảo đảm toàn vẹn dữ liệu và kiểm soát tương tranh với UC-14, UC-15 (quyết định UC-14-Q8 và phê duyệt liên UC ngày 23/11/2026 tại Codex).
 - Sau khi commit transaction DB thành công, hệ thống thực hiện làm mới cache catalog ở Redis (tăng số phiên bản catalog theo *Constraints chung - Cache*). Nếu Redis gặp sự cố kết nối hoặc timeout sau commit DB: hệ thống ghi log cảnh báo và không rollback DB; storefront có thể hiển thị giá cũ tối đa 5 phút (TTL dự phòng); giỏ hàng và thanh toán đọc trực tiếp từ DB nên luôn áp dụng giá mới (đã chốt theo quyết định UC-17-Q6, developer duyệt 22/11/2026 tại session Codex).
 
 ### Quyết định đã chốt
+- UC-14-Q11 (developer chốt tại Codex 23/11/2026): không được đặt hoặc đổi giá sau khi bất kỳ biến thể của sản phẩm có phiếu CONFIRMED; thay thế phạm vi cho phép sửa trước đây, giữ nguyên tính đồng bộ giá và snapshot đơn hàng.
 - Giá bán theo size; mọi màu cùng size dùng chung một giá (đã chốt 15/11/2026).
 - Giữ `variant_sell_price` ở biến thể theo ERD: khi Nhân viên đặt giá cho một size, hệ thống ghi cùng giá cho mọi biến thể cùng sản phẩm và cùng size (đã chốt 15/11/2026, theo data model v1 — ưu tiên ERD). Không còn lệch ERD.
 - Đổi giá không ảnh hưởng đơn hàng đã tạo; đơn hàng lưu snapshot `order_detail_unit_price` tại thời điểm đặt (đã chốt 22/11/2026, Q1).
 - Không lưu lịch sử giá; chỉ lưu giá bán hiện hành tại cột `catalog.variant.variant_sell_price` (đã chốt 22/11/2026, Q1).
-- Cho phép đổi giá khi sản phẩm đang ở trạng thái Đang bán (ACTIVE); sau khi đổi giá, sản phẩm vẫn giữ trạng thái Đang bán; khi Redis hoạt động bình thường, storefront hiển thị giá mới ngay lập tức; nếu Redis lỗi sau commit DB thì DB giữ giá mới, ghi log cảnh báo và không rollback DB, storefront hiển thị giá mới sau tối đa 5 phút (TTL), giỏ hàng/thanh toán đọc trực tiếp từ DB luôn dùng giá mới (đã chốt 22/11/2026, Q2 và quyết định UC-17-Q6 được developer duyệt 22/11/2026 tại session Codex).
+- Cho phép đổi giá khi sản phẩm đang ở trạng thái Đang bán (ACTIVE) và chưa có phiếu CONFIRMED; sau khi đổi giá, sản phẩm vẫn giữ trạng thái Đang bán; khi Redis hoạt động bình thường, storefront hiển thị giá mới ngay lập tức; nếu Redis lỗi sau commit DB thì DB giữ giá mới, ghi log cảnh báo và không rollback DB, storefront hiển thị giá mới sau tối đa 5 phút (TTL), giỏ hàng/thanh toán đọc trực tiếp từ DB luôn dùng giá mới (đã chốt 22/11/2026, Q2 và quyết định UC-17-Q6 được developer duyệt 22/11/2026 tại session Codex).
 - Khi tạo thêm biến thể mới ở UC-15 cho size đã có giá, biến thể mới tự động nhận giá của size đó; tại UC-16 lệnh lưu giá luôn cập nhật đồng bộ toàn bộ biến thể cùng sản phẩm và size (đã chốt 22/11/2026, Q3).
 - Lưu giá theo lô (toàn bộ các size được nhập/sửa trên form) trong một transaction; giá nhập bắt buộc là số nguyên VND > 0; không cho phép xóa trắng giá về NULL đối với size đã có giá (đã chốt 22/11/2026, Q4).
 - Phân quyền: Chỉ tài khoản vai trò Nhân viên (`employee`) mới có quyền truy cập và chỉnh sửa giá bán; Admin và Khách hàng bị từ chối truy cập (đã chốt 22/11/2026, Q5).
@@ -197,3 +209,4 @@ And: PostgreSQL commit thành công trước rồi mới tăng catalog_version �
 - v6 (2026-11-22): áp dụng quyết định UC-17-Q6 đã được developer phê duyệt tại session Codex (22/11/2026): cập nhật Main Flow bước 5, Alternative 2a, Postconditions; bổ sung Exception E5 và AC-15 xử lý lỗi Redis sau commit DB (không rollback DB, log cảnh báo, storefront tối đa 5 phút TTL, giỏ hàng/thanh toán luôn đọc giá mới từ DB); cập nhật AC-6; chuyển Status sang ready.
 - v7 (2026-11-23): mở lại rà soát logic vòng 2 (phát hiện #3 về tương tranh giữa UC-15 và UC-16); chuyển Status về draft; đưa giả định [GD-01] về giao thức khóa bi quan dòng sản phẩm cha vào danh sách câu hỏi mở UC-16-Q6.
 - v8 (2026-11-23): áp dụng quyết định UC-14-Q8 và phê duyệt phạm vi liên UC của Developer tại session Codex (23/11/2026): bổ sung khóa bi quan catalog.product FOR UPDATE vào Main Flow bước 4 và Notes; hoàn thiện Postconditions; bổ sung AC-16 kiểm chứng tương tranh cho cả 2 thứ tự xen kẽ với UC-15; giải quyết hoàn toàn GD-01 / UC-16-Q6; chuyển Status sang ready.
+- v9 (2026-11-23): đồng bộ UC-14-Q11 theo quyết định developer tại Codex: khóa mọi đặt/sửa giá sau phiếu CONFIRMED, thêm E6/AC-17, sửa AC-7/8 bảo toàn giá đơn hàng và giỏ khi bị chặn; giới hạn quyền đổi giá ACTIVE vào trước nhập xác nhận; giữ ready.

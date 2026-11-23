@@ -4,7 +4,7 @@
 - **ID:** UC-14
 - **Module:** catalog
 - **Liên quan tới BR:** BR-002
-- **Status:** draft
+- **Status:** ready
 
 ## Actor
 Nhân viên (Khách hàng và Admin không có quyền truy cập chức năng này).
@@ -15,6 +15,7 @@ Nhân viên mở mục Sản phẩm trong portal quản trị.
 ## Preconditions
 - Nhân viên đã đăng nhập thành công vào portal quản trị (UC-02).
 - Hệ thống đã có ít nhất một danh mục và ít nhất một giới tính tồn tại/khả dụng để chọn (UC-17).
+- Với sản phẩm có bất kỳ biến thể nào thuộc phiếu nhập `CONFIRMED`, Nhân viên chỉ được sửa Mô tả. Các thao tác ghi thành công khác và các AC tương ứng bên dưới chỉ áp dụng khi chưa có phiếu `CONFIRMED`; phiếu `DRAFT`/`CANCELLED` không kích hoạt khóa sửa này. Điều kiện xóa vẫn kiểm tra mọi phiếu nhập như Flow 2c.
 
 ## Main Flow
 1. Hệ thống hiển thị danh sách sản phẩm có phân trang cố định 20 sản phẩm/trang, sắp xếp theo sản phẩm mới tạo nhất lên đầu (`product_created_at` giảm dần). Màn hình hỗ trợ:
@@ -48,6 +49,7 @@ Nhân viên mở mục Sản phẩm trong portal quản trị.
 8. Sau khi sản phẩm đã thỏa mãn đủ điều kiện mở bán, Nhân viên bấm "Chuyển sang Đang bán".
 9. Trong MỘT Database Transaction XUYÊN SUỐT từ trước kiểm tra đến commit:
    - Khóa dòng sản phẩm cha (`SELECT * FROM catalog.product WHERE product_key = ... FOR UPDATE`) để giữ độc quyền kiểm tra và ghi, chống race condition.
+   - Gọi Service công khai `inventory` trong cùng transaction kiểm tra phiếu nhập `CONFIRMED` của mọi biến thể: nếu đã có thì từ chối đổi trạng thái theo E10, không ghi DB hoặc tăng cache version.
    - Kiểm tra điều kiện mở bán (xem Exception E3):
      + Sản phẩm phải có ít nhất một biến thể tồn tại trong sản phẩm (UC-15).
      + Mọi size của sản phẩm đều đã được đặt giá bán > 0 (UC-16).
@@ -75,9 +77,10 @@ Nhân viên mở mục Sản phẩm trong portal quản trị.
 - **2a. Sửa sản phẩm:**
   - Điều kiện vào: Nhân viên chọn sửa một sản phẩm từ danh sách hoặc màn hình chi tiết.
   - Xử lý:
-    1. Hệ thống hiển thị form chỉnh sửa gồm: Tên sản phẩm, Mô tả, Danh mục, Giới tính, Bộ sưu tập. Mã sản phẩm `product_id` hiển thị ở chế độ chỉ đọc, không cho sửa.
+    1. Hệ thống hiển thị form chỉnh sửa gồm: Tên sản phẩm, Mô tả, Danh mục, Giới tính, Bộ sưu tập. Mã sản phẩm `product_id` hiển thị ở chế độ chỉ đọc, không cho sửa. Nếu đã có phiếu `CONFIRMED`, chỉ Mô tả cho nhập; các trường và nút ghi khác bị khóa.
     2. Nhân viên sửa thông tin và bấm "Lưu thay đổi".
     3. Trong CÙNG MỘT Database Transaction duy nhất (bảo đảm tính nguyên tử từ kiểm tra đến ghi):
+       - Khóa dòng sản phẩm cha `FOR UPDATE`, kiểm tra lại phiếu `CONFIRMED` qua Service công khai `inventory`. Nếu đã nhập kho, so sánh các giá trị yêu cầu với DB: có thay đổi ngoài Mô tả thì từ chối toàn bộ request theo E10, kể cả gửi trực tiếp API hoặc form đã mở trước lúc xác nhận nhập kho. Nếu chỉ sửa Mô tả, chỉ cập nhật `product_description` và dấu thời gian kỹ thuật `product_updated_at`, không ghi lại tên hoặc các liên kết; bỏ qua các bước cập nhật trường khác dưới đây.
        - Hệ thống chuẩn hóa cắt khoảng trắng thừa đầu/cuối của tên sản phẩm (`trim()`), kiểm tra độ dài tối đa 255 ký tự, kiểm tra đủ trường bắt buộc.
        - Kiểm tra tính duy nhất tên sản phẩm nguyên tử: cho phép giữ nguyên tên hiện tại của chính sản phẩm đang sửa, nhưng chặn nếu trùng với bất kỳ sản phẩm nào khác trong hệ thống (so sánh chuỗi sau khi trim, không phân biệt hoa/thường). Nếu không hợp lệ -> rollback và chuyển sang Exception E1.
        - Cập nhật thông tin trong bảng `catalog.product` với tên đã trim (giữ nguyên định dạng hoa/thường nhập) và ghi nhận `product_updated_at = now()`.
@@ -90,7 +93,7 @@ Nhân viên mở mục Sản phẩm trong portal quản trị.
 - **2b. Ngừng bán sản phẩm:**
   - Điều kiện vào: Sản phẩm đang ở trạng thái `ACTIVE` (Đang bán). Nhân viên bấm "Ngừng bán" và xác nhận.
   - Xử lý:
-    1. Trong Database Transaction: khóa dòng sản phẩm (`SELECT ... FOR UPDATE`), cập nhật trạng thái sản phẩm sang `INACTIVE` (Ngừng bán) trong bảng `catalog.product`, cập nhật `product_updated_at = now()`.
+    1. Trong Database Transaction: khóa dòng sản phẩm (`SELECT ... FOR UPDATE`), kiểm tra phiếu `CONFIRMED` qua Service công khai `inventory`; nếu có thì từ chối theo E10. Nếu chưa có, cập nhật trạng thái sản phẩm sang `INACTIVE` (Ngừng bán) trong bảng `catalog.product`, cập nhật `product_updated_at = now()`.
     2. Sau khi Database Transaction commit thành công:
        - Hệ thống gọi Redis tăng số phiên bản catalog (`catalog_version`) để làm mới cache công khai ở request tiếp theo.
        - Nếu Redis gặp sự cố hoặc timeout: ghi log cảnh báo, không rollback DB, vẫn thông báo thành công cho Nhân viên (Exception E9); độ trễ tối đa TTL 5 phút chỉ áp dụng cho các dữ liệu đọc từ cache công khai.
@@ -136,7 +139,7 @@ Nhân viên mở mục Sản phẩm trong portal quản trị.
        - Thêm ảnh mới: tải lên một hoặc nhiều ảnh hợp lệ.
        - Đổi thứ tự hiển thị: kéo thả hoặc thay đổi vị trí các ảnh.
        - Xóa ảnh: chọn xóa một hoặc nhiều ảnh khỏi gallery.
-    2. Trong Database Transaction: khóa dòng sản phẩm cha (`SELECT ... FOR UPDATE` trên bảng `catalog.product`).
+    2. Trong Database Transaction: khóa dòng sản phẩm cha (`SELECT ... FOR UPDATE` trên bảng `catalog.product`), kiểm tra phiếu `CONFIRMED` qua Service công khai `inventory`; nếu có thì chặn toàn bộ thao tác thêm/xóa/đổi thứ tự ảnh theo E10.
     3. Kiểm tra điều kiện ràng buộc: Nếu sản phẩm đang ở trạng thái `ACTIVE` (Đang bán) mà thao tác xóa ảnh làm bộ ảnh rỗng (0 ảnh) -> hệ thống từ chối xóa và chuyển sang Exception E7.
     4. Hệ thống tự động chuẩn hóa và đánh lại số thứ tự `gallery_order_no` thành dãy số nguyên liên tục 1, 2, 3... đến N.
        - Ảnh có `gallery_order_no = 1` mặc định là ảnh đại diện (thumbnail) của sản phẩm trên storefront và quản trị.
@@ -150,6 +153,11 @@ Nhân viên mở mục Sản phẩm trong portal quản trị.
 
 ## Exceptions
 
+- **E10. Sản phẩm đã nhập kho chỉ được sửa Mô tả:**
+  - Điều kiện: Service `inventory` xác nhận có ít nhất một dòng phiếu nhập `CONFIRMED` liên quan bất kỳ biến thể nào của sản phẩm, không phụ thuộc tồn kho hiện tại hay trạng thái sản phẩm/biến thể.
+  - Chặn đổi tên, danh mục, giới tính, bộ sưu tập, gallery, trạng thái sản phẩm, giá, thêm/xóa/đổi trạng thái biến thể và đổi tên taxonomy liên quan (UC-15/16/17). Xóa sản phẩm vẫn bị chặn theo E2.
+  - Server kiểm tra lại trong transaction; yêu cầu chứa cả Mô tả và thay đổi bị cấm bị từ chối toàn bộ, không lưu riêng Mô tả, không tăng `catalog_version`; báo "Sản phẩm đã nhập kho, chỉ được phép sửa mô tả". Tồn kho về 0 không mở khóa.
+
 - **E1. Thiếu trường bắt buộc, sai định dạng hoặc tên sản phẩm bị trùng:**
   - Thiếu tên sản phẩm hoặc tên chỉ chứa khoảng trắng: hệ thống từ chối lưu và báo "Tên sản phẩm là bắt buộc".
   - Tên sản phẩm vượt quá 255 ký tự: hệ thống từ chối lưu và báo "Tên sản phẩm không được vượt quá 255 ký tự".
@@ -159,7 +167,7 @@ Nhân viên mở mục Sản phẩm trong portal quản trị.
 
 - **E2. Chặn xóa sản phẩm đã phát sinh giao dịch:**
   - Điều kiện: Sản phẩm đã có ít nhất một biến thể xuất hiện trong đơn hàng (`ordering.order_detail`) hoặc trong phiếu nhập (`inventory.goods_receipt_detail`, kể cả phiếu nhập nháp).
-  - Xử lý: Hệ thống từ chối xóa, rollback transaction nếu đang mở, giữ nguyên dữ liệu và hiển thị thông báo: "Sản phẩm đã phát sinh giao dịch (đơn hàng hoặc phiếu nhập), không thể xóa. Gợi ý chuyển sang Ngừng bán".
+  - Xử lý: Hệ thống từ chối xóa, rollback transaction nếu đang mở, giữ nguyên dữ liệu và hiển thị thông báo: "Sản phẩm đã phát sinh giao dịch (đơn hàng hoặc phiếu nhập), không thể xóa". Nếu có phiếu CONFIRMED, chỉ được sửa Mô tả; không gợi ý chuyển trạng thái.
 
 - **E3. Chặn chuyển Đang bán khi chưa đủ điều kiện mở bán:**
   - Điều kiện: Sản phẩm đang ở trạng thái Ngừng bán (`INACTIVE`), Nhân viên bấm chuyển sang Đang bán (`ACTIVE`) nhưng vi phạm một trong các điều kiện mở bán:
@@ -285,13 +293,13 @@ And: sản phẩm A bị loại khỏi khối Top 5 bán chạy trên trang ch�
 ### AC-11: Chặn xóa sản phẩm đã có trong đơn hàng
 Given: sản phẩm A đã có ít nhất một biến thể xuất hiện trong đơn hàng
 When: Nhân viên bấm xóa sản phẩm A
-Then: hệ thống từ chối xóa và hiển thị thông báo "Sản phẩm đã phát sinh giao dịch (đơn hàng hoặc phiếu nhập), không thể xóa. Gợi ý chuyển sang Ngừng bán"
+Then: hệ thống từ chối xóa và hiển thị thông báo "Sản phẩm đã phát sinh giao dịch (đơn hàng hoặc phiếu nhập), không thể xóa"
 And: hệ thống tuyệt đối không gọi Redis tăng `catalog_version` khi transaction bị rollback
 
 ### AC-12: Chặn xóa sản phẩm đã có trong phiếu nhập
 Given: sản phẩm A chưa có đơn hàng nào nhưng đã có biến thể nằm trong phiếu nhập (kể cả phiếu nhập nháp)
 When: Nhân viên bấm xóa sản phẩm A
-Then: hệ thống từ chối xóa và hiển thị thông báo "Sản phẩm đã phát sinh giao dịch (đơn hàng hoặc phiếu nhập), không thể xóa. Gợi ý chuyển sang Ngừng bán"
+Then: hệ thống từ chối xóa và hiển thị thông báo "Sản phẩm đã phát sinh giao dịch (đơn hàng hoặc phiếu nhập), không thể xóa"
 And: hệ thống tuyệt đối không gọi Redis tăng `catalog_version` khi transaction bị rollback
 
 ### AC-13: Chặn xóa sản phẩm đã từng gắn khuyến mãi theo sản phẩm
@@ -376,7 +384,7 @@ And: Khi hai nhân viên đồng thời sửa sản phẩm A thành "Bikini Spor
 Then: đúng một sản phẩm được cập nhật tên thành công, sản phẩm còn lại bị từ chối với thông báo lỗi E1 "Tên sản phẩm đã tồn tại"
 
 ### AC-26: Xử lý lỗi Redis cache version sau khi commit DB thành công
-Given: sản phẩm A đang `ACTIVE`, có biến thể `ACTIVE` giá hợp lệ, đang xuất hiện trong cache Hàng mới và Bộ sưu tập UC-09, danh mục UC-10, chi tiết UC-12 và trong top 15 Bán chạy của reporting; các cache công khai còn TTL không quá 5 phút và Redis vẫn đọc được
+Given: sản phẩm A đang `ACTIVE`, chưa có phiếu CONFIRMED, có biến thể `ACTIVE` giá hợp lệ; fixture cache Hàng mới/Bộ sưu tập UC-09, danh mục UC-10, chi tiết UC-12 và top 15 reporting đều chứa A; cache còn TTL không quá 5 phút và Redis vẫn đọc được
 When: Nhân viên Ngừng bán A, Database Transaction đã commit `product_status = INACTIVE` vào PostgreSQL, nhưng lệnh tăng `catalog_version` ở Redis bị timeout hoặc lỗi kết nối
 Then: hệ thống ghi nhận log cảnh báo (warning log) kèm chi tiết lỗi Redis
 And: toàn bộ thay đổi dữ liệu trong PostgreSQL được giữ nguyên, tuyệt đối KHÔNG rollback Database Transaction đã commit
@@ -385,6 +393,32 @@ And: các truy vấn đọc trực tiếp Database (tìm kiếm UC-11, wishlist 
 And: chỉ các dữ liệu đọc từ cache công khai (Hàng mới và Bộ sưu tập UC-09, danh mục UC-10, chi tiết sản phẩm UC-12) chấp nhận có thể cũ (stale cache) tối đa trong thời gian TTL dự phòng còn lại (tối đa 5 phút) hoặc cho đến lần tăng `catalog_version` thành công tiếp theo
 And: với thao tác Ngừng bán A, request trang chủ ngay sau commit có thể còn thấy A trong Hàng mới và Bộ sưu tập từ cache cũ, nhưng khối Bán chạy phải loại A ngay qua kiểm tra trạng thái DB hiện hành, dù cache top 15 của reporting vẫn chứa A
 And: khi cache cũ hết TTL hoặc phiên bản được tăng thành công, request mới cho Hàng mới và Bộ sưu tập không còn trả A; TTL không tự thay DOM đã mở trên trình duyệt
+
+### AC-27: Sản phẩm đã nhập kho vẫn được sửa Mô tả
+Given: sản phẩm A có biến thể thuộc phiếu nhập `CONFIRMED`, tên/giá/trạng thái/gallery và liên kết taxonomy đã được lưu
+When: Nhân viên chỉ sửa Mô tả của A và lưu
+Then: server khóa sản phẩm, kiểm tra lại phiếu xác nhận qua Service inventory trong cùng transaction và chỉ lưu Mô tả cùng dấu thời gian kỹ thuật
+And: mọi dữ liệu còn lại giữ nguyên; sau commit làm mới cache theo quy tắc thành công/lỗi Redis hiện có
+
+### AC-28: Khóa mọi thay đổi khác sau nhập kho, kể cả API và request hỗn hợp
+Given: A có một phiếu nhập `CONFIRMED`; thực hiện mỗi tình huống độc lập với tồn kho còn hàng hoặc đã về 0
+When: Nhân viên lần lượt gửi yêu cầu đổi tên/danh mục/giới tính/bộ sưu tập, thêm/xóa/đổi thứ tự ảnh, chuyển ACTIVE/INACTIVE, xóa A hoặc sửa đồng thời Mô tả và tên
+Then: tất cả thao tác đều bị từ chối; xóa theo E2, các thay đổi khác theo E10
+And: toàn bộ DB giữ nguyên, kể cả Mô tả trong request hỗn hợp; không tăng `catalog_version`
+And: chặn cả request gửi trực tiếp và form đã mở trước khi phiếu chuyển sang CONFIRMED
+
+### AC-29: Phiếu nháp/hủy chưa khóa sửa, phiếu xác nhận khóa toàn sản phẩm
+Given: A chỉ có phiếu DRAFT và CANCELLED; B có hai biến thể, chỉ một biến thể từng thuộc phiếu CONFIRMED và tồn kho hiện tại của cả hai bằng 0
+When: Nhân viên sửa tên A hợp lệ và sửa tên B
+Then: A được sửa theo Flow 2a; B bị chặn theo E10, không phụ thuộc biến thể nào đã nhập hay còn hàng
+And: việc A chưa bị khóa sửa không thay thế điều kiện chặn xóa khi đã liên kết bất kỳ phiếu nhập nào
+
+### AC-30: Tuần tự hóa khóa sửa với xác nhận nhập kho
+Given: A chưa có phiếu CONFIRMED, form sửa tên đã mở; transaction xác nhận nhập và transaction sửa tên dùng cùng khóa cha theo hợp đồng Service công khai
+When: thực hiện độc lập hai thứ tự cấp khóa: xác nhận nhập giữ khóa trước, hoặc sửa tên giữ khóa trước
+Then: nếu xác nhận nhập commit trước, request sửa tên chờ khóa rồi đọc lại CONFIRMED và bị từ chối theo E10, tên giữ nguyên
+And: nếu sửa tên commit trước, thay đổi hợp lệ được giữ; xác nhận nhập sau đó thành công thì mọi request sửa ngoài Mô tả tiếp theo bị khóa
+And: không có thay đổi bị cấm nào commit dựa trên kết quả kiểm tra trước xác nhận nhập; nhánh từ chối không tăng catalog_version
 
 ## Dependencies
 - **Upstream UC:**
@@ -408,6 +442,8 @@ And: khi cache cũ hết TTL hoặc phiên bản được tăng thành công, re
 - **External Systems:** không có
 
 ## Notes
+- **Khóa sau nhập kho (UC-14-Q11, developer chốt tại Codex 23/11/2026):** có phiếu `CONFIRMED` là khóa toàn bộ thay đổi Catalog của sản phẩm ngoài Mô tả, bao gồm giá, trạng thái, biến thể và tên taxonomy dùng chung. Quy tắc này ưu tiên hơn quyền sửa trong các quyết định cũ; không tự mở khóa khi tồn kho về 0. Phải cấu hình giá/trạng thái/biến thể mong muốn trước xác nhận nhập; nếu đã xác nhận khi chưa định giá hoặc đang INACTIVE thì không được sửa giá/mở bán để khắc phục bằng các UC này.
+- **Hợp đồng với inventory:** kiểm tra phiếu xác nhận qua Service công khai dùng cùng DB transaction sau khóa sản phẩm cha; xác nhận nhập kho phải tuần tự hóa với các thao tác Catalog bằng cùng khóa sản phẩm (nhiều sản phẩm khóa theo `product_key ASC` qua Service catalog trước khóa biến thể). Sau khi chờ khóa phải đọc lại trạng thái đã commit. Đây là yêu cầu tích hợp cho UC-34 khi triển khai; không tuyên bố UC-34 hoặc mã nguồn đã được cập nhật/kiểm thử trong PR đặc tả Catalog.
 - **Quy tắc Cache (BR-GIAIDOAN1):** 
   - Khi sản phẩm thay đổi thông tin, đổi trạng thái hoặc bị xóa, hệ thống tăng số phiên bản catalog (`catalog_version`) ở Redis để toàn bộ cache Redis công khai (trang chủ, danh mục, chi tiết) tự động được làm mới ở request tiếp theo. Việc tăng cache version chỉ được thực hiện sau khi Database Transaction đã commit thành công (không gọi Redis trong SQL transaction).
   - Nếu Database Transaction bị rollback: tuyệt đối không gọi Redis tăng `catalog_version`.
@@ -419,6 +455,7 @@ And: khi cache cũ hết TTL hoặc phiên bản được tăng thành công, re
   - Lưu ý quan trọng: Khóa dòng sản phẩm đơn lẻ này (`FOR UPDATE`) chỉ bảo vệ tính nhất quán dữ liệu của chính sản phẩm đó; nó không thể thay thế cho cơ chế bảo đảm tính duy nhất toàn cục của tên sản phẩm (uniqueness giữa các sản phẩm khác nhau). Cơ chế bảo đảm tính duy nhất nguyên tử tên sản phẩm cần giải pháp toàn cục riêng (unique constraint ở database hoặc cơ chế khóa toàn cục tương đương).
 
 ### Quyết định đã chốt
+- UC-14-Q11 (23/11/2026, developer trả lời tại Codex): "chỉ được phép sửa mô tả" và "Có phiếu nhập đã xác nhận (CONFIRMED)". Khóa cả giá, trạng thái, biến thể và các thuộc tính liên quan; các quyết định sửa/mở bán bên dưới chỉ áp dụng trước mốc này.
 - Admin chỉ quản lý tài khoản và gán vai trò cho tài khoản; mọi thao tác vận hành cửa hàng do Nhân viên thực hiện (đã chốt 15/11/2026).
 - Sản phẩm gồm: mã tự nhiên `product_id`, tên, mô tả, trạng thái, 1 danh mục, 1 giới tính, nhiều bộ sưu tập, bộ ảnh (gallery) gắn theo sản phẩm có thứ tự hiển thị (đã chốt 15/11/2026, theo ERD).
 - Đánh giá sản phẩm (review) để giai đoạn 2, không làm trong MVP; `product_total_score_review` mặc định 0 (đã chốt 15/11/2026).
@@ -435,7 +472,7 @@ And: khi cache cũ hết TTL hoặc phiên bản được tăng thành công, re
 - Xử lý lỗi Redis sau khi Database Transaction đã commit: Database commit thành công trước rồi mới gọi Redis tăng `catalog_version`. Nếu Redis bị timeout hoặc lỗi kết nối: ghi log warning, không rollback Database Transaction, vẫn trả thông báo thành công cho Nhân viên; độ trễ tối đa theo TTL dự phòng (5 phút) hoặc lần tăng version thành công tiếp theo chỉ áp dụng cho dữ liệu đọc từ cache công khai (Hàng mới và Bộ sưu tập UC-09, UC-10, UC-12). Các luồng đọc trực tiếp Database không cache (tìm kiếm UC-11, wishlist UC-38, giỏ hàng UC-18, đặt hàng UC-19/20, lọc khối bán chạy UC-09) luôn thấy trạng thái mới nhất ngay sau khi DB commit. Nếu Database Transaction bị rollback thì tuyệt đối không gọi Redis tăng `catalog_version`. Cache TTL không tự động làm mới giao diện trình duyệt của khách hàng nếu khách hàng không tải lại trang (đã chốt 23/11/2026, UC-14-Q10).
 
 ### Giả định [GD]
-- [GD] UC-14-Q11 (review PR #7, mục 3): Cần developer chốt phạm vi "sản phẩm đã nhập kho chỉ được sửa mô tả": khóa cả giá/trạng thái/thêm biến thể hay chỉ thông tin sản phẩm, gallery và tên taxonomy liên quan? Mốc khóa là có phiếu CONFIRMED hay mọi liên kết phiếu nhập kể cả DRAFT/CANCELLED? Chưa áp dụng quy tắc mới vào Flow/AC trước khi chốt vì có thể thay thế hành vi đã duyệt tại UC-15/16; UC-17-Q7 phụ thuộc cùng quyết định.
+- Không còn câu hỏi mở. UC-14-Q11 đã chốt: chỉ sửa Mô tả sau phiếu CONFIRMED; bao gồm khóa giá/trạng thái/biến thể và taxonomy liên quan (23/11/2026).
 
 ## History
 - v1 (2026-11-15): initial
@@ -450,3 +487,4 @@ And: khi cache cũ hết TTL hoặc phiên bản được tăng thành công, re
 - v10 (2026-11-23): rà soát theo ý kiến Coordinator: làm rõ quy trình nguyên tử trong CÙNG một transaction ở Main 5 và Alt 2a.3, quy trình xuyên suốt giữ khóa từ trước kiểm tra đến commit ở Main 9-10; làm rõ điều kiện là có ít nhất 1 biến thể tồn tại (không bắt buộc biến thể ACTIVE); bổ sung AC-24 (chặn thêm size mới chưa có giá khi parent ACTIVE) và AC-25 (sửa giữ nguyên tên chính nó và cạnh tranh đổi tên), nâng tổng số AC lên 26 AC (AC-1..AC-3, AC-3b, AC-4..AC-25) mà không renumber.
 - v11 (2026-11-23): rà soát logic vòng 3 (phát hiện #2): developer phê duyệt chốt dứt điểm UC-14-Q10; bổ sung nhánh xử lý lỗi Redis timeout/mất kết nối sau khi Database Transaction đã commit (ghi log warning, giữ nguyên DB, báo thành công cho nhân viên); làm rõ độ trễ TTL 5 phút chỉ áp dụng dữ liệu cache công khai, các luồng không cache (tìm kiếm, wishlist, mua hàng, khối bán chạy) luôn đọc trạng thái DB mới nhất; làm rõ không tăng version khi DB rollback; thêm Exception E9, AC-26; gỡ bỏ toàn bộ nhãn [GD]; chuyển Status sang ready.
 - v12 (2026-11-23): sửa review PR #7 mục 2/4: phân biệt điều kiện mở bán với hiển thị danh sách qua AC-6/AC-6b; bổ sung Hàng mới và Bộ sưu tập vào phạm vi cache và AC-26. Mở UC-14-Q11, giữ draft chờ chốt phạm vi khóa sản phẩm đã nhập kho (mục 3).
+- v13 (2026-11-23): developer chốt UC-14-Q11: sau phiếu CONFIRMED chỉ sửa Mô tả; khóa trường khác, gallery, trạng thái, giá và biến thể; thêm E10, AC-27..30 và hợp đồng tuần tự hóa với xác nhận nhập; đồng bộ fixture/điều kiện cũ, khôi phục ready.

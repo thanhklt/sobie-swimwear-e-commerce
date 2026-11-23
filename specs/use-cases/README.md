@@ -123,7 +123,7 @@ Chưa xử lý ──(UC-23 xác nhận)──► Đã xác nhận ──(UC-40 
 | Ranh giới khối bán chạy trang chủ | reporting tổng hợp qua service ordering và ghi Redis; catalog đọc top 15, lọc dữ liệu sản phẩm/biến thể hiện hành trong module catalog trước giới hạn 5, độc lập việc tăng catalog_version thành công hay lỗi; lấy khuyến mãi/tồn kho qua service promotion/inventory. Redis trống/lỗi thì gọi service reporting tính lại qua service ordering (22/11/2026, UC-09-Q2; cập nhật 23/11/2026) | UC-09 |
 | Trang danh mục | Lọc theo giới tính, size, danh mục, bộ sưu tập; sắp xếp mặc định mới nhất | UC-10 |
 | Sản phẩm (ERD) | 1 danh mục, 1 giới tính, nhiều bộ sưu tập; ảnh (gallery) theo sản phẩm, có thứ tự; review để giai đoạn 2 | UC-12, UC-14, UC-17 |
-| Giá bán | Chỉ đổi theo size; cùng size khác màu cùng giá | UC-12, UC-16 |
+| Giá bán | Chỉ đặt/đổi trước nhập kho CONFIRMED, theo size; cùng size khác màu cùng giá | UC-12, UC-16 |
 | Tập biến thể tính giá và nhãn tồn kho | Chỉ biến thể ACTIVE có variant_sell_price > 0 tham gia min giá thẻ và min-max chi tiết khi có tập hợp lệ; không xét tồn khi tính giá. Nhãn Hết hàng trên thẻ khi không có biến thể trong tập này còn tồn khả dụng > 0 (23/11/2026, UC-10-Q9; duyệt đồng bộ tại Codex) | UC-09, UC-10, UC-11, UC-12 |
 | Sản phẩm đủ điều kiện xuất hiện trong danh sách | Sản phẩm cha ACTIVE có ít nhất một biến thể ACTIVE giá > 0; loại từng sản phẩm không đủ điều kiện trước tổng số/tổng trang/giới hạn hiển thị. Không đổi trạng thái DB, không ẩn vì hết tồn. Danh sách rỗng không sinh trang 0 (23/11/2026, UC-10-Q10; duyệt tại Codex) | UC-09, UC-10, UC-11 |
 | URL chi tiết không còn biến thể hợp lệ | Sản phẩm cha ACTIVE nhưng không còn biến thể ACTIVE có giá hợp lệ vẫn trả HTTP 200, hiện tên/mô tả/ảnh và "Sản phẩm tạm ngừng kinh doanh", không hiện khoảng giá, vô hiệu hóa màu/size/số lượng/thêm giỏ. Cha INACTIVE hoặc không tồn tại vẫn 404 (UC-12-Q9b, chốt và đồng bộ tại Codex 23/11/2026) | UC-12 |
@@ -172,11 +172,12 @@ Chưa xử lý ──(UC-23 xác nhận)──► Đã xác nhận ──(UC-40 
 | Trang chính sách | Một trang chính sách chung duy nhất (22/11/2026, Q1) | UC-13 |
 | Trạng thái sản phẩm | Đang bán (`ACTIVE`) hoặc Ngừng bán (`INACTIVE`); sản phẩm mới tạo ở trạng thái Ngừng bán (22/11/2026, Q1) | UC-14 |
 | Trường bắt buộc của sản phẩm | Tên sản phẩm, một danh mục và một giới tính là bắt buộc (22/11/2026, Main Flow và Quyết định đã chốt) | UC-14 |
+| Khóa sản phẩm đã nhập kho | Có phiếu CONFIRMED ở bất kỳ biến thể nào thì chỉ được sửa Mô tả toàn sản phẩm; khóa mọi trường khác, ảnh, giá, trạng thái, thêm/xóa/đổi trạng thái biến thể, đổi tên taxonomy liên quan. Tồn kho về 0 không gỡ khóa; DRAFT/CANCELLED chưa kích hoạt khóa sửa, điều kiện chặn xóa do liên kết phiếu nhập vẫn áp dụng. Ưu tiên hơn các quyền sửa cũ; cấu hình trước khi xác nhận nhập (developer chốt tại Codex 23/11/2026, review PR #7, UC-14-Q11/UC-17-Q7) | UC-14, UC-15, UC-16, UC-17 |
 | Điều kiện mở bán sản phẩm | Có ít nhất một ảnh gallery, ít nhất một biến thể và mọi size đã có giá bán > 0; tồn kho = 0 vẫn cho mở bán. Chặn xóa ảnh cuối khi sản phẩm đang ACTIVE (22/11/2026, Q1/Q7) | UC-14 |
 | Xóa sản phẩm | Chặn xóa nếu đã có trong đơn hàng hoặc phiếu nhập (kể cả nháp), đã từng gắn khuyến mãi theo sản phẩm (kể cả đã kết thúc), hoặc còn tồn kho > 0. Xóa hợp lệ và dọn dữ liệu liên quan qua service công khai trong cùng transaction; lỗi thì rollback (22/11/2026, Q2/Q6) | UC-14 |
 | Tồn kho biến thể mới | Tồn kho và giá vốn ban đầu bằng 0, khởi tạo qua service inventory trong cùng transaction tạo biến thể; không sửa tồn kho trực tiếp trên màn hình biến thể (22/11/2026, Q1) | UC-15 |
 | Xóa biến thể | Chỉ xóa khi tồn kho = 0 và chưa có trong đơn hàng/phiếu nhập; kiểm tra, xóa biến thể và dọn stock qua service inventory trong cùng transaction (22/11/2026, Q3) | UC-15 |
-| Giá đơn hàng đã tạo | Đổi giá bán không ảnh hưởng đơn hàng đã tạo; giữ snapshot đơn giá lúc đặt hàng (22/11/2026, Q1) | UC-16 |
+| Giá đơn hàng đã tạo | Giữ snapshot đơn giá lúc đặt hàng; sản phẩm có phiếu CONFIRMED không được đổi giá nữa (Q1 ngày 22/11/2026, giới hạn bởi UC-14-Q11 ngày 23/11/2026) | UC-16 |
 | Lịch sử giá | Không lưu lịch sử giá; chỉ lưu giá hiện hành tại `catalog.variant.variant_sell_price` (22/11/2026, Q1) | UC-16 |
 | Cấp danh mục | Chỉ có danh mục một cấp, không có danh mục con (22/11/2026, Quyết định đã chốt) | UC-17 |
 | Xóa danh mục và thuộc tính | Chặn xóa danh mục/bộ sưu tập/giới tính khi có sản phẩm liên kết; chặn xóa màu/size khi có biến thể liên kết, kiểm tra tại thời điểm xóa và báo số lượng đang dùng (22/11/2026, Q1) | UC-17 |

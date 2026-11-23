@@ -18,6 +18,8 @@ Nhân viên mở mục Quản lý Biến thể của một sản phẩm trong po
 - Đã có ít nhất một giá trị Màu và ít nhất một giá trị Size trong danh mục thuộc tính sản phẩm (UC-17).
 
 ## Main Flow
+Các thao tác ghi thành công và fixture AC tương ứng trong UC này chỉ áp dụng khi sản phẩm chưa có bất kỳ biến thể nào thuộc phiếu nhập `CONFIRMED`. Nếu đã có, màn hình chỉ xem, vô hiệu hóa Tạo/Xóa/Đổi trạng thái và server bắt buộc kiểm tra lại theo E7; điều kiện tồn kho bằng 0 không gỡ khóa.
+
 1. Hệ thống hiển thị danh sách biến thể hiện có của sản phẩm, gồm:
    - Mã biến thể tự nhiên SKU (`variant_id`, định dạng `<mã SP>-<MÀU>-<SIZE>`).
    - Tên màu (`color_name`).
@@ -32,7 +34,7 @@ Nhân viên mở mục Quản lý Biến thể của một sản phẩm trong po
 5. Hệ thống sinh tập hợp các tổ hợp màu × size từ các giá trị đã chọn và thực hiện đánh giá sơ bộ danh sách tổ hợp đối chiếu với dữ liệu hiện có trên màn hình (lưu ý: việc phân loại tổ hợp chính thức bắt buộc được quyết định cuối cùng bên trong Database Transaction sau khi khóa dòng sản phẩm ở bước 6, hệ thống không kết thúc sớm dựa trên dữ liệu đọc trước khi có khóa).
 6. Hệ thống mở MỘT Database Transaction duy nhất bao trùm toàn bộ quá trình kiểm tra, tạo lô các biến thể mới và khởi tạo tồn kho tương ứng:
    - Hệ thống thực hiện khóa dòng sản phẩm cha trong cơ sở dữ liệu (`SELECT * FROM catalog.product WHERE product_key = :product_key FOR UPDATE`) và giữ khóa này cho tới khi transaction kết thúc (commit hoặc rollback) nhằm ngăn chặn xung đột cạnh tranh đồng thời (race condition) với các thao tác cập nhật giá (UC-16), quản lý sản phẩm (UC-14) hoặc tạo biến thể khác.
-   - Sau khi có được khóa, hệ thống đọc lại trạng thái hiện tại của sản phẩm (`product_status`), kiểm tra lại danh sách các tổ hợp biến thể hiện có trong cơ sở dữ liệu và đưa ra quyết định phân loại tổ hợp cuối cùng:
+   - Sau khi có được khóa, gọi Service công khai `inventory` trong cùng transaction kiểm tra phiếu `CONFIRMED` của mọi biến thể thuộc sản phẩm; nếu có thì chuyển E7 trước khi phân loại hoặc ghi bất kỳ tổ hợp nào. Nếu chưa có, hệ thống đọc lại trạng thái hiện tại của sản phẩm (`product_status`), kiểm tra lại danh sách các tổ hợp biến thể hiện có trong cơ sở dữ liệu và đưa ra quyết định phân loại tổ hợp cuối cùng:
      + Nếu sau khi kiểm tra lại nhận thấy toàn bộ tổ hợp đã chọn đều đã tồn tại (hoặc các tổ hợp mới dự kiến tạo vừa được tạo thành công bởi một giao dịch cạnh tranh khác trong lúc chờ khóa): hệ thống chuyển sang Alternative Flow 5b (kết thúc transaction mà không tạo biến thể nào, hiển thị thông báo theo Flow 5b).
      + Nếu có một số tổ hợp đã tồn tại và một số tổ hợp chưa tồn tại: hệ thống chuyển sang xử lý theo Alternative Flow 5a (bỏ qua các tổ hợp đã tồn tại, tiếp tục xử lý các tổ hợp mới chưa có).
    - Hệ thống đọc bảng giá hiện hành theo size của sản phẩm và đối chiếu các tổ hợp mới cần tạo:
@@ -56,7 +58,7 @@ Nhân viên mở mục Quản lý Biến thể của một sản phẩm trong po
   - Xử lý:
     1. Nhân viên bấm nút "Ngừng bán" (khi biến thể đang `ACTIVE`) hoặc "Bán lại" (khi biến thể đang `INACTIVE`) tại dòng biến thể tương ứng.
     2. Hệ thống mở một Database Transaction, thực hiện khóa dòng sản phẩm cha trong cơ sở dữ liệu (`SELECT * FROM catalog.product WHERE product_key = :product_key FOR UPDATE`) và giữ khóa đến khi commit/rollback (không giữ khóa chờ thao tác bấm của người dùng).
-    3. Sau khi giữ khóa, hệ thống đọc lại trạng thái hiện tại của biến thể và sản phẩm cha, rồi cập nhật trường `variant_status` của biến thể thành `INACTIVE` hoặc `ACTIVE`.
+    3. Sau khi giữ khóa, gọi Service công khai `inventory` kiểm tra mọi biến thể của sản phẩm có phiếu `CONFIRMED` hay không; nếu có thì từ chối theo E7. Nếu chưa có, đọc lại trạng thái hiện tại của biến thể và sản phẩm cha, rồi cập nhật trường `variant_status` thành `INACTIVE` hoặc `ACTIVE`.
     4. Hệ thống commit transaction. Ngay sau khi commit thành công, hệ thống tăng số phiên bản `catalog_version` trong Redis để làm mới cache storefront (nếu Redis gặp lỗi thì ghi log warning và tiếp tục; storefront tự làm mới sau TTL 5 phút). Hệ thống làm mới trạng thái trên giao diện và hiển thị thông báo: "Cập nhật trạng thái biến thể thành công".
   - Tác động storefront: Biến thể ở trạng thái `INACTIVE` (Ngừng bán) không bị ẩn khỏi các lựa chọn trên storefront; tùy chọn của tổ hợp màu × size không bán này vẫn được hiển thị nhưng bị vô hiệu hóa (`disabled`), không cho khách hàng chọn mua (nhất quán với UC-12). Hệ thống không vô hiệu hóa toàn bộ màu hoặc size nếu vẫn còn tổ hợp `ACTIVE` hợp lệ khác.
 
@@ -68,6 +70,7 @@ Nhân viên mở mục Quản lý Biến thể của một sản phẩm trong po
     2. Trong cùng một Database Transaction:
        - Hệ thống thực hiện khóa dòng sản phẩm cha trong cơ sở dữ liệu (`SELECT * FROM catalog.product WHERE product_key = :product_key FOR UPDATE`) và giữ khóa đến khi commit/rollback.
        - Sau khi giữ khóa, hệ thống kiểm tra các điều kiện ràng buộc:
+         + Nếu bất kỳ biến thể nào của sản phẩm cha thuộc phiếu nhập `CONFIRMED`, từ chối theo E7, kể cả biến thể đang yêu cầu xóa chưa từng nhập kho.
          + **Kiểm tra bất biến sản phẩm Đang bán (đồng bộ UC-14):** Nếu sản phẩm cha đang ở trạng thái Đang bán (`product_status = ACTIVE`), hệ thống đếm tổng số biến thể hiện có của sản phẩm. Nếu biến thể yêu cầu xóa là biến thể duy nhất còn lại của sản phẩm (xóa xong sản phẩm sẽ có 0 biến thể, vi phạm điều kiện duy trì ACTIVE của UC-14), hệ thống từ chối xóa và chuyển sang Exception E6.
          + Biến thể còn tồn kho (`stock_quantity > 0` từ module `inventory` qua Service công khai)? -> Chuyển sang Exception E2.
          + Biến thể đã từng có trong ít nhất một phiếu nhập (`inventory.goods_receipt_detail` qua Service công khai)? -> Chuyển sang Exception E2.
@@ -94,6 +97,8 @@ Nhân viên mở mục Quản lý Biến thể của một sản phẩm trong po
 
 ## Exceptions
 
+- **E7. Sản phẩm đã nhập kho chỉ được sửa Mô tả:** Sau khóa sản phẩm, Service inventory xác nhận có phiếu `CONFIRMED` thì chặn tạo cả lô, xóa hoặc đổi trạng thái bất kỳ biến thể nào của sản phẩm; báo "Sản phẩm đã nhập kho, chỉ được phép sửa mô tả". Rollback toàn bộ request, giữ nguyên variant/stock và không tăng `catalog_version`, kể cả request trực tiếp hoặc form đã mở trước lúc xác nhận nhập kho (UC-14-Q11).
+
 - **E1. Không chọn màu hoặc không chọn size:**
   - Điểm rẽ: Bắt đầu từ bước 4 của Main Flow.
   - Điều kiện: Nhân viên bấm "Tạo biến thể" nhưng chưa chọn màu nào, hoặc chưa chọn size nào, hoặc không chọn cả hai.
@@ -106,8 +111,8 @@ Nhân viên mở mục Quản lý Biến thể của một sản phẩm trong po
   - Điểm rẽ: Bắt đầu từ bước 2 của Alternative Flow 1b.
   - Điều kiện: Nhân viên yêu cầu xóa biến thể nhưng biến thể không thỏa mãn điều kiện xóa.
   - Xử lý: Hệ thống từ chối xóa, rollback transaction nếu đang mở, giữ nguyên dữ liệu và hiển thị thông báo lỗi cụ thể:
-    - Nếu biến thể còn tồn kho (`stock_quantity > 0`): "Không thể xóa biến thể còn tồn kho (số lượng tồn: {stock_quantity}). Vui lòng chuyển trạng thái biến thể sang Ngừng bán".
-    - Nếu biến thể đã phát sinh đơn hàng hoặc phiếu nhập: "Không thể xóa biến thể đã phát sinh đơn hàng hoặc phiếu nhập. Vui lòng chuyển trạng thái biến thể sang Ngừng bán".
+    - Nếu biến thể còn tồn kho (`stock_quantity > 0`): "Không thể xóa biến thể còn tồn kho (số lượng tồn: {stock_quantity})".
+    - Nếu biến thể đã phát sinh đơn hàng hoặc phiếu nhập: "Không thể xóa biến thể đã phát sinh đơn hàng hoặc phiếu nhập". Nếu đã có phiếu CONFIRMED thì ưu tiên E7, không gợi ý đổi trạng thái.
 
 - **E3. Lỗi giao dịch hệ thống hoặc lỗi liên module:**
   - Điểm rẽ: Xảy ra tại bước 6 của Main Flow (khi tạo lô biến thể và gọi `inventory` tạo `stock`), hoặc bước 2/3 của Alternative Flow 1b (khi gọi `inventory` xóa `stock` và xóa `variant`).
@@ -201,22 +206,22 @@ Then: trạng thái của biến thể Đỏ×M chuyển thành "ACTIVE"
 And: hệ thống thông báo "Cập nhật trạng thái biến thể thành công"
 And: trên trang chi tiết sản phẩm của storefront (UC-12), tổ hợp Đỏ×M được kích hoạt lại cho phép người dùng lựa chọn theo điều kiện giá và tồn kho hiện hành (trạng thái ACTIVE không tự bảo đảm còn hàng)
 
-### AC-11: Chặn xóa biến thể còn tồn kho (Exception E2)
-Given: biến thể Đỏ×M có tồn kho = 5 (lấy từ module inventory)
+### AC-11: Chặn xóa biến thể đã nhập còn tồn kho (Exception E7)
+Given: biến thể Đỏ×M thuộc phiếu CONFIRMED và có tồn kho = 5 (lấy từ module inventory)
 When: Nhân viên bấm xóa biến thể Đỏ×M và xác nhận
-Then: hệ thống từ chối xóa và hiển thị thông báo lỗi "Không thể xóa biến thể còn tồn kho (số lượng tồn: 5). Vui lòng chuyển trạng thái biến thể sang Ngừng bán"
+Then: hệ thống từ chối xóa và hiển thị thông báo "Sản phẩm đã nhập kho, chỉ được phép sửa mô tả"
 And: biến thể Đỏ×M vẫn tồn tại trong danh sách
 
-### AC-12: Chặn xóa biến thể đã có trong đơn hàng (Exception E2)
-Given: biến thể Đỏ×M có tồn kho = 0 nhưng đã từng có trong ít nhất một đơn hàng
+### AC-12: Chặn xóa biến thể đã nhập và có đơn hàng (Exception E7)
+Given: biến thể Đỏ×M thuộc phiếu CONFIRMED, có tồn kho = 0 nhưng đã từng có trong ít nhất một đơn hàng
 When: Nhân viên bấm xóa biến thể Đỏ×M và xác nhận
-Then: hệ thống từ chối xóa và hiển thị thông báo lỗi "Không thể xóa biến thể đã phát sinh đơn hàng hoặc phiếu nhập. Vui lòng chuyển trạng thái biến thể sang Ngừng bán"
+Then: hệ thống từ chối xóa và hiển thị thông báo "Sản phẩm đã nhập kho, chỉ được phép sửa mô tả"
 And: biến thể Đỏ×M vẫn tồn tại trong danh sách
 
 ### AC-13: Chặn xóa biến thể đã có trong phiếu nhập (Exception E2)
-Given: biến thể Xanh×L có tồn kho = 0, chưa có trong đơn hàng nào, nhưng đã từng có trong một phiếu nhập hàng
+Given: biến thể Xanh×L có tồn kho = 0, chưa có trong đơn hàng nào, nhưng đã liên kết phiếu nhập DRAFT; toàn bộ sản phẩm chưa có phiếu CONFIRMED
 When: Nhân viên bấm xóa biến thể Xanh×L và xác nhận
-Then: hệ thống từ chối xóa và hiển thị thông báo lỗi "Không thể xóa biến thể đã phát sinh đơn hàng hoặc phiếu nhập. Vui lòng chuyển trạng thái biến thể sang Ngừng bán"
+Then: hệ thống từ chối xóa và hiển thị thông báo lỗi "Không thể xóa biến thể đã phát sinh đơn hàng hoặc phiếu nhập"
 And: biến thể Xanh×L vẫn tồn tại trong danh sách
 
 ### AC-14: Xóa biến thể hợp lệ và dọn bản ghi tồn kho liên kết (Flow 1b)
@@ -302,6 +307,13 @@ And: cơ sở dữ liệu PostgreSQL giữ đúng thay đổi đã commit, tuy�
 And: hệ thống vẫn trả về kết quả thành công cho Nhân viên trên portal quản trị kèm thông báo tương ứng với thao tác
 And: dữ liệu cache cũ trên storefront chỉ được làm mới ở lần truy cập sau khi hết khoảng thời gian TTL dự phòng còn lại tối đa 5 phút hoặc khi có lần tăng `catalog_version` thành công tiếp theo
 
+### AC-25: Có phiếu CONFIRMED khóa toàn bộ biến thể của sản phẩm
+Given: A có Đỏ×M thuộc phiếu CONFIRMED và Xanh×L chưa từng nhập; tồn kho cả hai đã về 0, các điều kiện tạo/xóa/đổi trạng thái khác đều hợp lệ
+When: Nhân viên lần lượt gửi request tạo cả lô gồm tổ hợp mới, xóa Xanh×L, ngừng bán hoặc bán lại một biến thể
+Then: mọi request đều bị từ chối theo E7 sau kiểm tra lại dưới khóa sản phẩm, không có lô được tạo một phần
+And: toàn bộ variant, giá, trạng thái và stock giữ nguyên, không tăng catalog_version; nút ghi trên màn hình bị vô hiệu hóa
+And: phiếu chỉ DRAFT/CANCELLED chưa kích hoạt E7, nhưng điều kiện chặn xóa do từng liên kết phiếu nhập vẫn áp dụng
+
 ## Dependencies
 - **Upstream UC:**
   - UC-02 Đăng nhập (xác thực quyền Nhân viên vận hành).
@@ -323,6 +335,7 @@ And: dữ liệu cache cũ trên storefront chỉ được làm mới ở lần 
 - **External Systems:** Redis (lưu trữ và quản lý số phiên bản cache `catalog_version` của danh mục sản phẩm).
 
 ## Notes
+- Quy tắc ưu tiên UC-14-Q11 (developer chốt 23/11/2026): có phiếu `CONFIRMED` ở bất kỳ biến thể nào thì sản phẩm chỉ sửa Mô tả; không còn được tạo/xóa/đổi trạng thái biến thể, dù tồn kho bằng 0. Quy tắc này thay thế quyền chuyển INACTIVE cho biến thể đã nhập trong Q4 cũ. Kiểm tra qua Service inventory sau khóa cha; hợp đồng tuần tự hóa với xác nhận nhập kho theo Notes UC-14.
 - **Ranh giới Modular Monolith (AGENTS.md):** Module `catalog` không truy cập trực tiếp bảng `inventory.stock`, `inventory.goods_receipt_detail` hay `ordering.order_detail`. Mọi thao tác kiểm tra giao dịch, khởi tạo hoặc xóa bản ghi tồn kho đều thông qua Service công khai của module tương ứng.
 - **Tồn kho biến thể (BR-005, Data Model v2):** Tồn kho và giá vốn chuyển sang bảng `inventory.stock` (không còn cột tồn kho ở `catalog.variant`). Tồn kho chỉ thay đổi qua module inventory (xác nhận phiếu nhập, đặt/hủy đơn hàng, giao hàng không thành công). Tồn kho không bao giờ âm.
 - **Mã tự nhiên SKU (Data Model v2):** Cấp tự động theo định dạng `<mã SP>-<MÀU>-<SIZE>` (bỏ dấu tiếng Việt, viết hoa, bỏ khoảng trắng), NOT NULL, UNIQUE, không cho phép chỉnh sửa.
@@ -332,13 +345,14 @@ And: dữ liệu cache cũ trên storefront chỉ được làm mới ở lần 
   - Thao tác kiểm tra điều kiện xóa (tồn kho, đơn hàng, phiếu nhập, điều kiện biến thể cuối cùng) và xóa biến thể kèm dọn bản ghi `stock` phải chạy trong cùng transaction có khóa này. Nếu có lỗi ở bất kỳ bước nào, toàn bộ transaction bị rollback.
 
 ### Quyết định đã chốt
+- UC-14-Q11 (developer chốt tại Codex 23/11/2026): có bất kỳ phiếu CONFIRMED của sản phẩm thì chặn mọi ghi biến thể; quyền tạo/xóa/đổi trạng thái trong các quyết định bên dưới chỉ áp dụng trước mốc này.
 - Quản lý biến thể là quyền vận hành cửa hàng của Nhân viên (đã chốt 15/11/2026).
 - Tồn kho và giá vốn chuyển sang bảng `inventory.stock`; bảng `catalog.variant` không còn cột tồn kho (đã chốt 20/11/2026).
 - Tồn kho ban đầu của biến thể mới tạo = 0, giá vốn = 0; được khởi tạo trong `inventory.stock` qua Service công khai của module inventory trong cùng một transaction khi tạo biến thể; tồn kho không cho sửa tay (đã chốt 22/11/2026, UC-15-Q1).
 - Mã biến thể tự nhiên SKU (`variant_id`) cấp tự động theo quy tắc `<mã SP>-<MÀU>-<SIZE>` (bỏ dấu, viết hoa, bỏ khoảng trắng), không cho sửa (đã chốt 22/11/2026, UC-15-Q1).
 - Biến thể mới tạo cho một size đã có giá bán tại sản phẩm sẽ tự động kế thừa `variant_sell_price` của size đó; size chưa có giá bán thì để `NULL` chờ định giá ở UC-16 (đã chốt 22/11/2026, UC-15-Q2).
 - Biến thể chỉ được xóa khi thỏa mãn đồng thời: chưa từng có trong đơn hàng, chưa từng có trong phiếu nhập, và tồn kho hiện tại = 0; kiểm tra và xóa được thực hiện nguyên tử trong cùng một transaction; khi xóa hợp lệ, hệ thống dọn bản ghi tồn kho liên kết trong `inventory.stock` qua Service của inventory (đã chốt 22/11/2026, UC-15-Q3).
-- Hỗ trợ chuyển trạng thái biến thể giữa `ACTIVE` (Đang bán) và `INACTIVE` (Ngừng bán). Biến thể đã phát sinh giao dịch không thể xóa được thì chuyển sang `INACTIVE` để ngừng kinh doanh (đã chốt 22/11/2026, UC-15-Q4). Biến thể `INACTIVE` trên storefront vẫn hiển thị tùy chọn nhưng bị vô hiệu hóa (`disabled`), không cho khách hàng chọn mua; mở bán lại (`ACTIVE`) kích hoạt lại quyền chọn mua theo điều kiện giá và tồn kho hiện hành của UC-12 (đã chốt 22/11/2026, phê duyệt tại session Codex đồng bộ với UC-12).
+- Hỗ trợ chuyển trạng thái biến thể giữa `ACTIVE` và `INACTIVE` chỉ trước khi sản phẩm có phiếu CONFIRMED (UC-14-Q11, 23/11/2026, thay thế phạm vi Q4 ngày 22/11/2026). Không gợi ý ngừng bán biến thể đã nhập xác nhận. Biến thể `INACTIVE` vẫn hiển thị tùy chọn disabled trên storefront theo UC-12.
 - Khi chọn tổ hợp màu × size trùng một phần: hệ thống bỏ qua tổ hợp đã tồn tại, chỉ tạo tổ hợp mới và thông báo rõ ràng số lượng tạo mới cũng như số lượng bỏ qua trên giao diện (đã chốt 22/11/2026, UC-15-Q5).
 - Xử lý mã SKU trùng do chuẩn hóa hoặc vượt quá 60 ký tự (`varchar(60)`): hệ thống từ chối tạo biến thể đó (rollback toàn bộ lô tạo biến thể nếu tạo hàng loạt), hiển thị thông báo lỗi rõ ràng để Nhân viên kiểm tra và điều chỉnh lại tên thuộc tính tại UC-17; không tự ý cắt ngắn chuỗi hay sinh hậu tố ngẫu nhiên (đã chốt 22/11/2026, UC-15-Q6).
 - **Quy tắc bất biến sản phẩm Đang bán và cơ chế khóa đồng bộ (đã chốt 23/11/2026, đồng bộ UC-14, UC-16):**
@@ -368,3 +382,4 @@ And: dữ liệu cache cũ trên storefront chỉ được làm mới ở lần 
 - v11 (2026-11-23): chốt toàn bộ quyết định theo phê duyệt của Developer cho UC-15-Q7: bổ sung cơ chế invalidation cache storefront qua catalog_version trong Redis (Main Flow 7, Flow 1a, Flow 1b), xử lý ngoại lệ Redis ghi log warning và fallback TTL 5 phút, bổ sung ràng buộc kiểm tra DB trực tiếp cho UC-18/19/20 chống stale cache; bổ sung AC-23 và AC-24; gỡ bỏ toàn bộ nhãn [GD] và câu hỏi mở; chuyển Status: ready.
 - v12 (2026-11-23): hoàn thiện tính nhất quán và bằng chứng AC theo điều phối của Coordinator: khai báo Redis tại External Systems; AC-24 bổ sung DB giữ nguyên thay đổi đã commit (không rollback khi lỗi Redis) và cache làm mới sau TTL tối đa 5 phút hoặc lần tăng version thành công tiếp theo; bổ sung assertion không tăng catalog_version khi DB rollback tại AC-15, AC-16, AC-17, AC-19, AC-21; làm rõ dependency UC-18/19/20 chờ Codex trình duyệt phạm vi đồng bộ; giữ nguyên Status: ready.
 - v13 (2026-11-23): cập nhật ghi chú dependency liên UC: chuyển trạng thái bảo vệ stale cache tại UC-18/19/20 sang 'đã đồng bộ đặc tả ngày 23/11/2026 theo phê duyệt Codex' (sau khi Developer duyệt đồng bộ 5 file BR/README/UC-18/19/20 tại Codex); giữ nguyên Status: ready.
+- v14 (2026-11-23): đồng bộ UC-14-Q11 theo quyết định developer tại Codex: chặn tạo/xóa/đổi trạng thái mọi biến thể sau phiếu CONFIRMED, kiểm tra dưới khóa cha, thêm E7/AC-25; sửa AC-11..13 và bỏ gợi ý ngừng bán không còn hợp lệ; giữ ready.

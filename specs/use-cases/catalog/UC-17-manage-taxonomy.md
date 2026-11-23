@@ -4,7 +4,7 @@
 - **ID:** UC-17
 - **Module:** catalog
 - **Liên quan tới BR:** BR-002
-- **Status:** draft
+- **Status:** ready
 
 ## Actor
 Nhân viên
@@ -32,7 +32,7 @@ Nhân viên mở mục Danh mục, Bộ sưu tập, Giới tính, Màu hoặc Si
 - **3a. Sửa tên mục:**
   1. Tại danh sách của loại đang chọn, Nhân viên chọn sửa một mục và nhập tên mới.
   2. Hệ thống chuẩn hóa (cắt khoảng trắng thừa đầu/cuối và gom khoảng trắng nội bộ) và kiểm tra tên mới như bước 4 của Main Flow (không trống, đúng giới hạn độ dài, không trùng với các mục khác trong cùng loại).
-  3. Hệ thống cập nhật tên mới vào cơ sở dữ liệu PostgreSQL:
+  3. Trong một Database Transaction, hệ thống khóa mục taxonomy `FOR UPDATE`, xác định và khóa các sản phẩm liên quan theo `product_key ASC` (Danh mục/Giới tính/Bộ sưu tập qua liên kết sản phẩm; Màu/Size qua biến thể). Gọi Service công khai inventory cùng transaction kiểm tra phiếu `CONFIRMED` của mọi sản phẩm này; nếu ít nhất một sản phẩm đã nhập thì chặn toàn bộ đổi tên theo E5. Không chỉ kiểm tra riêng biến thể dùng màu/size đó. Thay đổi liên kết taxonomy phải tuần tự hóa với khóa này; kiểm tra lại sau khi chờ khóa. Khi hợp lệ, cập nhật tên mới:
      - Đối với Màu và Size, hệ thống chỉ đổi tên hiển thị, giữ nguyên mã SKU (`variant_id`) bất biến của các biến thể đã tạo trước đó; các màn hình hiển thị tự động cập nhật tên mới qua liên kết khóa ngoại.
      - Việc kiểm tra trùng tên không phân biệt hoa/thường trên chuỗi đã chuẩn hóa được đảm bảo nguyên tử khi ghi. Nếu cập nhật cơ sở dữ liệu thất bại (kể cả do thao tác đồng thời dẫn đến trùng tên): transaction rollback, dừng xử lý, chuyển sang E1 hoặc báo lỗi hệ thống.
   4. Sau khi cơ sở dữ liệu commit thành công, hệ thống gửi lệnh tăng số phiên bản catalog (`catalog_version`) tới Redis để làm mới cache storefront (nếu Redis lỗi, xem E4).
@@ -49,6 +49,7 @@ Nhân viên mở mục Danh mục, Bộ sưu tập, Giới tính, Màu hoặc Si
 - **1a. Người dùng không có quyền truy cập:** xem E3.
 
 ## Exceptions
+- **E5. Không đổi tên taxonomy làm thay đổi sản phẩm đã nhập kho:** Nếu mục đang liên kết trực tiếp hoặc qua biến thể với bất kỳ sản phẩm nào có phiếu `CONFIRMED`, từ chối toàn bộ request đổi tên; báo "Thuộc tính đang dùng cho sản phẩm đã nhập kho, không thể đổi tên". Không đổi tên, không tạo mục thay thế hoặc tự tách liên kết, không đổi SKU, không tăng catalog_version. Áp dụng cả Danh mục/Bộ sưu tập/Giới tính/Màu/Size, request trực tiếp và form cũ. Phiếu DRAFT/CANCELLED chưa kích hoạt khóa này, tồn kho về 0 không gỡ khóa.
 - **E1. Tên không hợp lệ (trống, vượt quá độ dài hoặc trùng tên):**
   - Tên để trống sau khi chuẩn hóa: hệ thống báo lỗi "Tên không được để trống".
   - Tên vượt quá độ dài tối đa (256 ký tự trở lên với Danh mục/Bộ sưu tập; 51 ký tự trở lên với Giới tính/Màu/Size): hệ thống báo lỗi "Tên vượt quá độ dài cho phép".
@@ -114,7 +115,7 @@ When: Nhân viên thêm size "XL"
 Then: size "XL" xuất hiện trong danh sách, chọn được khi tạo biến thể (UC-15) và xuất hiện trong bộ lọc (UC-10)
 
 ### AC-9: Sửa tên danh mục thành công
-Given: danh mục "Bikini" đang có 3 sản phẩm
+Given: danh mục "Bikini" đang có 3 sản phẩm, chưa sản phẩm nào có phiếu CONFIRMED
 When: Nhân viên đổi tên thành "Đồ bơi hai mảnh" và lưu
 Then: danh mục được cập nhật tên mới trong cơ sở dữ liệu và danh sách quản trị
 And: 3 sản phẩm đang gắn danh mục này tự động hiển thị tên danh mục mới trên storefront
@@ -125,7 +126,7 @@ When: Nhân viên sửa màu "Xanh" thành "đỏ"
 Then: hệ thống không lưu vào cơ sở dữ liệu và báo lỗi "Tên đã tồn tại"
 
 ### AC-11: Sửa tên màu hoặc size giữ nguyên mã SKU biến thể cũ
-Given: sản phẩm SP-0001 có biến thể với mã SKU là "SP-0001-DO-M" (gắn với màu "Đỏ" và size "M")
+Given: sản phẩm SP-0001 có biến thể với mã SKU là "SP-0001-DO-M" (gắn với màu "Đỏ" và size "M"); SP-0001 và mọi sản phẩm dùng Màu/Size này đều chưa có phiếu CONFIRMED
 When: Nhân viên sửa tên màu "Đỏ" thành "Đỏ đô" và sửa tên size "M" thành "Medium"
 Then: tên hiển thị của màu đổi thành "Đỏ đô", tên hiển thị của size đổi thành "Medium"
 And: mã SKU của biến thể vẫn giữ nguyên không đổi là "SP-0001-DO-M"
@@ -199,17 +200,38 @@ When: Nhân viên thêm danh mục "Kính bơi" và cơ sở dữ liệu đã co
 Then: hệ thống ghi log cảnh báo lỗi Redis và vẫn trả về thông báo thêm thành công cho Nhân viên
 And: dữ liệu "Kính bơi" đã được lưu vĩnh viễn trong cơ sở dữ liệu; storefront sẽ nhận dữ liệu mới khi hết hạn TTL 5 phút của Redis
 
+### AC-25: Khóa đổi tên mọi taxonomy dùng chung với sản phẩm đã nhập
+Given: A và B cùng dùng danh mục, giới tính, bộ sưu tập, màu Đỏ và size M; A có phiếu CONFIRMED dù tồn kho đã về 0, B chưa nhập
+When: Nhân viên lần lượt yêu cầu đổi tên từng mục dùng chung, gồm Đỏ thành Đỏ đô và M thành Medium
+Then: mọi yêu cầu đều bị chặn theo E5 dưới transaction có khóa; tên và liên kết của cả A/B cùng SKU SP-0001-DO-M giữ nguyên, không tăng catalog_version
+And: không tự sao chép taxonomy hoặc đổi liên kết B để thực hiện một phần request
+And: kể cả chỉ biến thể khác của A đã nhập thì tên màu/size dùng bởi biến thể chưa nhập của A vẫn bị khóa
+
+### AC-26: Mục chưa dùng cho sản phẩm nhập xác nhận vẫn đổi tên được
+Given: màu Xanh chỉ được dùng bởi các sản phẩm có phiếu DRAFT/CANCELLED hoặc chưa có phiếu; tên mới không trùng và hợp lệ
+When: Nhân viên đổi tên Xanh thành Xanh biển
+Then: tên được cập nhật theo Flow 3a, giữ nguyên SKU cũ; cache xử lý sau commit theo hợp đồng hiện có
+
+### AC-27: Form đổi tên cũ không vượt khóa sau xác nhận nhập
+Given: form đổi tên màu Đỏ của A đã mở trước nhập kho; transaction xác nhận phiếu nhập A đang giữ khóa sản phẩm cha, transaction đổi tên đã khóa mục Màu và đang chờ khóa A
+When: xác nhận nhập commit CONFIRMED và transaction đổi tên tiếp tục sau khi được cấp khóa A
+Then: server đọc lại thấy phiếu CONFIRMED qua Service inventory và chặn toàn bộ đổi tên theo E5
+And: tên Đỏ, mọi liên kết và SKU cũ giữ nguyên; không tăng catalog_version từ request đổi tên bị từ chối
+
 ## Dependencies
+- **Internal Services:** inventory kiểm tra phiếu CONFIRMED của sản phẩm liên quan qua Service công khai dùng cùng transaction, theo hợp đồng khóa tại Notes UC-14.
 - **Upstream UC:** UC-02 Đăng nhập
 - **Downstream UC:** UC-09 Xem trang chủ, UC-10 Xem sản phẩm theo danh mục, UC-11 Tìm kiếm sản phẩm, UC-12 Xem chi tiết sản phẩm, UC-14 Quản lý sản phẩm, UC-15 Quản lý biến thể màu × size
 - **External Systems:** Redis (cache `catalog_version`)
 
 ## Notes
+- UC-17-Q7 đồng bộ UC-14-Q11 (developer chốt tại Codex 23/11/2026): chỉ sửa Mô tả khi sản phẩm có phiếu CONFIRMED; đổi tên taxonomy không được đi vòng quy tắc này. Q3 giữ SKU bất biến chỉ cho phép đổi tên khi không tác động sản phẩm đã nhập; kiểm tra qua Service inventory và hợp đồng khóa với xác nhận nhập kho tại Notes UC-14. Màn hình khóa nút sửa với mục đã bị ràng buộc, server vẫn kiểm tra lại trong transaction.
 - Áp dụng constraint cache danh sách (BR-GIAIDOAN1, Constraints chung): Danh mục và thuộc tính sản phẩm công khai được cache ở Redis theo `catalog_version`. Mọi thao tác thêm, sửa, xóa thành công đều commit DB trước rồi mới gửi lệnh tăng `catalog_version` để làm mới cache trên storefront.
 - Trình tự xử lý lỗi hạ tầng: SQL commit thành công là nguồn sự thật duy nhất (source of truth). Nếu Redis lỗi sau khi DB đã commit, không rollback DB mà dựa vào TTL 5 phút của Redis để tự khôi phục dữ liệu cache.
 - Out of Scope (BR-GIAIDOAN1): Mega menu, danh mục phân cấp nhiều tầng (chỉ dùng danh mục 1 cấp).
 
 ### Quyết định đã chốt
+- UC-17-Q7 (23/11/2026): theo UC-14-Q11 đã được developer chốt tại Codex, chặn đổi tên bất kỳ loại taxonomy nếu tác động sản phẩm có phiếu CONFIRMED; việc giữ SKU không tạo ngoại lệ. Các quyền đổi tên trước đây chỉ áp dụng khi không có sản phẩm bị khóa.
 - Phân loại gồm 5 loại: danh mục, bộ sưu tập, giới tính, màu, size; mỗi loại là một danh sách tên (theo ERD, đã chốt 15/11/2026).
 - Thuộc tính sản phẩm gồm giới tính, màu, size (theo ERD, đã chốt 15/11/2026).
 - Mỗi sản phẩm thuộc 1 danh mục, 1 giới tính và nhiều bộ sưu tập; biến thể = màu × size (theo ERD, đã chốt 15/11/2026).
@@ -223,7 +245,7 @@ And: dữ liệu "Kính bơi" đã được lưu vĩnh viễn trong cơ sở d�
 - Xử lý lỗi Redis sau khi commit DB: ghi log cảnh báo, không rollback DB, vẫn thông báo thành công cho Nhân viên; cache storefront tự làm mới qua cơ chế TTL dự phòng 5 phút (đã chốt 22/11/2026, UC-17-Q6).
 
 ### Giả định [GD]
-- [GD] UC-17-Q7 (review PR #7, mục 3): Chờ quyết định UC-14-Q11 về mốc "đã nhập kho" và phạm vi khóa thuộc tính. Cần đồng bộ điều kiện chặn đổi tên mục dùng chung (đặc biệt Màu/Size) nếu thay đổi đó tác động sản phẩm đã nhập kho; chưa coi giữ nguyên SKU là đủ để bảo toàn thuộc tính hiển thị. Chưa sửa hành vi đã chốt của Flow 3a/AC-9/AC-11 cho đến khi developer chốt quy tắc này.
+- Không còn câu hỏi mở. UC-17-Q7 đã chốt theo UC-14-Q11: chặn đổi tên mục liên quan sản phẩm có phiếu CONFIRMED (23/11/2026).
 
 ## History
 - v1 (2026-11-15): initial
@@ -233,3 +255,4 @@ And: dữ liệu "Kính bơi" đã được lưu vĩnh viễn trong cơ sở d�
 - v5 (2026-11-22): chốt câu hỏi UC-17-Q6 với developer — xử lý lỗi Redis sau khi commit DB bằng cảnh báo log và tận dụng TTL 5 phút, gỡ toàn bộ nhãn [GD] trong UC-17.
 - v6 (2026-11-22): làm rõ postconditions theo nhánh thành công/lỗi Redis (E4); chuẩn hóa diễn đạt kiểm tra trùng tên case-insensitive nguyên tử khi ghi; cập nhật Status: ready.
 - v7 (2026-11-23): ghi nhận review PR #7 mục 3 và mở UC-17-Q7 phụ thuộc UC-14-Q11 về khóa thuộc tính sản phẩm đã nhập kho; chuyển draft chờ developer xác nhận phạm vi.
+- v8 (2026-11-23): chốt UC-17-Q7 theo UC-14-Q11: chặn đổi tên taxonomy tác động sản phẩm có phiếu CONFIRMED, kiểm tra toàn sản phẩm qua Service inventory trong transaction có khóa; thêm E5/AC-25..27, giới hạn fixture AC-9/11 trước nhập, khôi phục ready.

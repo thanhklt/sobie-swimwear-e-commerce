@@ -16,17 +16,18 @@ Hệ thống
 - Đơn ở trạng thái "Giao thành công" và chưa có hóa đơn.
 
 ## Main Flow
-1. Hệ thống nhận sự kiện đơn "Giao thành công".
+1. Sau khi UC-36 ghi nhận đơn "Giao thành công", hệ thống nhận sự kiện; với đơn COD, ghi nhận "Đã thanh toán" theo giả định hiện có, không ghi lịch sử cho thay đổi thanh toán. Việc ghi nhận này độc lập với kết quả xuất hóa đơn.
 2. Hệ thống tạo hóa đơn cho đơn gồm mã hóa đơn, mã đơn, thời điểm xuất và snapshot tại thời điểm xuất: tên sản phẩm, đơn giá gốc, đơn giá sau giảm, số lượng, tiền giảm, phí vận chuyển, tổng thanh toán, địa chỉ, người đặt, số điện thoại, email, phương thức thanh toán.
-3. Với đơn COD, hệ thống ghi nhận đơn "Đã thanh toán" khi giao thành công `[GD]` (không ghi lịch sử cho thay đổi trạng thái thanh toán).
-4. Hóa đơn ở chế độ chỉ đọc, không sửa và không xóa.
+3. Trước khi tạo hoặc thử xuất lại, hệ thống kiểm tra hóa đơn hiện có và bảo đảm mỗi đơn chỉ có một hóa đơn.
+4. Hóa đơn ở chế độ chỉ đọc, không sửa và không xóa; mỗi đơn có tối đa một hóa đơn kể cả khi sự kiện được gửi lại.
 
 ## Alternative Flows
 - **1a. Đơn giao không thành công:** không xuất hóa đơn; tồn kho được cộng lại theo UC-35.
 
 ## Exceptions
 - **E1. Đơn đã có hóa đơn:** sự kiện bị gửi lặp → hệ thống không tạo thêm hóa đơn (mỗi đơn đúng 1 hóa đơn).
-- **E2. Lỗi khi tạo hóa đơn:** rollback, ghi log và thử lại; trạng thái "Giao thành công" của đơn không bị ảnh hưởng `[GD]`.
+- **E2. Lỗi khi tạo hóa đơn:** rollback phần tạo hóa đơn, ghi log và thử lại; đơn vẫn "Giao thành công", COD vẫn "Đã thanh toán" `[GD]`.
+- **E3. Tác vụ thử lại:** hệ thống kiểm tra hóa đơn hiện có trước khi tạo; nếu đã có hóa đơn thì trả về hóa đơn đó và không tạo bản thứ hai.
 
 ## Postconditions
 - Đơn "Giao thành công" có đúng 1 hóa đơn chỉ đọc, lưu snapshot thông tin tại thời điểm xuất.
@@ -61,12 +62,24 @@ Given: đơn COD B6TQ2R5D "Đang giao"
 When: trang giả lập cập nhật B6TQ2R5D sang "Giao thành công"
 Then: B6TQ2R5D được ghi nhận "Đã thanh toán" và có hóa đơn
 
+### AC-6: Hai tác vụ xuất hóa đơn đồng thời
+Given: đơn "Giao thành công" chưa có hóa đơn
+When: hai tác vụ cùng xử lý xuất hóa đơn cho đơn đó
+Then: chỉ một hóa đơn được tạo; tác vụ còn lại sử dụng hóa đơn đã có
+
+### AC-7: Thử lại sau lỗi tạo hóa đơn
+Given: đơn đã "Giao thành công" nhưng chưa có hóa đơn do lần tạo trước thất bại
+When: hệ thống thử lại và xử lý thành công
+Then: đơn vẫn "Giao thành công" và có đúng một hóa đơn
+And: các lần thử lại tiếp theo không tạo thêm hóa đơn
+
 ## Dependencies
 - **Upstream UC:** UC-36 Cập nhật trạng thái giao hàng
 - **Downstream UC:** UC-27 Xem hóa đơn, UC-37 Xem dashboard
 - **External Systems:** Không có
 
 ## Notes
+- Việc tạo hóa đơn phải bảo đảm duy nhất theo đơn ở cơ sở dữ liệu, kể cả khi hai tác vụ cùng kiểm tra chưa có hóa đơn rồi cùng tạo.
 - BR-GIAIDOAN1: hóa đơn tự xuất khi giao thành công; khách và nhân viên chỉ xem (đã chốt 20/11/2026).
 - Không phải hóa đơn điện tử VAT (Out of Scope).
 - Tiền tính bằng số nguyên VND.
@@ -87,3 +100,6 @@ Then: B6TQ2R5D được ghi nhận "Đã thanh toán" và có hóa đơn
 - v2 (2026-11-15): chốt snapshot hóa đơn và mỗi đơn tối đa 1 hóa đơn (theo ERD); lưu lịch sử khi COD chuyển "Đã thanh toán"
 - v3 (2026-11-15): không ghi thay đổi trạng thái thanh toán vào lịch sử (theo data model v1); mã hóa đơn sinh từ `invoice_id`
 - v4 (2026-11-20): đồng bộ BR-GIAIDOAN1 — chốt khách và Nhân viên chỉ xem hóa đơn; mã đơn ví dụ theo định dạng Crockford Base32
+- v5 (2026-11-22): làm rõ thứ tự với UC-36, kiểm tra hóa đơn trước khi tạo và xử lý retry; thêm AC-6, AC-7.
+- v6 (2026-11-22): bỏ ngoại lệ E3 trùng; làm rõ chống tạo hóa đơn đồng thời và cập nhật AC-6.
+- v7 (2026-11-22): làm rõ COD đã thanh toán khi giao thành công, độc lập với lỗi xuất hóa đơn.

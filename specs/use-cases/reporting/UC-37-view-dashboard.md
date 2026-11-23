@@ -24,7 +24,7 @@ Nhân viên mở trang dashboard trong khu vực quản trị.
    3. **Số đơn theo trạng thái:** số đơn tạo trong kỳ theo từng trạng thái (Chưa xử lý, Đã xác nhận, Chờ lấy hàng, Đang giao, Giao thành công, Giao không thành công, Đã hủy).
    4. **Sản phẩm bán chạy:** top 10 sản phẩm theo số lượng bán của cùng nhóm đơn dùng để tính doanh thu. Tính cả biến thể đã ngừng bán.
    5. **Tồn kho thấp:** các biến thể có tồn kho ≤ ngưỡng tồn kho thấp (hard-code) tại thời điểm xem.
-   6. **Tiền nhập hàng theo nhà cung cấp:** tổng tiền các phiếu nhập "Đã xác nhận" có ngày lập phiếu trong kỳ, nhóm theo nhà cung cấp.
+   6. **Tiền nhập hàng theo nhà cung cấp:** tổng tiền các phiếu nhập có ngày tạo (`goods_receipt_created_date`) thuộc kỳ báo cáo theo múi giờ `Asia/Ho_Chi_Minh` và ở trạng thái "Đã xác nhận" tại thời điểm xem, nhóm theo nhà cung cấp. Xác nhận muộn có thể làm tăng số liệu kỳ cũ.
 4. Ngày giao thành công dùng để xác định kỳ báo cáo và thời gian hiển thị đều theo múi giờ `Asia/Ho_Chi_Minh`.
 
 ## Alternative Flows
@@ -70,7 +70,7 @@ When: Nhân viên xem dashboard
 Then: danh sách tồn kho thấp gồm X và Y, không có Z
 
 ### AC-5: Tiền nhập hàng theo nhà cung cấp
-Given: nhà cung cấp X có 2 phiếu "Đã xác nhận" lập trong kỳ tổng 5.000.000đ, 1 phiếu "Nháp" lập trong kỳ trị giá 1.000.000đ và 1 phiếu "Đã xác nhận" lập trước kỳ trị giá 2.000.000đ
+Given: nhà cung cấp X có 3 phiếu được tạo trong kỳ; tại thời điểm xem có 2 phiếu "Đã xác nhận" tổng 5.000.000đ và 1 phiếu "Nháp" 1.000.000đ
 When: Nhân viên xem dashboard
 Then: tiền nhập của X = 5.000.000đ
 
@@ -96,6 +96,12 @@ When: Nhân viên xem lần lượt báo cáo tháng 11 và tháng 12.
 Then: tháng 11 có doanh thu và lợi nhuận gộp bằng 0, danh sách sản phẩm bán chạy trống.
 And: tháng 12 có doanh thu 400.000đ, lợi nhuận gộp 160.000đ và danh sách sản phẩm bán chạy hiển thị A (2).
 
+### AC-10: Xác nhận muộn làm tăng tiền nhập của kỳ tạo phiếu
+Given: nhà cung cấp X chỉ có phiếu P tổng 1.000.000đ, tạo ngày 30/11/2026 theo múi giờ `Asia/Ho_Chi_Minh`; P còn "Nháp" nên tiền nhập tháng 11 của X đang là 0đ
+When: Nhân viên xác nhận P ngày 01/12/2026 rồi xem lại dashboard tháng 11 và tháng 12
+Then: tiền nhập tháng 11 của X = 1.000.000đ
+And: tiền nhập tháng 12 của X = 0đ
+
 ## Dependencies
 - **Upstream UC:** UC-19, UC-20, UC-23, UC-26, UC-31, UC-32, UC-34, UC-35, UC-36
 - **Downstream UC:** không có
@@ -116,11 +122,8 @@ And: tháng 12 có doanh thu 400.000đ, lợi nhuận gộp 160.000đ và danh s
 - Doanh thu, lợi nhuận gộp và Top 10 sản phẩm bán chạy được ghi nhận vào kỳ chứa ngày đơn chuyển sang "Giao thành công" (đã chốt 22/11/2026).
 - Doanh thu là tiền hàng sau giảm, không gồm phí vận chuyển. Top 10 xếp theo số lượng bán.
 - Tồn kho thấp: tồn kho ≤ ngưỡng.
-- Tiền nhập hàng ghi nhận theo ngày lập phiếu và chỉ tính các phiếu đã xác nhận.
 
-## Câu hỏi mở
-- `[GD]` Ngưỡng tồn kho thấp trong triển khai là 5 theo dữ liệu nghiệm thu AC-4 và AC-6. Cửa hàng có dùng ngưỡng này không?
-- `[GD]` Khi hai sản phẩm có cùng số lượng bán, dashboard xếp theo mã sản phẩm tăng dần. Có cần dùng tiêu chí phụ khác không?
+- Tiền nhập hàng theo nhà cung cấp lọc theo ngày tạo phiếu, chỉ tính phiếu đã xác nhận tại thời điểm xem; số liệu kỳ cũ có thể tăng khi xác nhận muộn. Không bổ sung thời điểm xác nhận phiếu nhập (đã chốt 22/11/2026, UC-34).
 
 ## History
 - v1 (2026-11-15): initial
@@ -130,4 +133,4 @@ And: tháng 12 có doanh thu 400.000đ, lợi nhuận gộp 160.000đ và danh s
 - v5 (2026-11-21): chốt dashboard không cache phía server; phân biệt với khối bán chạy trang chủ
 - v6 (2026-11-21): theo BR-GIAIDOAN1 v22 — trang dashboard trả `no-store` thay cho `private, no-cache` + `ETag`
 - v7 (2026-11-22): chốt ngày giao thành công làm mốc ghi nhận doanh thu, lợi nhuận gộp và Top 10
-- v8 (2026-11-22): chốt ngày lập phiếu làm mốc ghi nhận tiền nhập hàng và bổ sung AC-5
+- v8 (2026-11-22): đồng bộ kỳ tiền nhập hàng theo ngày tạo phiếu với UC-34, giữ các quy tắc dashboard đã có trên main; cập nhật AC-5 và thêm AC-10 cho xác nhận khác kỳ tạo

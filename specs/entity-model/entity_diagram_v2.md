@@ -282,9 +282,10 @@ Theo SDD Ebook — Tầng 3: Entity Model trả lời câu hỏi *hệ thống �
 - **Bảng:** `inventory.supplier`
 - **Mã:** `NCC-<4 số>`
 - **Trường:** name, phone_number, email, address, status
+- **Tên:** bắt buộc, không trùng với nhà cung cấp khác kể cả nhà cung cấp "Ngừng hợp tác"; so sánh bỏ khoảng trắng đầu/cuối, không phân biệt hoa/thường nhưng phân biệt dấu tiếng Việt; khi sửa loại trừ chính nhà cung cấp đang sửa (UC-32, đã chốt 22/11/2026).
 - **Trạng thái:** Đang hợp tác (`ACTIVE`) | Ngừng hợp tác (`INACTIVE`)
 - **Có nhiều:** GoodsReceipt
-- **Quy tắc:** chỉ nhà cung cấp Đang hợp tác được chọn khi lập phiếu; đã có phiếu nhập thì không xóa, chỉ ngừng hợp tác `[GD]`.
+- **Quy tắc:** chỉ nhà cung cấp Đang hợp tác được chọn khi lập phiếu; cho phép xóa hẳn khi chưa có phiếu nhập; nếu có phiếu tham chiếu ở bất kỳ trạng thái nào thì từ chối xóa và gợi ý ngừng hợp tác (UC-32, đã chốt 22/11/2026).
 
 ## GoodsReceipt / GoodsReceiptDetail
 - **Đại diện:** một phiếu nhập hàng / một dòng biến thể trong phiếu.

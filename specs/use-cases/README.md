@@ -130,7 +130,7 @@ Chưa xử lý ──(UC-23 xác nhận)──► Đã xác nhận ──(UC-40 
 | Trạng thái khuyến mãi | Lưu cờ bật / tắt; trạng thái hiển thị Sắp diễn ra (chỉ hóa đơn và voucher) / Đang hiệu lực / Đã kết thúc được tính ra; đã kết thúc thì không bật lại (20/11/2026) | UC-28, UC-29, UC-30 |
 | Voucher (ERD) | Có giá trị đơn tối thiểu; chỉ giới hạn tổng lượt dùng | UC-30, UC-31 |
 | Nhà cung cấp | Gồm tên, SĐT, email, địa chỉ | UC-32 |
-| Tồn kho | Nhân viên xem được tồn kho theo biến thể | UC-39 |
+| Tồn kho | Chỉ Nhân viên xem; mỗi dòng gồm tên sản phẩm, màu, size, số lượng tồn; 20 biến thể/trang, sắp theo tên sản phẩm tăng dần, trùng tên thì theo SKU tăng dần. Tìm tên chứa từ khóa, không phân biệt hoa/thường, có phân biệt dấu; kết hợp được với lọc danh mục, giữ điều kiện khi chuyển trang. Đánh dấu tồn ≤ 5, gồm cả tồn 0; không hiển thị giá vốn; vẫn hiển thị sản phẩm/biến thể ngừng bán. Không sửa tay tồn kho, không cache, đọc DB mỗi request; tồn mới hiển thị ở lần yêu cầu xem tiếp theo (22/11/2026) | UC-39 |
 | Trang giả lập | Chỉ còn trang giả lập vận chuyển, không cần đăng nhập, 1 trang (cập nhật 20/11/2026) | UC-36 |
 | Thanh toán chuyển khoản | Dùng chung 1 tài khoản; SePay gửi webhook, hệ thống tự đối soát; nội dung `SOBIE` + mã đơn; thừa tiền vẫn khớp, thiếu là không khớp, không cộng dồn; không khớp thì khách liên hệ cửa hàng (20/11/2026) | UC-20, UC-25 |
 | Mã đơn hàng | 8 ký tự ngẫu nhiên Crockford Base32, UNIQUE, trùng thì sinh lại (20/11/2026) | UC-20, UC-25 |
@@ -147,9 +147,16 @@ Chưa xử lý ──(UC-23 xác nhận)──► Đã xác nhận ──(UC-40 
 | Sửa khuyến mãi | Khuyến mãi đã tạo không được sửa, chỉ ngừng; tạo có popup xác nhận | UC-28 → UC-31 |
 | Tra cứu khuyến mãi | Không có tên, nhận diện bằng mã `KM-<4 số>`; danh sách khuyến mãi theo hóa đơn và voucher lọc theo khoảng thời gian — hiện khuyến mãi có thời gian hiệu lực giao với khoảng chọn (kể cả một phần); khuyến mãi theo sản phẩm không lọc theo thời gian (20/11/2026) | UC-28, UC-29, UC-30 |
 | Nhà cung cấp | Có trạng thái Đang hợp tác / Ngừng hợp tác; chỉ chọn nhà cung cấp Đang hợp tác khi lập phiếu | UC-32, UC-33 |
+| Xóa nhà cung cấp | Cho phép xóa hẳn khi chưa có phiếu nhập; nếu có phiếu tham chiếu ở bất kỳ trạng thái nào thì từ chối xóa và gợi ý ngừng hợp tác (22/11/2026) | UC-32 |
+| Tên nhà cung cấp | Bắt buộc, không trùng với NCC khác kể cả NCC ngừng hợp tác; so sánh bỏ khoảng trắng đầu/cuối, không phân biệt hoa/thường nhưng phân biệt dấu tiếng Việt; khi sửa loại trừ chính NCC đang sửa (22/11/2026) | UC-32 |
+| Danh sách nhà cung cấp | Có phân trang, tìm theo tên chứa từ khóa; tìm kiếm bỏ khoảng trắng đầu/cuối của tên và từ khóa, không phân biệt hoa/thường nhưng phân biệt dấu tiếng Việt (22/11/2026) | UC-32 |
 | Giá nhập | Số nguyên VND ≥ 0 (21/11/2026) | UC-33 |
 | Phiếu nhập | Không lưu người / thời điểm xác nhận | UC-34 |
-| Hàng hoàn | Chống cộng tồn hai lần bằng trạng thái đơn, không có cột đánh dấu | UC-35 |
+| Phiếu nhập — xử lý đồng thời | Sửa/hủy/xác nhận cùng khóa dòng phiếu rồi kiểm tra lại DRAFT trong transaction; xác nhận khóa inventory.stock và tăng phiên bản cache catalog sau commit thành công (22/11/2026) | UC-33, UC-34 |
+| Phiếu nhập — lỗi cache sau commit | Vẫn báo xác nhận thành công, giữ dữ liệu đã commit, ghi log lỗi cache kèm mã phiếu; chờ TTL dự phòng 5 phút, không retry (22/11/2026) | UC-34 |
+| Phiếu nhập — NCC ngừng hợp tác | Chặn chọn/lưu với NCC ngừng hợp tác; vẫn cho xác nhận phiếu nháp đã lưu trước khi NCC ngừng hợp tác (22/11/2026) | UC-33, UC-34 |
+| Tiền nhập hàng theo NCC | Theo ngày tạo phiếu, chỉ tính phiếu đã xác nhận tại thời điểm xem; xác nhận muộn có thể làm tăng số liệu kỳ cũ (22/11/2026) | UC-34, UC-37 |
+| Hàng hoàn | Khóa và kiểm tra trạng thái đơn để chống cộng tồn hai lần; cộng tồn, đổi trạng thái và ghi lịch sử cùng transaction. Hàng ngừng bán vẫn được cộng tồn; lỗi đã xác định không commit thì rollback và cho gửi lại. Kết quả commit chưa xác định phải kiểm tra lại Database; lỗi cache sau commit chỉ thử lại cache, giữ kết quả nghiệp vụ thành công (22/11/2026) | UC-35 |
 
 ## Data model
 
@@ -247,27 +254,14 @@ Mỗi dòng là một giả định đang có trong mục *Notes* của UC, ch�
 | UC-31 | Mức giảm theo hóa đơn hoặc voucher tính trên tạm tính (đã gồm khuyến mãi theo sản phẩm), không áp vào phí vận chuyển, và không vượt quá tạm tính. |
 | UC-31 | Số tiền thay đổi giữa lúc xem và lúc xác nhận thì không tạo đơn, yêu cầu khách xác nhận lại. |
 | UC-31 | Đơn bị hủy thì hoàn cả lượt khuyến mãi theo hóa đơn. |
-| UC-32 | Tên nhà cung cấp là bắt buộc và không trùng. |
-| UC-32 | Danh sách có phân trang và tìm theo tên. |
-| UC-32 | Nhà cung cấp đã có phiếu nhập không xóa được, chỉ ngừng hợp tác; chưa có phiếu nhập thì xóa hẳn được. |
-| UC-33 | Phiếu nhập có trạng thái: Nháp → Đã xác nhận | Đã hủy; chỉ sửa và hủy được khi còn "Nháp". |
+| UC-33 | Phiếu nhập có trạng thái: Nháp → Đã xác nhận \| Đã hủy; chỉ sửa và hủy được khi còn "Nháp". |
 | UC-33 | Mỗi biến thể chỉ xuất hiện một dòng trong một phiếu. |
 | UC-33 | Danh sách phiếu nhập lọc được theo trạng thái và nhà cung cấp. |
-| UC-35 | Cộng tồn chạy trong cùng transaction với cập nhật trạng thái đơn. |
-| UC-35 | Biến thể hoặc sản phẩm đã ngừng bán vẫn được cộng lại tồn kho. |
-| UC-35 | Khi lỗi, Trang giả lập vận chuyển nhận lỗi và có thể gửi lại. |
 | UC-36 | Danh sách trên trang giả lập gồm: mã đơn, trạng thái, người nhận, số điện thoại, địa chỉ, người gửi, số tiền thu khi giao với đơn COD. |
-| UC-37 | Kỳ báo cáo mặc định là tháng hiện tại, chọn được khoảng thời gian. |
-| UC-37 | Tồn kho thấp: tồn kho ≤ ngưỡng. |
 | UC-38 | Nút tim có trên cả thẻ sản phẩm và trang chi tiết. |
 | UC-38 | Khách vãng lai bấm tim thì được yêu cầu đăng nhập; sau đăng nhập quay lại trang đang xem, không tự lưu sản phẩm. |
 | UC-38 | Danh sách yêu thích sắp xếp mới thêm nhất trước (theo thứ tự thêm; ERD không có cột thời gian riêng), có phân trang. |
 | UC-38 | Sản phẩm ngừng bán vẫn ở danh sách, hiển thị nhãn "Ngừng bán" và không mở được trang chi tiết. |
-| UC-39 | Danh sách tồn kho có phân trang; mỗi dòng gồm tên sản phẩm, màu, size, số lượng tồn. |
-| UC-39 | Tìm theo tên sản phẩm và lọc theo danh mục. |
-| UC-39 | Biến thể có tồn ≤ ngưỡng tồn kho thấp được đánh dấu. |
-| UC-39 | Giá vốn có hiển thị trên màn hình tồn kho hay không: chưa chốt, hiện chưa hiển thị. |
-| UC-39 | Khách hàng và Admin không truy cập được màn hình tồn kho. |
 | UC-40 | Có thể bàn giao nhiều đơn một lúc; đơn không hợp lệ thì bỏ qua và báo lại. |
 
 ## Câu hỏi mở (từ BR-GIAIDOAN1)

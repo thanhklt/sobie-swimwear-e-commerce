@@ -90,12 +90,12 @@ Then: sản phẩm A không xuất hiện trong danh sách của Y
 - Áp dụng constraint cache danh sách (BR-GIAIDOAN1, Constraints chung).
 
 ### Quyết định đã chốt
+- UC thuộc module shopping (cùng giỏ hàng), đã chốt 20/11/2026.
 - Wishlist là chức năng trong phạm vi MVP: khách thả tim để lưu sản phẩm vào một danh sách (đã chốt 15/11/2026).
 - Mỗi sản phẩm chỉ xuất hiện 1 lần trong danh sách của một tài khoản (theo ERD: unique account + product).
 - Mỗi Khách hàng có đúng 1 danh sách yêu thích trong DB, tạo cùng lúc tạo tài khoản Khách hàng (UC-01, UC-06). Trang danh sách yêu thích luôn có danh sách để đọc / ghi, không tạo danh sách khi thả tim lần đầu (đã chốt 21/11/2026, Q39).
 
 ### Giả định [GD]
-- UC thuộc module shopping (cùng giỏ hàng), đã chốt 20/11/2026.
 - Nút tim có trên cả thẻ sản phẩm và trang chi tiết.
 - Khách vãng lai bấm tim thì được yêu cầu đăng nhập; sau đăng nhập quay lại trang đang xem, không tự lưu sản phẩm.
 - Danh sách yêu thích sắp xếp mới thêm nhất trước (theo thứ tự thêm; ERD không có cột thời gian riêng), có phân trang.
@@ -106,3 +106,4 @@ Then: sản phẩm A không xuất hiện trong danh sách của Y
 - v2 (2026-11-15): theo data model v1 — sắp xếp theo thứ tự thêm, không dùng cột thời gian
 - v3 (2026-11-21): bổ sung giả định tạo danh sách yêu thích cùng lúc tạo tài khoản Khách hàng
 - v4 (2026-11-21): chốt tạo danh sách yêu thích cùng lúc tạo tài khoản Khách hàng (Q39)
+- v5 (2026-11-22): chuyển quyết định module shopping ra khỏi phần giả định.

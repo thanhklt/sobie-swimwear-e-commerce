@@ -27,13 +27,13 @@ Nhân viên mở màn hình quản lý khuyến mãi theo giá trị hóa đơn 
 ## Alternative Flows
 - **5a. Hủy tại popup xác nhận:** Nhân viên bấm "Hủy" → hệ thống không lưu, quay lại màn hình nhập với dữ liệu đã nhập.
 - **1a. Ngừng khuyến mãi (kết thúc trước hạn):** Nhân viên chọn một khuyến mãi chưa kết thúc và bấm "Ngừng" → khuyến mãi chuyển trạng thái tắt, hết hiệu lực ngay, không còn được xét trong UC-31 cho các đơn sau; ngày kết thúc đã chọn khi tạo giữ nguyên; khuyến mãi không bật lại được; đơn đã tạo không thay đổi.
-- **1b. Xem danh sách khuyến mãi:** Nhân viên xem danh sách khuyến mãi theo hóa đơn kèm số lượng được áp dụng, số lượng đã dùng `[GD]` và trạng thái: "Sắp diễn ra" (chưa tới ngày bắt đầu), "Đang hiệu lực", "Đã kết thúc" (đã tới ngày kết thúc hoặc đã bị ngừng). Danh sách không có thao tác sửa.
+- **1b. Xem danh sách khuyến mãi:** Nhân viên xem danh sách khuyến mãi theo hóa đơn kèm số lượng được áp dụng, số lượng đã dùng và trạng thái: "Sắp diễn ra" (chưa tới ngày bắt đầu), "Đang hiệu lực", "Đã kết thúc" (đã tới ngày kết thúc hoặc đã bị ngừng). Danh sách không có thao tác sửa.
 - **1c. Lọc theo khoảng thời gian:** Nhân viên chọn "từ ngày" và "đến ngày" → hệ thống chỉ hiển thị các khuyến mãi có thời gian hiệu lực giao với khoảng đã chọn (kể cả giao một phần).
 - **7a. Hết lượt:** số lượng đã dùng bằng số lượng được áp dụng → khuyến mãi không còn được xét trong UC-31 dù còn trong thời gian hiệu lực.
 - **7b. Hết hạn:** tới ngày kết thúc → khuyến mãi tự hết hiệu lực, chuyển "Đã kết thúc", không cần Nhân viên thao tác.
 
 ## Exceptions
-- **E1. Thiếu hoặc sai dữ liệu:** thiếu trường bắt buộc, giá trị đơn tối thiểu âm, phần trăm giảm không nằm trong khoảng lớn hơn 0 và nhỏ hơn 100 `[GD]`, số lượng được áp dụng nhỏ hơn 1 `[GD]`, hoặc ngày kết thúc không sau ngày bắt đầu → hệ thống báo lỗi theo từng trường, không hiển thị popup xác nhận, không lưu.
+- **E1. Thiếu hoặc sai dữ liệu:** thiếu trường bắt buộc, giá trị đơn tối thiểu âm, phần trăm giảm không nằm trong khoảng lớn hơn 0 và nhỏ hơn 100, số lượng được áp dụng nhỏ hơn 1, hoặc ngày kết thúc không sau ngày bắt đầu → hệ thống báo lỗi theo từng trường, không hiển thị popup xác nhận, không lưu.
 
 ## Postconditions
 - Khuyến mãi được lưu sau khi Nhân viên xác nhận và được xét cho các đơn tạo trong thời gian hiệu lực, khi còn lượt.
@@ -125,7 +125,7 @@ And: đơn đặt hôm nay không được xét P, R, S
 **Giả định [GD]**
 - Được phép có nhiều khuyến mãi theo hóa đơn cùng hiệu lực; UC-31 chọn cái giảm nhiều nhất trong số đủ điều kiện.
 - Đơn bị hủy thì hoàn lượt khuyến mãi theo hóa đơn (giảm số lượng đã dùng 1).
-- Phần trăm giảm hợp lệ: lớn hơn 0 và nhỏ hơn 100; số lượng được áp dụng ≥ 1.
+- Phần trăm giảm hợp lệ: lớn hơn 0 và nhỏ hơn 100; số lượng được áp dụng ≥ 1 (được ràng buộc trong database).
 - Danh sách khuyến mãi hiển thị số lượng được áp dụng và số lượng đã dùng.
 
 ## History

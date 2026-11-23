@@ -124,8 +124,8 @@ Then: giá sau giảm = 169.999đ (169.999,15 làm tròn `ROUND_HALF_UP`)
 - Khuyến mãi không có tên, nhận diện bằng mã khuyến mãi `KM-<4 số>` (đã chốt 20/11/2026, data model v2, Q21).
 - Danh sách khuyến mãi theo sản phẩm không lọc theo khoảng thời gian, vì loại này không có ngày bắt đầu / kết thúc và hệ thống không lưu thời điểm tạo / kết thúc (đã chốt 20/11/2026, data model v2, Q30; thay quyết định lọc theo thời gian ngày 15/11/2026).
 
-**Giả định [GD]**
-- Phần trăm giảm hợp lệ: lớn hơn 0 và nhỏ hơn 100.
+**Quy tắc đã chốt theo data model v2**
+- Phần trăm giảm hợp lệ: lớn hơn 0 và nhỏ hơn 100; database có CHECK constraint tương ứng.
 
 ## History
 - v1 (2026-11-15): initial

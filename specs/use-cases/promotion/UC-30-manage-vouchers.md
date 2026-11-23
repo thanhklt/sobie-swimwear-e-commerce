@@ -27,13 +27,13 @@ Nhân viên mở màn hình quản lý voucher để tạo hoặc ngừng một 
 ## Alternative Flows
 - **5a. Hủy tại popup xác nhận:** Nhân viên bấm "Hủy" → hệ thống không lưu, quay lại màn hình nhập với dữ liệu đã nhập.
 - **1a. Ngừng voucher (kết thúc trước hạn):** Nhân viên chọn một voucher chưa kết thúc và bấm "Ngừng" → voucher chuyển trạng thái tắt, hết hiệu lực ngay, khách nhập mã sẽ bị báo không hợp lệ `[GD]`; ngày kết thúc đã chọn khi tạo giữ nguyên; voucher không bật lại được; đơn đã tạo không thay đổi.
-- **1b. Xem danh sách voucher:** Nhân viên xem danh sách voucher kèm tổng lượt dùng, số lượt đã dùng `[GD]` và trạng thái: "Sắp diễn ra" (chưa tới ngày bắt đầu), "Đang hiệu lực", "Đã kết thúc" (đã tới ngày kết thúc hoặc đã bị ngừng). Danh sách không có thao tác sửa.
+- **1b. Xem danh sách voucher:** Nhân viên xem danh sách voucher kèm tổng lượt dùng, số lượt đã dùng và trạng thái: "Sắp diễn ra" (chưa tới ngày bắt đầu), "Đang hiệu lực", "Đã kết thúc" (đã tới ngày kết thúc hoặc đã bị ngừng). Danh sách không có thao tác sửa.
 - **1c. Lọc theo khoảng thời gian:** Nhân viên chọn "từ ngày" và "đến ngày" → hệ thống chỉ hiển thị các voucher có thời gian hiệu lực giao với khoảng đã chọn (kể cả giao một phần).
 - **7a. Hết hạn:** tới ngày kết thúc → voucher tự hết hiệu lực, chuyển "Đã kết thúc", không cần Nhân viên thao tác.
 
 ## Exceptions
-- **E1. Trùng mã:** mã voucher đã tồn tại (không phân biệt hoa thường `[GD]`) → hệ thống báo lỗi, không lưu.
-- **E2. Thiếu hoặc sai dữ liệu:** thiếu mã, phần trăm giảm không nằm trong khoảng lớn hơn 0 và nhỏ hơn 100 `[GD]`, giá trị đơn tối thiểu âm, tổng lượt dùng ≤ 0, hoặc ngày kết thúc không sau ngày bắt đầu → hệ thống báo lỗi theo từng trường, không hiển thị popup xác nhận, không lưu.
+- **E1. Trùng mã:** mã voucher đã tồn tại (không phân biệt hoa thường) → hệ thống báo lỗi, không lưu.
+- **E2. Thiếu hoặc sai dữ liệu:** thiếu mã, phần trăm giảm không nằm trong khoảng lớn hơn 0 và nhỏ hơn 100, giá trị đơn tối thiểu âm, tổng lượt dùng ≤ 0, hoặc ngày kết thúc không sau ngày bắt đầu → hệ thống báo lỗi theo từng trường, không hiển thị popup xác nhận, không lưu.
 
 ## Postconditions
 - Voucher được lưu sau khi Nhân viên xác nhận và dùng được cho các đơn tạo trong thời gian hiệu lực, khi còn lượt và đạt giá trị đơn tối thiểu.
@@ -123,8 +123,8 @@ And: hệ thống báo "P1" chưa đến thời gian hiệu lực (UC-31 E2)
 - Lọc theo khoảng thời gian: hiển thị voucher có thời gian hiệu lực giao với khoảng đã chọn, kể cả giao một phần (đã chốt 15/11/2026).
 
 **Giả định [GD]**
-- Mã voucher không phân biệt hoa thường.
-- Phần trăm giảm hợp lệ: lớn hơn 0 và nhỏ hơn 100.
+- Mã voucher không phân biệt hoa thường (được ràng buộc bởi unique index trên `lower(code_promotion_code)`).
+- Phần trăm giảm hợp lệ: lớn hơn 0 và nhỏ hơn 100; giá trị tối thiểu ≥ 0; số lượt > 0 (được ràng buộc trong database).
 - Danh sách voucher hiển thị tổng lượt dùng và số lượt đã dùng.
 
 ## History

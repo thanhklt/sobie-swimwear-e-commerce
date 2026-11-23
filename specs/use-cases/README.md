@@ -15,7 +15,7 @@
 |---|---|
 | Khách vãng lai | Người dùng chưa đăng nhập |
 | Khách hàng | Người tự đăng ký trên website, hoặc được Admin tạo tài khoản, để mua hàng |
-| Nhân viên | Tài khoản nội bộ, thực hiện mọi thao tác vận hành cửa hàng |
+| Nhân viên | Tài khoản nội bộ, vận hành cửa hàng và được xem thông tin, khóa tài khoản Khách hàng |
 | Admin | Tài khoản nội bộ, chỉ quản lý tài khoản: tạo tài khoản mọi vai trò và đổi vai trò qua lại giữa Nhân viên và Admin |
 | Hệ thống | Tác vụ tự động (tự hủy đơn, tự xuất hóa đơn, tính mức giảm, tự cộng lại tồn kho) |
 | Trang giả lập vận chuyển | 1 trang, không cần đăng nhập; đơn "Chờ lấy hàng" có nút "Đã nhận hàng", đơn "Đang giao" có nút "Đã giao" / "Giao không thành công" |
@@ -46,11 +46,11 @@ Module giao tiếp qua service công khai; không đọc / ghi bảng hoặc g�
 | [UC-01](identity/UC-01-register-account.md) | Đăng ký tài khoản | identity | BR-001 | Khách vãng lai |
 | [UC-02](identity/UC-02-login.md) | Đăng nhập | identity | BR-001 | Khách hàng, Nhân viên, Admin |
 | [UC-03](identity/UC-03-logout.md) | Đăng xuất `[GD]` | identity | BR-001 | Khách hàng, Nhân viên, Admin |
-| [UC-04](identity/UC-04-update-customer-profile.md) | Cập nhật hồ sơ khách hàng | identity | BR-001 | Khách hàng |
-| [UC-05](identity/UC-05-change-password.md) | Đổi mật khẩu | identity | BR-001 | Khách hàng; Nhân viên, Admin `[GD]` |
+| [UC-04](identity/UC-04-update-customer-profile.md) | Cập nhật hồ sơ khách hàng | identity | BR-001 | Khách hàng; Admin qua UC-07 |
+| [UC-05](identity/UC-05-change-password.md) | Đổi mật khẩu | identity | BR-001 | Khách hàng, Nhân viên, Admin |
 | [UC-06](identity/UC-06-create-account.md) | Admin tạo tài khoản (mọi vai trò) | identity | BR-001 | Admin |
-| [UC-07](identity/UC-07-edit-account.md) | Sửa tài khoản | identity | BR-001 | Admin |
-| [UC-08](identity/UC-08-lock-unlock-account.md) | Khóa và mở khóa tài khoản | identity | BR-001 | Admin |
+| [UC-07](identity/UC-07-edit-account.md) | Sửa tài khoản | identity | BR-001 | Admin; Nhân viên chỉ xem thông tin Khách hàng |
+| [UC-08](identity/UC-08-lock-unlock-account.md) | Khóa và mở khóa tài khoản | identity | BR-001 | Admin; Nhân viên chỉ khóa Khách hàng |
 | [UC-09](catalog/UC-09-view-home-page.md) | Xem trang chủ | catalog | BR-002 | Khách vãng lai, Khách hàng |
 | [UC-10](catalog/UC-10-browse-category.md) | Xem sản phẩm theo danh mục | catalog | BR-002 | Khách vãng lai, Khách hàng |
 | [UC-11](catalog/UC-11-search-products.md) | Tìm kiếm sản phẩm | catalog | BR-002 | Khách vãng lai, Khách hàng |
@@ -103,12 +103,15 @@ Chưa xử lý ──(UC-23 xác nhận)──► Đã xác nhận ──(UC-40 
 |---|---|---|
 | Trạng thái đơn | Bộ trạng thái như sơ đồ trên; Nhân viên bàn giao vận chuyển thì đơn sang "Chờ lấy hàng", đơn vị vận chuyển bấm "Đã nhận hàng" thì sang "Đang giao" (cập nhật 20/11/2026) | UC-19 → UC-24, UC-36, UC-40 |
 | Hủy đơn | Cộng lại tồn kho và hoàn lượt voucher. Khách hủy khi "Chưa xử lý"; Nhân viên hủy đến trước khi vận chuyển nhận hàng, bắt buộc nhập lý do, khách không thấy lý do; không còn "Từ chối" (cập nhật 20/11/2026) | UC-22, UC-23, UC-24, UC-31 |
-| Phân quyền | Admin chỉ quản lý tài khoản (tạo được tài khoản mọi vai trò, dùng ngay không bắt buộc đổi mật khẩu — 20/11/2026) và đổi vai trò giữa Nhân viên và Admin; Nhân viên vận hành cửa hàng; Admin không xem hóa đơn, dashboard | UC-02, UC-06, UC-07, UC-14, UC-23, UC-27, UC-37 |
+| Phân quyền | Admin quản trị tài khoản, tạo tài khoản cho mọi vai trò dùng được ngay và đổi vai trò giữa Nhân viên và Admin. Nhân viên vận hành cửa hàng, được xem thông tin và khóa tài khoản Khách hàng (23/11/2026). Admin không xem hóa đơn, dashboard. | UC-02, UC-06, UC-07, UC-08, UC-14, UC-23, UC-27, UC-37 |
 | Đổi vai trò | Chỉ đổi qua lại giữa Nhân viên và Admin; không đổi Khách hàng ↔ Nhân viên/Admin (chốt lại 20/11/2026); có hiệu lực ngay; tài khoản đang đăng nhập bị đăng xuất; tài khoản được cấp mã mới (`NV-` ↔ `AD-`) | UC-07 |
 | Tài khoản | Account gồm email, SĐT (unique), mật khẩu, vai trò, trạng thái và họ tên, ngày sinh, địa chỉ; không có username; không còn hồ sơ riêng theo vai trò (21/11/2026). Mã `KH-` / `NV-` / `AD-` do hệ thống cấp, bộ đếm riêng từng loại; ngày sinh bắt buộc với Nhân viên, Admin | UC-01, UC-02, UC-04, UC-06, UC-07 |
 | Mật khẩu | Băm bằng bcrypt (21/11/2026) | UC-01, UC-05, UC-06 |
+| Tự đổi mật khẩu | Khách hàng, Nhân viên và Admin được tự đổi mật khẩu Sobie đã có. Mật khẩu mới tối thiểu 6 ký tự và phải khác mật khẩu hiện tại (23/11/2026). | UC-05 |
+| Admin tạo tài khoản | Admin chọn vai trò từ danh sách thả xuống và đặt mật khẩu ban đầu có ít nhất 6 ký tự. Cấp mã và tạo tài khoản trong cùng một transaction. Hệ thống có sẵn một Admin Hoạt động khi khởi tạo lần đầu (23/11/2026). | UC-06 |
 | Mã khách hàng | Ngày đăng ký trong mã `KH-` lấy theo giờ `Asia/Ho_Chi_Minh` (21/11/2026) | UC-01, UC-06 |
 | Giỏ hàng, danh sách yêu thích | Mỗi Khách hàng có 1 giỏ và 1 danh sách yêu thích, tạo cùng transaction tạo tài khoản Khách hàng; identity gọi service công khai của shopping (21/11/2026, Q39) | UC-01, UC-06, UC-18, UC-38 |
+| Thông tin nhận hàng | Khách nhập tên người nhận, số điện thoại và địa chỉ, hoặc bấm "Sử dụng thông tin hồ sơ" nếu hồ sơ có đủ họ tên, ngày sinh, số điện thoại và địa chỉ nhận hàng hợp lệ. Khách sửa được thông tin cho riêng đơn (23/11/2026). | UC-04, UC-19, UC-20 |
 | Đăng ký / đăng nhập | Đăng ký nhập đủ email và SĐT; đăng nhập bằng một trong hai | UC-01, UC-02 |
 | Cổng đăng nhập | Storefront chỉ cho Khách hàng; Nhân viên / Admin đăng nhập ở storefront bị báo "Thông tin đăng nhập không đúng"; Nhân viên và Admin dùng portal quản trị riêng (21/11/2026) | UC-02 |
 | Quên mật khẩu | Làm ở giai đoạn 2; giai đoạn 1 storefront có nút "Quên mật khẩu" nhưng không có hành động (21/11/2026) | UC-02 |
@@ -124,7 +127,8 @@ Chưa xử lý ──(UC-23 xác nhận)──► Đã xác nhận ──(UC-40 
 | Khuyến mãi | Giảm theo %, không có mức tối đa; mỗi đơn tối đa 1 khuyến mãi theo hóa đơn hoặc voucher; bằng nhau ưu tiên voucher | UC-28 → UC-31 |
 | Số lượng khuyến mãi | Có số lượng được áp dụng và số đã dùng; khuyến mãi theo sản phẩm không giới hạn, hiệu lực đến khi Nhân viên kết thúc | UC-28, UC-29, UC-30 |
 | Thời gian khuyến mãi | Theo sản phẩm: chỉ có tạo rồi kết thúc, không có ngày bắt đầu / kết thúc, gắn đúng 1 sản phẩm. Theo hóa đơn và voucher: có ngày bắt đầu / kết thúc; hết hiệu lực khi tới ngày kết thúc hoặc Nhân viên ngừng trước hạn (giữ nguyên ngày kết thúc) (20/11/2026) | UC-28, UC-29, UC-30 |
-| Admin | Admin được tự đổi vai trò và tự khóa chính mình; hệ thống luôn có ít nhất 1 Admin đang hoạt động — chặn đổi vai trò và chặn khóa Admin đang hoạt động cuối cùng (20/11/2026) | UC-07, UC-08 |
+| Admin | Hệ thống luôn có ít nhất một Admin ở trạng thái Hoạt động. Khóa và đổi vai trò phải giữ ràng buộc này, kể cả khi thao tác đồng thời (23/11/2026). | UC-06, UC-07, UC-08 |
+| Khóa và mở khóa tài khoản | Admin có thể khóa và mở khóa tài khoản của cả ba vai trò, tuân theo ràng buộc Admin Hoạt động. Hồ sơ, đơn hàng và dữ liệu nghiệp vụ giữ nguyên (23/11/2026). | UC-08 |
 | Giỏ khách vãng lai | Lưu ở `localStorage`; giỏ không lưu giá, luôn hiển thị giá hiện tại (20/11/2026) | UC-18 |
 | Lý do hủy | Lưu ở `order_status_history_note` (20/11/2026) | UC-22 |
 | Trạng thái khuyến mãi | Lưu cờ bật / tắt; trạng thái hiển thị Sắp diễn ra (chỉ hóa đơn và voucher) / Đang hiệu lực / Đã kết thúc được tính ra; đã kết thúc thì không bật lại (20/11/2026) | UC-28, UC-29, UC-30 |
@@ -173,19 +177,11 @@ Mỗi dòng là một giả định đang có trong mục *Notes* của UC, ch�
 | UC-03 | Toàn bộ UC này là giả định: BR-001 chỉ nêu đăng ký và đăng nhập, không nêu đăng xuất. |
 | UC-03 | Đăng xuất chỉ kết thúc phiên trên thiết bị hiện tại. |
 | UC-03 | Sau đăng xuất chuyển về trang chủ. |
-| UC-04 | Địa chỉ trong tài khoản được điền sẵn khi đặt hàng. |
 | UC-04 | Đổi email hoặc số điện thoại không cần xác minh lại. |
-| UC-05 | Nhân viên và Admin cũng tự đổi được mật khẩu của mình. |
-| UC-05 | Mật khẩu mới tối thiểu 6 ký tự và phải khác mật khẩu hiện tại. |
-| UC-06 | Cấp mã và tạo account trong cùng một transaction. |
-| UC-06 | Admin đặt mật khẩu ban đầu cho tài khoản; mật khẩu tối thiểu 6 ký tự. |
-| UC-06 | Hệ thống có sẵn 1 tài khoản Admin khi khởi tạo. |
 | UC-07 | Việc xem và tìm danh sách tài khoản gộp vào UC này. |
 | UC-07 | Danh sách có phân trang; tìm theo họ tên, email hoặc số điện thoại. |
 | UC-07 | Admin sửa được thông tin mọi tài khoản. |
 | UC-07 | Đổi vai trò giữ nguyên thông tin cá nhân, email, số điện thoại, mật khẩu; lưu trong một transaction, lỗi thì hủy toàn bộ. |
-| UC-08 | Khóa và mở khóa áp dụng cho mọi vai trò (Khách hàng, Nhân viên, Admin). |
-| UC-08 | Khóa không xóa dữ liệu của tài khoản. |
 | UC-09 | Trang chủ gồm khối hàng mới và khối sản phẩm theo bộ sưu tập. |
 | UC-09 | Khối không có sản phẩm thì ẩn. |
 | UC-09 | Khối bán chạy: "7 ngày gần nhất" là 7 × 24 giờ tính lùi; loại đơn "Đã hủy"; còn dưới 5 sản phẩm sau khi lọc thì hiển thị số còn lại. |
@@ -213,7 +209,6 @@ Mỗi dòng là một giả định đang có trong mục *Notes* của UC, ch�
 | UC-17 | Không xóa danh mục, bộ sưu tập, giới tính, màu hoặc size đang được sử dụng. |
 | UC-18 | Khi đăng nhập, giỏ trong `localStorage` gộp vào giỏ tài khoản; dòng trùng cộng dồn nhưng không vượt tồn kho. |
 | UC-18 | Dòng hết hàng/ngừng bán vẫn nằm trong giỏ nhưng không tính tiền và không đặt được. |
-| UC-19 | Thông tin nhận hàng được điền sẵn từ hồ sơ khách, khách sửa được cho riêng đơn này. |
 | UC-19 | Lượt đã dùng của khuyến mãi được chọn (voucher hoặc khuyến mãi theo hóa đơn) tăng khi tạo đơn. |
 | UC-19 | Các dòng đã đặt được xóa khỏi giỏ sau khi đặt thành công. |
 | UC-19 | Giá hoặc mức giảm thay đổi trước khi xác nhận thì tính lại và yêu cầu khách xác nhận lại. |

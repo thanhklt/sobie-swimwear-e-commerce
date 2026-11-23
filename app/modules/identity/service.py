@@ -11,9 +11,9 @@ Chỉ gọi repository của chính module này; dữ liệu module khác lấy 
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 
+from app.database.transaction import transaction
 from app.modules.identity import repository
 from app.modules.identity.session import AuthenticatedSession, Role, SessionPortal
-from app.shared.database.transaction import transaction
 
 _SESSION_POLICIES = {
     SessionPortal.STOREFRONT: ((Role.CUSTOMER,), timedelta(minutes=30)),
@@ -28,7 +28,7 @@ async def authenticate_session(
     if not token:
         return None
 
-    from app.shared.database.engine import session_factory
+    from app.database.engine import session_factory
 
     allowed_roles, lifetime = _SESSION_POLICIES[portal]
     seen_at = datetime.now(UTC)

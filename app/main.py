@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.error.handlers import register_error_handlers
-from app.shared.web.session import SessionMiddleware
+from app.security.session import SessionMiddleware
 
 version = "v1"
 

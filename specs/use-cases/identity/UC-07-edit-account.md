@@ -7,13 +7,14 @@
 - **Status:** draft
 
 ## Actor
-Admin
+- Admin xem và sửa tài khoản.
+- Nhân viên xem thông tin tài khoản Khách hàng trong chức năng "Quản lý khách hàng".
 
 ## Trigger
-Admin mở khu vực quản lý tài khoản và chọn một tài khoản để sửa.
+Admin mở khu vực quản lý tài khoản để xem hoặc sửa tài khoản. Nhân viên mở chức năng "Quản lý khách hàng" để xem thông tin Khách hàng.
 
 ## Preconditions
-- Admin đang đăng nhập.
+- Admin hoặc Nhân viên đang đăng nhập ở portal quản trị.
 
 ## Main Flow
 1. Admin mở khu vực quản lý tài khoản.
@@ -25,6 +26,7 @@ Admin mở khu vực quản lý tài khoản và chọn một tài khoản để
 7. Nếu vai trò được đổi, hệ thống cấp mã tài khoản mới theo vai trò (`NV-...` → `AD-...` hoặc ngược lại; mã cũ không dùng lại) và xóa mọi phiên (`identity.session`) của tài khoản trong cùng transaction ở bước 6, nên mọi phiên đang mở của tài khoản đó kết thúc ngay; vai trò mới có hiệu lực ngay.
 
 ## Alternative Flows
+- **1a. Nhân viên xem thông tin Khách hàng:** Nhân viên mở "Quản lý khách hàng". Hệ thống chỉ hiển thị tài khoản có vai trò Khách hàng. Khi chọn một khách hàng, Nhân viên xem được hồ sơ và trạng thái tài khoản. Thao tác "Khóa" thực hiện theo UC-08.
 - **3a. Không tìm thấy:** từ khóa không khớp tài khoản nào — hệ thống hiển thị danh sách rỗng kèm thông báo "Không tìm thấy tài khoản".
 - **4a. Đổi Nhân viên sang Admin hoặc Admin sang Nhân viên:** lịch sử thao tác cũ (ví dụ người đổi trạng thái đơn, người lập phiếu nhập) được giữ nguyên vì gắn với tài khoản.
 - **4b. Admin tự đổi vai trò của chính mình (Admin → Nhân viên):** được phép, miễn sau khi đổi hệ thống vẫn còn ít nhất 1 Admin đang hoạt động (E4); đổi xong phiên của Admin đó bị kết thúc như mọi lần đổi vai trò.
@@ -33,11 +35,12 @@ Admin mở khu vực quản lý tài khoản và chọn một tài khoản để
 - **E1. Email hoặc số điện thoại trùng tài khoản khác:** hệ thống báo trường bị trùng, không lưu.
 - **E2. Dữ liệu không hợp lệ:** thiếu trường bắt buộc hoặc sai định dạng — hệ thống báo lỗi, không lưu.
 - **E3. Đổi vai trò giữa Khách hàng và Nhân viên / Admin** (theo bất kỳ chiều nào): hệ thống từ chối. Giao diện không hiển thị thao tác này; nếu có yêu cầu gửi thẳng lên hệ thống thì vẫn bị từ chối.
-- **E4. Đổi vai trò làm hệ thống không còn Admin nào đang hoạt động** (vai trò Admin và trạng thái Hoạt động), kể cả khi Admin tự đổi vai trò của mình — hệ thống từ chối.
+- **E4. Đổi vai trò làm hệ thống hết Admin đang hoạt động:** nếu vai trò mới làm hệ thống không còn tài khoản Admin ở trạng thái Hoạt động, hệ thống từ chối. Vai trò và các phiên đăng nhập giữ nguyên.
 - **E5. Lỗi khi lưu:** hệ thống hủy toàn bộ transaction; thông tin và vai trò giữ nguyên, phiên đăng nhập không bị kết thúc `[GD]`.
+- **E6. Nhân viên thao tác ngoài phạm vi quản lý khách hàng:** hệ thống từ chối yêu cầu xem tài khoản nội bộ, sửa thông tin tài khoản hoặc truy cập khu vực quản lý toàn bộ tài khoản của Admin.
 
 ## Postconditions
-- Thông tin tài khoản được cập nhật.
+- Khi Admin sửa thành công, thông tin tài khoản được cập nhật. Khi Nhân viên xem hồ sơ Khách hàng, dữ liệu tài khoản giữ nguyên.
 - Nếu đổi vai trò (chỉ giữa Nhân viên và Admin): tài khoản có vai trò mới, giữ nguyên thông tin cá nhân và thông tin đăng nhập, có mã mới theo vai trò; vai trò mới có hiệu lực ngay; tài khoản đang đăng nhập bị đăng xuất và phải đăng nhập lại với vai trò mới.
 
 ## Acceptance Criteria
@@ -86,10 +89,10 @@ When: có yêu cầu đổi vai trò của tài khoản này thành Khách hàng
 Then: hệ thống từ chối, vai trò giữ nguyên Nhân viên
 And: danh sách vai trò có thể chọn cho tài khoản này chỉ gồm Nhân viên và Admin
 
-### AC-9: Vai trò khác không truy cập được
+### AC-9: Nhân viên không có quyền sửa tài khoản
 Given: Nhân viên đang đăng nhập
-When: Nhân viên truy cập khu vực quản lý tài khoản
-Then: hệ thống từ chối truy cập
+When: Nhân viên truy cập khu vực quản lý toàn bộ tài khoản của Admin hoặc yêu cầu sửa hồ sơ một Khách hàng
+Then: hệ thống từ chối yêu cầu và dữ liệu tài khoản giữ nguyên
 
 ### AC-10: Đổi vai trò đăng xuất tài khoản đang đăng nhập
 Given: tài khoản "nv1@example.com" có vai trò Nhân viên và đang đăng nhập
@@ -116,6 +119,16 @@ Given: "admin@example.com" là Admin đang hoạt động duy nhất (các Admin
 When: có yêu cầu đổi vai trò của "admin@example.com" (kể cả tự đổi) thành Nhân viên
 Then: hệ thống từ chối, vai trò giữ nguyên Admin
 
+### AC-14: Nhân viên xem thông tin Khách hàng
+Given: Nhân viên đang đăng nhập và hệ thống có tài khoản Khách hàng, Nhân viên và Admin
+When: Nhân viên mở "Quản lý khách hàng" và chọn một Khách hàng
+Then: danh sách chỉ hiển thị các tài khoản Khách hàng và hệ thống hiển thị hồ sơ, trạng thái tài khoản của Khách hàng đã chọn
+
+### AC-15: Nhân viên không xem được tài khoản nội bộ
+Given: Nhân viên đang đăng nhập
+When: Nhân viên yêu cầu mở hồ sơ của một tài khoản Nhân viên hoặc Admin trong chức năng "Quản lý khách hàng"
+Then: hệ thống từ chối yêu cầu
+
 ## Dependencies
 - **Upstream UC:** UC-02 Đăng nhập, UC-01 Đăng ký tài khoản, UC-06 Admin tạo tài khoản
 - **Downstream UC:** UC-08 Khóa và mở khóa tài khoản
@@ -129,9 +142,11 @@ Then: hệ thống từ chối, vai trò giữ nguyên Admin
 
 ### Quyết định đã chốt
 - Admin chỉ quản lý tài khoản và gán vai trò cho tài khoản; mọi thao tác vận hành cửa hàng do Nhân viên thực hiện (đã chốt 15/11/2026).
+- Nhân viên được xem hồ sơ và trạng thái tài khoản Khách hàng, và có quyền khóa Khách hàng theo UC-08 (đã chốt 23/11/2026).
 - Chỉ đổi vai trò qua lại giữa Nhân viên và Admin. Không đổi Khách hàng sang Nhân viên / Admin và không đổi Nhân viên / Admin sang Khách hàng; không tạo vai trò mới hoặc cấu hình quyền (đã chốt 20/11/2026, thay quyết định cho đổi sang mọi vai trò cùng ngày).
 - Vai trò mới có hiệu lực ngay khi được đổi; nếu tài khoản đang đăng nhập thì bị đăng xuất (đã chốt 15/11/2026).
 - Admin được tự đổi vai trò của mình; ràng buộc duy nhất là hệ thống luôn có ít nhất 1 Admin đang hoạt động (đã chốt 20/11/2026, data model v2, Q23b, Q24).
+- Khi đổi một Admin đang Hoạt động thành Nhân viên, kiểm tra E4 trong cùng transaction với cập nhật vai trò và dùng cùng cơ chế khóa các dòng tài khoản Admin như UC-08. Hai luồng phải giữ ràng buộc ngay cả khi khóa và đổi vai trò diễn ra đồng thời (xem UC-08 AC-10).
 - Mỗi tài khoản đúng 1 vai trò (đã chốt 20/11/2026, data model v2, Q17).
 - Đổi vai trò thì tài khoản được cấp mã mới theo vai trò: `NV-` / `AD-<HỌ TÊN>-<YYYYMMDD ngày sinh>-<4 số>`, bộ đếm riêng cho từng tiền tố; mã cũ không dùng lại. Đây là trường hợp duy nhất mã tài khoản thay đổi (đã chốt 21/11/2026, data model v2, Q16, Q32).
 
@@ -153,3 +168,5 @@ Then: hệ thống từ chối, vai trò giữ nguyên Admin
 - v9 (2026-11-21): theo data model v2 — không còn bảng hồ sơ riêng; đổi vai trò cấp mã mới trên account (bước 7, 4a, Notes)
 - v10 (2026-11-21): theo BR-GIAIDOAN1 v20 — kết thúc phiên khi đổi vai trò bằng `account_token_version` (bước 7, Notes)
 - v11 (2026-11-21): theo BR-GIAIDOAN1 v21 — kết thúc phiên bằng xóa `identity.session` thay cho `account_token_version` (bước 7, Notes)
+- v12 (2026-11-23): thêm quyền Nhân viên xem thông tin Khách hàng và dẫn chiếu thao tác khóa sang UC-08.
+- v13 (2026-11-23): đồng bộ kiểm tra Admin hoạt động cuối cùng với UC-08 khi đổi vai trò và khóa đồng thời.

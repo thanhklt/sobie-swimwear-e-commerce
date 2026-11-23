@@ -17,8 +17,8 @@ Khách bấm "Đặt hàng" trên trang giỏ hàng.
 - Giỏ hàng có ít nhất 1 dòng còn hàng.
 
 ## Main Flow
-1. Hệ thống mở trang thanh toán, điền sẵn họ tên, số điện thoại, địa chỉ nhận hàng từ hồ sơ khách `[GD]`.
-2. Khách kiểm tra hoặc sửa thông tin nhận hàng.
+1. Hệ thống mở trang thanh toán với các trường tên người nhận, địa chỉ nhận hàng (số nhà, đường; phường/xã; tỉnh/thành phố; quốc gia) và số điện thoại nhận hàng. Nút "Sử dụng thông tin hồ sơ" chỉ dùng được khi hồ sơ đã lưu đủ họ tên, ngày sinh, số điện thoại và địa chỉ nhận hàng hợp lệ. Hệ thống chỉ sao chép dữ liệu hồ sơ khi khách bấm nút.
+2. Khách nhập thông tin nhận hàng hoặc bấm "Sử dụng thông tin hồ sơ" để sao chép họ tên, địa chỉ và số điện thoại từ hồ sơ vào các trường tương ứng. Khách vẫn có thể sửa từng trường sau khi sao chép. Thông tin cuối cùng trên biểu mẫu được dùng cho riêng đơn hàng.
 3. Khách chọn phương thức "Thanh toán khi nhận hàng (COD)" và có thể nhập mã voucher.
 4. Hệ thống tính và hiển thị: tạm tính (đã áp khuyến mãi theo sản phẩm trên từng dòng), mức giảm do UC-31 chọn (tối đa 1 khuyến mãi: theo hóa đơn hoặc voucher), phí vận chuyển cố định, tổng thanh toán. Mọi mức giảm tính theo phần trăm, tiền làm tròn `ROUND_HALF_UP` về số nguyên VND.
 5. Khách bấm "Xác nhận đặt hàng".
@@ -33,19 +33,20 @@ Khách bấm "Đặt hàng" trên trang giỏ hàng.
 ## Exceptions
 - **E1. Hết hàng khi xác nhận:** một dòng không còn đủ tồn kho → không tạo đơn, rollback toàn bộ transaction, báo dòng nào thiếu hàng.
 - **E2. Voucher không hợp lệ:** UC-31 báo lỗi; khách sửa hoặc bỏ voucher rồi đặt lại.
-- **E3. Thiếu thông tin nhận hàng:** họ tên, số điện thoại hoặc địa chỉ trống → không cho xác nhận, báo trường thiếu.
+- **E3. Thiếu thông tin nhận hàng:** nếu thiếu tên người nhận, số điện thoại nhận hàng hoặc một phần bắt buộc của địa chỉ nhận hàng, hệ thống báo trường thiếu và không tạo đơn.
 - **E4. Giá hoặc mức giảm thay đổi trước khi xác nhận:** hệ thống tính lại theo giá hiện tại, báo khách và yêu cầu xác nhận lại `[GD]`.
 
 ## Postconditions
 - Đơn COD ở trạng thái "Chưa xử lý", tồn kho các biến thể đã bị trừ, tồn kho không âm.
-- Đơn lưu lại thông tin nhận hàng, đơn giá từng dòng, khuyến mãi theo sản phẩm của từng dòng (nếu có), khuyến mãi được áp cho đơn (tối đa 1), tiền giảm, phí vận chuyển và tổng thanh toán tại thời điểm đặt.
+- Đơn lưu tên người nhận, số điện thoại nhận hàng và địa chỉ nhận hàng theo giá trị trên biểu mẫu lúc xác nhận. Hồ sơ tài khoản giữ nguyên khi đặt hàng.
+- Đơn lưu đơn giá từng dòng, khuyến mãi theo sản phẩm của từng dòng (nếu có), khuyến mãi được áp cho đơn (tối đa 1), tiền giảm, phí vận chuyển và tổng thanh toán tại thời điểm đặt.
 - Lịch sử trạng thái đơn có dòng đầu tiên: trạng thái mới "Chưa xử lý", nguồn là Khách hàng, thời điểm tạo đơn.
 
 ## Acceptance Criteria
 
 ### AC-1: Đặt hàng COD thành công
 Given: khách đã đăng nhập, giỏ có "Đỏ / M" số lượng 2, tồn kho 5
-When: khách chọn COD và xác nhận đặt hàng
+When: khách điền đủ thông tin nhận hàng, chọn COD và xác nhận đặt hàng
 Then: hệ thống tạo đơn trạng thái "Chưa xử lý", phương thức COD
 And: tồn kho "Đỏ / M" còn 3
 And: giỏ hàng không còn dòng "Đỏ / M"
@@ -93,8 +94,26 @@ When: cả hai xác nhận đặt hàng gần như cùng lúc
 Then: chỉ một đơn được tạo
 And: tồn kho "Đỏ / M" là 0, không âm
 
+### AC-9: Sao chép thông tin nhận hàng từ hồ sơ khi khách yêu cầu
+Given: khách đã lưu hồ sơ có đủ họ tên, ngày sinh, số điện thoại và địa chỉ nhận hàng hợp lệ
+When: khách mở trang thanh toán
+Then: nút "Sử dụng thông tin hồ sơ" dùng được và hệ thống chờ khách bấm trước khi sao chép thông tin
+And: khi khách bấm, ba trường tên người nhận, số điện thoại và địa chỉ nhận hàng được điền từ hồ sơ
+
+### AC-10: Dùng thông tin nhận hàng khác với hồ sơ
+Given: khách đã bấm "Sử dụng thông tin hồ sơ"
+When: khách sửa thông tin nhận hàng rồi xác nhận với dữ liệu hợp lệ
+Then: đơn lưu tên người nhận, số điện thoại và địa chỉ theo biểu mẫu lúc xác nhận
+And: hồ sơ tài khoản giữ nguyên
+
+### AC-11: Hồ sơ chưa đầy đủ vẫn đặt hàng bằng cách nhập tay
+Given: hồ sơ đã có họ tên, số điện thoại và địa chỉ nhận hàng nhưng thiếu ngày sinh
+When: khách mở trang thanh toán
+Then: nút "Sử dụng thông tin hồ sơ" không dùng được
+And: khách vẫn đặt được hàng khi nhập tay đầy đủ thông tin nhận hàng hợp lệ và đáp ứng các điều kiện đặt hàng khác
+
 ## Dependencies
-- **Upstream UC:** UC-02 Đăng nhập, UC-18 Quản lý giỏ hàng, UC-31 Tính mức giảm cho đơn hàng
+- **Upstream UC:** UC-02 Đăng nhập, UC-04 Cập nhật hồ sơ khách hàng, UC-18 Quản lý giỏ hàng, UC-31 Tính mức giảm cho đơn hàng
 - **Downstream UC:** UC-21 Theo dõi đơn hàng, UC-22 Hủy đơn hàng, UC-23 Xác nhận đơn hàng
 - **External Systems:** Không có
 
@@ -109,7 +128,6 @@ And: tồn kho "Đỏ / M" là 0, không âm
 - Mỗi lần đơn đổi trạng thái (kể cả lúc tạo), hệ thống lưu lịch sử: trạng thái cũ, trạng thái mới, nguồn thay đổi, người đổi (nếu có), thời điểm (theo ERD).
 
 ### Giả định [GD]
-- Thông tin nhận hàng được điền sẵn từ hồ sơ khách, khách sửa được cho riêng đơn này.
 - Lượt đã dùng của khuyến mãi được chọn (voucher hoặc khuyến mãi theo hóa đơn) tăng khi tạo đơn.
 - Các dòng đã đặt được xóa khỏi giỏ sau khi đặt thành công.
 - Giá hoặc mức giảm thay đổi trước khi xác nhận thì tính lại và yêu cầu khách xác nhận lại.
@@ -119,3 +137,4 @@ And: tồn kho "Đỏ / M" là 0, không âm
 - v2 (2026-11-15): chốt bộ trạng thái đơn
 - v3 (2026-11-15): mức giảm theo %, làm tròn ROUND_HALF_UP; mỗi đơn tối đa 1 khuyến mãi, khuyến mãi theo sản phẩm ghi theo dòng (theo ERD); lưu lịch sử trạng thái đơn (theo ERD); thêm AC-3, AC-4
 - v4 (2026-11-20): đồng bộ BR-GIAIDOAN1 — thêm trạng thái "Chờ lấy hàng", bỏ "Bị từ chối"; phí vận chuyển lấy từ biến môi trường (mặc định 12.000đ)
+- v5 (2026-11-23): chốt nút "Sử dụng thông tin hồ sơ", điều kiện hồ sơ đầy đủ và lưu thông tin nhận hàng theo từng đơn.

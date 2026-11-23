@@ -37,17 +37,16 @@ Một module dùng chung **một tên** cho: thư mục use case `specs/use-case
 soobin-swimwear-e-commerce/
 ├── app/
 │   ├── main.py                     # Khởi tạo ứng dụng, đăng ký router của 9 module
-│   ├── shared/                     # Thành phần kỹ thuật dùng chung, không chứa nghiệp vụ
-│   │   ├── config/settings.py      # Nạp cấu hình từ biến môi trường
-│   │   ├── database/
-│   │   │   ├── engine.py           # Engine, session
-│   │   │   └── transaction.py      # Transaction đi qua nhiều module
-│   │   ├── security/               # Băm mật khẩu, mã phiên, kiểm tra Origin
-│   │   ├── web/
-│   │   │   ├── session.py          # Middleware phiên, kiểm tra vai trò
-│   │   │   ├── templates/base.html
-│   │   │   └── static/css/
-│   │   └── money.py                # VND / Decimal, ROUND_HALF_UP
+│   ├── config/settings.py          # Nạp cấu hình từ biến môi trường
+│   ├── database/
+│   │   ├── engine.py               # Async engine, session factory
+│   │   └── transaction.py          # Transaction đi qua nhiều module
+│   ├── security/session.py         # Middleware phiên, kiểm tra vai trò
+│   ├── shared/web/                 # Template và cấu hình render HTML dùng chung
+│   │   ├── rendering.py
+│   │   └── templates/base.html
+│   ├── static/css/
+│   ├── money.py                    # VND / Decimal, ROUND_HALF_UP
 │   └── modules/
 │       ├── identity/
 │       ├── catalog/

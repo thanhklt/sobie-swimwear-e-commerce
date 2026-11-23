@@ -17,7 +17,7 @@ Khách chọn phương thức "Chuyển khoản qua mã QR" trên trang thanh to
 - Giỏ hàng có ít nhất 1 dòng còn hàng.
 
 ## Main Flow
-1. Khách thực hiện bước 1–4 như UC-19, chọn phương thức "Chuyển khoản qua mã QR".
+1. Khách thực hiện bước 1–4 như UC-19, gồm nhập tay hoặc dùng nút "Sử dụng thông tin hồ sơ" để điền thông tin nhận hàng, và chọn phương thức "Chuyển khoản qua mã QR".
 2. Khách bấm "Xác nhận đặt hàng".
 3. Trong cùng một transaction, hệ thống: kiểm tra lại tồn kho, trừ tồn kho, tăng lượt đã dùng của khuyến mãi được chọn (voucher hoặc khuyến mãi theo hóa đơn) `[GD]`, sinh mã đơn 8 ký tự Crockford Base32 không trùng, tạo đơn trạng thái "Chưa xử lý", thanh toán "Chưa thanh toán", hạn thanh toán = thời điểm đặt + 24 giờ, và lưu lịch sử trạng thái đơn.
 4. Hệ thống xóa các dòng đã đặt khỏi giỏ `[GD]`.
@@ -32,9 +32,11 @@ Khách chọn phương thức "Chuyển khoản qua mã QR" trên trang thanh to
 - **E1. Hết hàng khi xác nhận:** như UC-19 E1 — không tạo đơn, rollback toàn bộ.
 - **E2. Voucher không hợp lệ:** như UC-19 E2.
 - **E3. Quá 24 giờ chưa thanh toán:** Hệ thống tự hủy đơn (UC-24); mã QR không còn hiển thị `[GD]`.
+- **E4. Thiếu thông tin nhận hàng:** như UC-19 E3. Hệ thống báo trường thiếu trước khi tạo đơn QR.
 
 ## Postconditions
 - Đơn QR ở trạng thái "Chưa xử lý", "Chưa thanh toán", có hạn thanh toán; tồn kho đã bị trừ.
+- Đơn QR lưu tên người nhận, số điện thoại và địa chỉ nhận hàng theo biểu mẫu lúc xác nhận. Hồ sơ tài khoản giữ nguyên khi đặt hàng.
 - Đơn lưu khuyến mãi theo sản phẩm của từng dòng (nếu có), khuyến mãi được áp cho đơn (tối đa 1), tiền giảm, phí vận chuyển và tổng thanh toán tại thời điểm đặt.
 - Lịch sử trạng thái đơn có dòng đầu tiên: trạng thái mới "Chưa xử lý", nguồn là Khách hàng, thời điểm tạo đơn.
 
@@ -42,7 +44,7 @@ Khách chọn phương thức "Chuyển khoản qua mã QR" trên trang thanh to
 
 ### AC-1: Đặt hàng QR thành công
 Given: khách đã đăng nhập, giỏ có "Đỏ / M" số lượng 1, tồn kho 5
-When: khách chọn chuyển khoản QR và xác nhận đặt hàng lúc 10:00 ngày 20/11/2026
+When: khách điền đủ thông tin nhận hàng, chọn chuyển khoản QR và xác nhận đặt hàng lúc 10:00 ngày 20/11/2026
 Then: hệ thống tạo đơn "Chưa xử lý", "Chưa thanh toán"
 And: hạn thanh toán là 10:00 ngày 21/11/2026
 And: tồn kho "Đỏ / M" còn 4
@@ -81,8 +83,10 @@ When: khách xác nhận đặt hàng QR
 Then: đơn chỉ gắn voucher V, tiền giảm 40.000đ
 And: số tiền trong mã QR = 400.000đ − 40.000đ + phí vận chuyển (mặc định 12.000đ) = 372.000đ
 
+Các tiêu chí UC-19 AC-7 và AC-9–AC-11 về nhập và sử dụng thông tin nhận hàng cũng áp dụng cho đơn QR.
+
 ## Dependencies
-- **Upstream UC:** UC-02 Đăng nhập, UC-18 Quản lý giỏ hàng, UC-31 Tính mức giảm cho đơn hàng
+- **Upstream UC:** UC-02 Đăng nhập, UC-04 Cập nhật hồ sơ khách hàng, UC-18 Quản lý giỏ hàng, UC-31 Tính mức giảm cho đơn hàng
 - **Downstream UC:** UC-21 Theo dõi đơn hàng, UC-22 Hủy đơn hàng, UC-23 Xác nhận đơn hàng, UC-24 Tự hủy đơn chuyển khoản quá hạn, UC-25 Tự đối soát chuyển khoản qua webhook SePay
 - **External Systems:** SePay (nhận giao dịch qua UC-25)
 
@@ -106,3 +110,4 @@ And: số tiền trong mã QR = 400.000đ − 40.000đ + phí vận chuyển (m�
 - v1 (2026-11-15): initial
 - v2 (2026-11-15): chốt bộ trạng thái đơn; mức giảm theo %, làm tròn ROUND_HALF_UP; mỗi đơn tối đa 1 khuyến mãi (theo ERD); lưu lịch sử trạng thái đơn (theo ERD); thêm AC-6
 - v3 (2026-11-20): theo BR-GIAIDOAN1 — mã đơn Crockford Base32, nội dung `SOBIE` + mã đơn, đối soát qua SePay (UC-25), phí vận chuyển từ biến môi trường; thêm AC-2b
+- v4 (2026-11-23): áp dụng quy tắc thông tin nhận hàng và nút "Sử dụng thông tin hồ sơ" của UC-19 cho đơn QR.

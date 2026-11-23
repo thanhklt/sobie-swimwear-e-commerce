@@ -124,9 +124,6 @@ And: đơn đặt hôm nay không được xét P, R, S
 
 **Giả định [GD]**
 - Được phép có nhiều khuyến mãi theo hóa đơn cùng hiệu lực; UC-31 chọn cái giảm nhiều nhất trong số đủ điều kiện.
-- Đơn bị hủy thì hoàn lượt khuyến mãi theo hóa đơn (giảm số lượng đã dùng 1).
-- Phần trăm giảm hợp lệ: lớn hơn 0 và nhỏ hơn 100; số lượng được áp dụng ≥ 1 (được ràng buộc trong database).
-- Danh sách khuyến mãi hiển thị số lượng được áp dụng và số lượng đã dùng.
 
 ## History
 - v1 (2026-11-15): initial
@@ -136,3 +133,4 @@ And: đơn đặt hôm nay không được xét P, R, S
 - v5 (2026-11-15): chốt quy tắc lọc theo thời gian (giao khoảng)
 - v6 (2026-11-20): đồng bộ BR-GIAIDOAN1 — bỏ "Bị từ chối" (Nhân viên chỉ còn "Hủy đơn")
 - v7 (2026-11-20): theo data model v2 — ngừng trước hạn giữ ngày kết thúc, không bật lại (1a, AC-6); thêm 7b hết hạn; chốt trạng thái Sắp diễn ra / Đang hiệu lực / Đã kết thúc (1b, AC-10)
+- v8 (2026-11-23): đồng bộ ràng buộc dữ liệu và quy tắc hoàn lượt khuyến mãi theo hóa đơn khi hủy đơn với data model v2; loại các quy tắc đã chốt khỏi mục giả định

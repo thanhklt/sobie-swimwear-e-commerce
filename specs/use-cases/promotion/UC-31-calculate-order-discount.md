@@ -29,7 +29,7 @@ Khách hàng mở bước đặt hàng, nhập hoặc bỏ mã voucher, hoặc x
 - **3a. Không có khuyến mãi theo hóa đơn đủ điều kiện và không nhập voucher:** mức giảm = 0.
 - **5a. Voucher hợp lệ nhưng khuyến mãi theo hóa đơn có lợi hơn:** hệ thống chọn khuyến mãi theo hóa đơn, thông báo cho khách lý do voucher không được áp; voucher không bị trừ lượt.
 - **5b. Hai mức giảm bằng nhau:** ưu tiên voucher (đã chốt 15/11/2026).
-- **7a. Đơn bị hủy (khách hủy, Nhân viên hủy hoặc hệ thống tự hủy):** lượt voucher đã trừ được hoàn lại; lượt khuyến mãi theo hóa đơn cũng được hoàn lại `[GD]`.
+- **7a. Đơn bị hủy (khách hủy, Nhân viên hủy hoặc hệ thống tự hủy):** lượt voucher và lượt khuyến mãi theo hóa đơn đã trừ được hoàn lại.
 
 ## Exceptions
 - **E1. Voucher không tồn tại hoặc đã ngừng:** hệ thống báo "Voucher không hợp lệ", tính tiếp như chưa nhập voucher.
@@ -126,7 +126,7 @@ And: nguồn mức giảm không phải X
 
 **Quyết định đã chốt**
 - Hai mức giảm (khuyến mãi theo hóa đơn và voucher) bằng nhau thì ưu tiên voucher (đã chốt 15/11/2026).
-- Đơn bị hủy (khách hủy, Nhân viên hủy hoặc hệ thống tự hủy) thì cộng lại tồn kho và hoàn lượt voucher (đã chốt 15/11/2026).
+- Đơn bị hủy (khách hủy, Nhân viên hủy hoặc hệ thống tự hủy) thì cộng lại tồn kho và hoàn lượt voucher (đã chốt 15/11/2026); lượt khuyến mãi theo hóa đơn cũng được hoàn theo data model v2 (`promotion_used_amount`).
 - Mọi loại khuyến mãi giảm theo phần trăm; không có mức giảm tối đa (đã chốt 15/11/2026, theo ERD).
 - Mỗi đơn áp tối đa một khuyến mãi theo hóa đơn hoặc voucher; khuyến mãi theo sản phẩm ghi theo từng dòng đơn (theo ERD).
 - Khuyến mãi theo hóa đơn và voucher chỉ hợp lệ khi tạm tính ≥ giá trị đơn tối thiểu và còn lượt (số lượng đã dùng < số lượng được áp dụng); voucher không giới hạn số lần mỗi khách (đã chốt 15/11/2026, theo ERD).
@@ -136,7 +136,6 @@ And: nguồn mức giảm không phải X
 - Có nhiều khuyến mãi theo hóa đơn đủ điều kiện thì lấy mức giảm lớn nhất.
 - Mức giảm theo hóa đơn hoặc voucher tính trên tạm tính (đã gồm khuyến mãi theo sản phẩm), không áp vào phí vận chuyển, và không vượt quá tạm tính.
 - Số tiền thay đổi giữa lúc xem và lúc xác nhận thì không tạo đơn, yêu cầu khách xác nhận lại.
-- Đơn bị hủy thì hoàn cả lượt khuyến mãi theo hóa đơn.
 
 ## History
 - v1 (2026-11-15): initial
@@ -144,3 +143,4 @@ And: nguồn mức giảm không phải X
 - v3 (2026-11-15): giảm theo phần trăm, giá trị đơn tối thiểu cho voucher, lượt áp dụng cho khuyến mãi theo hóa đơn, mỗi đơn tối đa một khuyến mãi (theo ERD)
 - v4 (2026-11-15): ghi rõ dòng đơn lưu đơn giá gốc và khuyến mãi theo sản phẩm; đơn giá sau giảm ổn định vì khuyến mãi không sửa được (theo data model v1)
 - v5 (2026-11-20): đồng bộ BR-GIAIDOAN1 — bỏ "Bị từ chối"; hủy đơn gồm cả Nhân viên hủy
+- v6 (2026-11-23): xác nhận hoàn lượt khuyến mãi theo hóa đơn khi hủy đơn theo data model v2; bỏ quy tắc này khỏi mục giả định

@@ -31,7 +31,7 @@ Nhân viên mở màn hình quản lý khuyến mãi theo sản phẩm để t�
 - **1b. Xem danh sách khuyến mãi:** Nhân viên xem danh sách khuyến mãi theo sản phẩm kèm trạng thái: "Đang hiệu lực" (chưa kết thúc) hoặc "Đã kết thúc". Loại này không có trạng thái "Sắp diễn ra" vì có hiệu lực ngay khi tạo. Danh sách không có thao tác sửa và không có bộ lọc theo khoảng thời gian.
 
 ## Exceptions
-- **E1. Thiếu hoặc sai dữ liệu:** không chọn sản phẩm nào, hoặc phần trăm giảm không nằm trong khoảng lớn hơn 0 và nhỏ hơn 100 `[GD]` → hệ thống báo lỗi theo từng trường, không hiển thị popup xác nhận, không lưu.
+- **E1. Thiếu hoặc sai dữ liệu:** không chọn sản phẩm nào, hoặc phần trăm giảm không nằm trong khoảng lớn hơn 0 và nhỏ hơn 100 → hệ thống báo lỗi theo từng trường, không hiển thị popup xác nhận, không lưu.
 - **E2. Sản phẩm đã thuộc khuyến mãi khác:** sản phẩm được chọn đang thuộc một khuyến mãi theo sản phẩm khác chưa kết thúc → hệ thống báo lỗi, không lưu.
 
 ## Postconditions
@@ -136,3 +136,4 @@ Then: giá sau giảm = 169.999đ (169.999,15 làm tròn `ROUND_HALF_UP`)
 - v6 (2026-11-20): theo data model v2 — mỗi khuyến mãi gắn đúng 1 sản phẩm (bỏ giả định nhiều sản phẩm); khuyến mãi đã kết thúc không bật lại được (thêm vào 1a, Postconditions, AC-8)
 - v7 (2026-11-20): theo data model v2 — bỏ ngày bắt đầu / ngày kết thúc, khuyến mãi có hiệu lực ngay khi tạo (bước 2, 4, 6, 7; E1; AC-1, AC-2, AC-5, AC-7); thay AC-4 bằng "Có hiệu lực ngay khi tạo"; trạng thái chỉ còn Đang hiệu lực / Đã kết thúc (1b); lọc theo thời điểm tạo → kết thúc (1c, AC-11)
 - v8 (2026-11-20): theo data model v2, Q30 — bỏ lọc theo khoảng thời gian (xóa 1c, AC-11); không ghi thời điểm kết thúc (1a)
+- v9 (2026-11-23): bỏ nhãn giả định ở E1 vì ngưỡng phần trăm đã được chốt bằng CHECK constraint trong database

@@ -33,6 +33,7 @@ Nhân viên mở mục Sản phẩm trong portal quản trị.
    - Không nhập bảng size: cửa hàng dùng một bảng size chung cố định (BR-002).
 4. Nhân viên bấm "Lưu sản phẩm".
 5. Trong CÙNG MỘT Database Transaction duy nhất (bảo đảm tính nguyên tử từ bước kiểm tra đến ghi):
+   - Trước khi tạo sản phẩm/liên kết, khóa các dòng Danh mục/Giới tính/Bộ sưu tập được chọn bằng `FOR KEY SHARE`, theo thứ tự tên bảng rồi khóa UUID tăng dần. Giữ khóa đến commit/rollback; đọc lại tên/kiểm tra tồn tại sau khi chờ. Đây là bước khóa taxonomy trước khóa sản phẩm, thống nhất UC-15/17.
    - Hệ thống chuẩn hóa cắt bỏ khoảng trắng thừa ở đầu và cuối tên sản phẩm (`trim()`).
    - Kiểm tra các trường bắt buộc (Tên sản phẩm, Danh mục, Giới tính) -> nếu thiếu hoặc để trống sau khi trim thì rollback và chuyển sang Exception E1.
    - Kiểm tra độ dài tên sản phẩm không vượt quá 255 ký tự -> nếu vượt quá rollback và chuyển sang Exception E1.
@@ -80,6 +81,7 @@ Nhân viên mở mục Sản phẩm trong portal quản trị.
     1. Hệ thống hiển thị form chỉnh sửa gồm: Tên sản phẩm, Mô tả, Danh mục, Giới tính, Bộ sưu tập. Mã sản phẩm `product_id` hiển thị ở chế độ chỉ đọc, không cho sửa. Nếu đã có phiếu `CONFIRMED`, chỉ Mô tả cho nhập; các trường và nút ghi khác bị khóa.
     2. Nhân viên sửa thông tin và bấm "Lưu thay đổi".
     3. Trong CÙNG MỘT Database Transaction duy nhất (bảo đảm tính nguyên tử từ kiểm tra đến ghi):
+       - Nếu request đặt các khóa ngoại Danh mục/Giới tính/Bộ sưu tập, lấy `FOR KEY SHARE` trên tất cả các mục được tham chiếu trước khóa sản phẩm, theo thứ tự tên bảng rồi khóa UUID tăng dần. Chỉ sửa Mô tả thì không cần khóa taxonomy; không lấy thêm khóa taxonomy sau khi đã giữ khóa sản phẩm. Các giá trị tham chiếu không còn hợp lệ thì rollback, yêu cầu tải lại form.
        - Khóa dòng sản phẩm cha `FOR UPDATE`, kiểm tra lại phiếu `CONFIRMED` qua Service công khai `inventory`. Nếu đã nhập kho, so sánh các giá trị yêu cầu với DB: có thay đổi ngoài Mô tả thì từ chối toàn bộ request theo E10, kể cả gửi trực tiếp API hoặc form đã mở trước lúc xác nhận nhập kho. Nếu chỉ sửa Mô tả, chỉ cập nhật `product_description` và dấu thời gian kỹ thuật `product_updated_at`, không ghi lại tên hoặc các liên kết; bỏ qua các bước cập nhật trường khác dưới đây.
        - Hệ thống chuẩn hóa cắt khoảng trắng thừa đầu/cuối của tên sản phẩm (`trim()`), kiểm tra độ dài tối đa 255 ký tự, kiểm tra đủ trường bắt buộc.
        - Kiểm tra tính duy nhất tên sản phẩm nguyên tử: cho phép giữ nguyên tên hiện tại của chính sản phẩm đang sửa, nhưng chặn nếu trùng với bất kỳ sản phẩm nào khác trong hệ thống (so sánh chuỗi sau khi trim, không phân biệt hoa/thường). Nếu không hợp lệ -> rollback và chuyển sang Exception E1.
@@ -420,6 +422,13 @@ Then: nếu xác nhận nhập commit trước, request sửa tên chờ khóa r
 And: nếu sửa tên commit trước, thay đổi hợp lệ được giữ; xác nhận nhập sau đó thành công thì mọi request sửa ngoài Mô tả tiếp theo bị khóa
 And: không có thay đổi bị cấm nào commit dựa trên kết quả kiểm tra trước xác nhận nhập; nhánh từ chối không tăng catalog_version
 
+### AC-31: Đổi liên kết phân loại không đảo thứ tự khóa với đổi tên taxonomy
+Given: A chưa có phiếu CONFIRMED; Nhân viên đổi danh mục A sang C đồng thời người khác đổi tên danh mục C; các giá trị mới hợp lệ và không trùng tên
+When: UC-14 Flow 2a và UC-17 Flow 3a thực thi đồng thời
+Then: UC-14 lấy KEY SHARE trên toàn bộ taxonomy sẽ tham chiếu trước khóa A; nếu phải chờ C thì chưa giữ khóa A
+And: UC-17 lấy FOR UPDATE trên C trước khi khóa các sản phẩm liên quan; sau khi chờ khóa phải đọc lại tập sản phẩm còn liên kết
+And: hai thao tác tuần tự theo khóa taxonomy, A liên kết đúng C và hiển thị tên C cuối cùng; không có vòng chờ do giữ A rồi chờ C
+
 ## Dependencies
 - **Upstream UC:**
   - UC-02 Đăng nhập (xác thực quyền Nhân viên quản trị).
@@ -443,7 +452,10 @@ And: không có thay đổi bị cấm nào commit dựa trên kết quả kiể
 
 ## Notes
 - **Khóa sau nhập kho (UC-14-Q11, developer chốt tại Codex 23/11/2026):** có phiếu `CONFIRMED` là khóa toàn bộ thay đổi Catalog của sản phẩm ngoài Mô tả, bao gồm giá, trạng thái, biến thể và tên taxonomy dùng chung. Quy tắc này ưu tiên hơn quyền sửa trong các quyết định cũ; không tự mở khóa khi tồn kho về 0. Phải cấu hình giá/trạng thái/biến thể mong muốn trước xác nhận nhập; nếu đã xác nhận khi chưa định giá hoặc đang INACTIVE thì không được sửa giá/mở bán để khắc phục bằng các UC này.
-- **Hợp đồng với inventory:** kiểm tra phiếu xác nhận qua Service công khai dùng cùng DB transaction sau khóa sản phẩm cha; xác nhận nhập kho phải tuần tự hóa với các thao tác Catalog bằng cùng khóa sản phẩm (nhiều sản phẩm khóa theo `product_key ASC` qua Service catalog trước khóa biến thể). Sau khi chờ khóa phải đọc lại trạng thái đã commit. Đây là yêu cầu tích hợp cho UC-34 khi triển khai; không tuyên bố UC-34 hoặc mã nguồn đã được cập nhật/kiểm thử trong PR đặc tả Catalog.
+- **Hợp đồng với inventory:** kiểm tra phiếu xác nhận qua Service công khai dùng cùng DB transaction sau khóa sản phẩm cha; UC-34 khóa dòng phiếu nhập, rồi gọi Service Catalog khóa tất cả sản phẩm theo `product_key ASC` trước khi khóa biến thể theo `variant_key ASC`. Giữ khóa đến commit/rollback và kiểm tra lại dữ liệu đã commit sau khi chờ. UC-34 đã đồng bộ đặc tả hợp đồng này theo yêu cầu xử lý rà soát tại Codex ngày 23/11/2026; chưa xác nhận triển khai/kiểm thử runtime.
+- **Thứ tự khóa taxonomy và sản phẩm:** UC-14/15 lấy `FOR KEY SHARE` trên toàn bộ taxonomy sẽ tham chiếu trước khi khóa/ghi sản phẩm; UC-17 lấy `FOR UPDATE` trên mục sửa/xóa trước khi khóa sản phẩm. Trong từng nhóm, lấy theo tên bảng rồi UUID; sản phẩm theo `product_key ASC`, sau đó mới đến biến thể. Các luồng chỉ sửa giá/trạng thái/Mô tả hoặc xác nhận nhập không cần khóa taxonomy nhưng không được giữ khóa sản phẩm rồi chờ taxonomy. Cách này ngăn vòng chờ giữa đổi tên và ghi liên kết, kể cả khóa ngoại ngầm của DB.
+- Service inventory kiểm tra CONFIRMED từ Catalog chỉ đọc trạng thái đã commit, không khóa dòng phiếu nhập sau khi Catalog đã khóa sản phẩm. Khóa sản phẩm chung với UC-34 ngăn một lần xác nhận mới chen vào giữa kiểm tra và ghi; không đảo sang thứ tự sản phẩm → phiếu nhập.
+- Giao thức khóa/kiểm tra này dùng isolation `READ COMMITTED`: truy vấn CONFIRMED phải chạy sau khi đã được cấp khóa sản phẩm, không tái sử dụng dữ liệu form, kết quả tải trước hoặc snapshot transaction cũ. Câu lệnh mới sau chờ khóa phải thấy lần xác nhận đã commit.
 - **Quy tắc Cache (BR-GIAIDOAN1):** 
   - Khi sản phẩm thay đổi thông tin, đổi trạng thái hoặc bị xóa, hệ thống tăng số phiên bản catalog (`catalog_version`) ở Redis để toàn bộ cache Redis công khai (trang chủ, danh mục, chi tiết) tự động được làm mới ở request tiếp theo. Việc tăng cache version chỉ được thực hiện sau khi Database Transaction đã commit thành công (không gọi Redis trong SQL transaction).
   - Nếu Database Transaction bị rollback: tuyệt đối không gọi Redis tăng `catalog_version`.
@@ -488,3 +500,4 @@ And: không có thay đổi bị cấm nào commit dựa trên kết quả kiể
 - v11 (2026-11-23): rà soát logic vòng 3 (phát hiện #2): developer phê duyệt chốt dứt điểm UC-14-Q10; bổ sung nhánh xử lý lỗi Redis timeout/mất kết nối sau khi Database Transaction đã commit (ghi log warning, giữ nguyên DB, báo thành công cho nhân viên); làm rõ độ trễ TTL 5 phút chỉ áp dụng dữ liệu cache công khai, các luồng không cache (tìm kiếm, wishlist, mua hàng, khối bán chạy) luôn đọc trạng thái DB mới nhất; làm rõ không tăng version khi DB rollback; thêm Exception E9, AC-26; gỡ bỏ toàn bộ nhãn [GD]; chuyển Status sang ready.
 - v12 (2026-11-23): sửa review PR #7 mục 2/4: phân biệt điều kiện mở bán với hiển thị danh sách qua AC-6/AC-6b; bổ sung Hàng mới và Bộ sưu tập vào phạm vi cache và AC-26. Mở UC-14-Q11, giữ draft chờ chốt phạm vi khóa sản phẩm đã nhập kho (mục 3).
 - v13 (2026-11-23): developer chốt UC-14-Q11: sau phiếu CONFIRMED chỉ sửa Mô tả; khóa trường khác, gallery, trạng thái, giá và biến thể; thêm E10, AC-27..30 và hợp đồng tuần tự hóa với xác nhận nhập; đồng bộ fixture/điều kiện cũ, khôi phục ready.
+- v14 (2026-11-23): xử lý rà soát logic theo yêu cầu developer: taxonomy KEY SHARE trước khóa sản phẩm khi tạo/đặt tham chiếu, thêm AC-31; đồng bộ khóa phiếu/sản phẩm/biến thể với UC-34 và kiểm tra CONFIRMED sau chờ ở READ COMMITTED, không khóa phiếu ngược từ Catalog.

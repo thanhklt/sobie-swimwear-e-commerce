@@ -32,7 +32,7 @@ Nhân viên mở mục Danh mục, Bộ sưu tập, Giới tính, Màu hoặc Si
 - **3a. Sửa tên mục:**
   1. Tại danh sách của loại đang chọn, Nhân viên chọn sửa một mục và nhập tên mới.
   2. Hệ thống chuẩn hóa (cắt khoảng trắng thừa đầu/cuối và gom khoảng trắng nội bộ) và kiểm tra tên mới như bước 4 của Main Flow (không trống, đúng giới hạn độ dài, không trùng với các mục khác trong cùng loại).
-  3. Trong một Database Transaction, hệ thống khóa mục taxonomy `FOR UPDATE`, xác định và khóa các sản phẩm liên quan theo `product_key ASC` (Danh mục/Giới tính/Bộ sưu tập qua liên kết sản phẩm; Màu/Size qua biến thể). Gọi Service công khai inventory cùng transaction kiểm tra phiếu `CONFIRMED` của mọi sản phẩm này; nếu ít nhất một sản phẩm đã nhập thì chặn toàn bộ đổi tên theo E5. Không chỉ kiểm tra riêng biến thể dùng màu/size đó. Thay đổi liên kết taxonomy phải tuần tự hóa với khóa này; kiểm tra lại sau khi chờ khóa. Khi hợp lệ, cập nhật tên mới:
+  3. Trong một Database Transaction, hệ thống khóa mục taxonomy `FOR UPDATE`, xác định và khóa các sản phẩm liên quan theo `product_key ASC` (Danh mục/Giới tính/Bộ sưu tập qua liên kết sản phẩm; Màu/Size qua biến thể). UC-14/15 phải lấy đủ khóa taxonomy `FOR KEY SHARE` trước khóa sản phẩm khi tạo/đặt tham chiếu, không giữ khóa sản phẩm rồi chờ mục này. Sau khi chờ khóa, đọc lại các liên kết hiện hành và gọi Service công khai inventory cùng transaction kiểm tra phiếu `CONFIRMED` của mọi sản phẩm còn liên quan; nếu ít nhất một sản phẩm đã nhập thì chặn toàn bộ đổi tên theo E5. Không chỉ kiểm tra riêng biến thể dùng màu/size đó. Khi hợp lệ, cập nhật tên mới:
      - Đối với Màu và Size, hệ thống chỉ đổi tên hiển thị, giữ nguyên mã SKU (`variant_id`) bất biến của các biến thể đã tạo trước đó; các màn hình hiển thị tự động cập nhật tên mới qua liên kết khóa ngoại.
      - Việc kiểm tra trùng tên không phân biệt hoa/thường trên chuỗi đã chuẩn hóa được đảm bảo nguyên tử khi ghi. Nếu cập nhật cơ sở dữ liệu thất bại (kể cả do thao tác đồng thời dẫn đến trùng tên): transaction rollback, dừng xử lý, chuyển sang E1 hoặc báo lỗi hệ thống.
   4. Sau khi cơ sở dữ liệu commit thành công, hệ thống gửi lệnh tăng số phiên bản catalog (`catalog_version`) tới Redis để làm mới cache storefront (nếu Redis lỗi, xem E4).
@@ -42,6 +42,7 @@ Nhân viên mở mục Danh mục, Bộ sưu tập, Giới tính, Màu hoặc Si
   2. Hệ thống hiển thị hộp thoại yêu cầu xác nhận xóa.
   3. Nhân viên xác nhận xóa.
   4. Hệ thống thực hiện xóa bản ghi trong cơ sở dữ liệu PostgreSQL:
+     - Lấy khóa mục taxonomy `FOR UPDATE` trước kiểm tra/xóa, thống nhất thứ tự taxonomy trước sản phẩm; các request tạo liên kết UC-14/15 phải chờ mục này trước khi giữ khóa sản phẩm.
      - Tại thời điểm xóa, cơ sở dữ liệu kiểm tra ràng buộc toàn vẹn khóa ngoại (`ON DELETE RESTRICT`). Nếu có sản phẩm hoặc biến thể liên kết phát sinh đồng thời từ request khác, cơ sở dữ liệu từ chối xóa, transaction rollback và chuyển sang E2.
   5. Sau khi cơ sở dữ liệu commit xóa thành công, hệ thống gửi lệnh tăng số phiên bản catalog (`catalog_version`) tới Redis để làm mới cache storefront (nếu Redis lỗi, xem E4).
   6. Hệ thống hiển thị thông báo xóa thành công và loại bỏ mục khỏi danh sách hiển thị.
@@ -218,6 +219,13 @@ When: xác nhận nhập commit CONFIRMED và transaction đổi tên tiếp t�
 Then: server đọc lại thấy phiếu CONFIRMED qua Service inventory và chặn toàn bộ đổi tên theo E5
 And: tên Đỏ, mọi liên kết và SKU cũ giữ nguyên; không tăng catalog_version từ request đổi tên bị từ chối
 
+### AC-28: Đổi tên màu và tạo biến thể không chờ khóa vòng
+Given: A chưa có phiếu CONFIRMED, đang INACTIVE, có Đỏ×S với SKU SP-0001-DO-S; Nhân viên tạo Đỏ×M bằng color_key/size_key trong khi người khác đổi tên Đỏ thành Đỏ đô; không có SKU xung đột
+When: chạy độc lập hai thứ tự cấp khóa taxonomy giữa UC-15 và Flow 3a
+Then: nếu UC-15 lấy KEY SHARE trên Màu/Size trước, đổi tên chờ taxonomy trước khi giữ khóa A; UC-15 tạo SP-0001-DO-M rồi commit, sau đó đổi tên thành công và giữ nguyên SKU này
+And: nếu đổi tên giữ FOR UPDATE trên Màu trước, UC-15 chờ taxonomy và chưa giữ khóa A; đổi tên commit rồi UC-15 đọc tên mới, khóa A và tạo SP-0001-DODO-M
+And: cả hai request hợp lệ hoàn tất mà không hủy transaction do vòng chờ taxonomy–sản phẩm; SKU SP-0001-DO-S cũ luôn giữ nguyên, cache chỉ làm mới sau mỗi commit thành công
+
 ## Dependencies
 - **Internal Services:** inventory kiểm tra phiếu CONFIRMED của sản phẩm liên quan qua Service công khai dùng cùng transaction, theo hợp đồng khóa tại Notes UC-14.
 - **Upstream UC:** UC-02 Đăng nhập
@@ -225,6 +233,7 @@ And: tên Đỏ, mọi liên kết và SKU cũ giữ nguyên; không tăng catal
 - **External Systems:** Redis (cache `catalog_version`)
 
 ## Notes
+- Thứ tự khóa chung: UC-14/15 lấy đủ taxonomy `FOR KEY SHARE` (tên bảng rồi UUID tăng dần) trước khóa/ghi sản phẩm; UC-17 sửa/xóa mục lấy `FOR UPDATE` trước sản phẩm. Không luồng nào giữ khóa sản phẩm rồi chờ khóa taxonomy. Luồng chỉ sửa giá/trạng thái/Mô tả và UC-34 không tạo tham chiếu taxonomy, nên không cần lấy khóa taxonomy. Đây là thứ tự thực thi của các khóa hiện có, không thêm khóa toàn bộ Catalog.
 - UC-17-Q7 đồng bộ UC-14-Q11 (developer chốt tại Codex 23/11/2026): chỉ sửa Mô tả khi sản phẩm có phiếu CONFIRMED; đổi tên taxonomy không được đi vòng quy tắc này. Q3 giữ SKU bất biến chỉ cho phép đổi tên khi không tác động sản phẩm đã nhập; kiểm tra qua Service inventory và hợp đồng khóa với xác nhận nhập kho tại Notes UC-14. Màn hình khóa nút sửa với mục đã bị ràng buộc, server vẫn kiểm tra lại trong transaction.
 - Áp dụng constraint cache danh sách (BR-GIAIDOAN1, Constraints chung): Danh mục và thuộc tính sản phẩm công khai được cache ở Redis theo `catalog_version`. Mọi thao tác thêm, sửa, xóa thành công đều commit DB trước rồi mới gửi lệnh tăng `catalog_version` để làm mới cache trên storefront.
 - Trình tự xử lý lỗi hạ tầng: SQL commit thành công là nguồn sự thật duy nhất (source of truth). Nếu Redis lỗi sau khi DB đã commit, không rollback DB mà dựa vào TTL 5 phút của Redis để tự khôi phục dữ liệu cache.
@@ -256,3 +265,4 @@ And: tên Đỏ, mọi liên kết và SKU cũ giữ nguyên; không tăng catal
 - v6 (2026-11-22): làm rõ postconditions theo nhánh thành công/lỗi Redis (E4); chuẩn hóa diễn đạt kiểm tra trùng tên case-insensitive nguyên tử khi ghi; cập nhật Status: ready.
 - v7 (2026-11-23): ghi nhận review PR #7 mục 3 và mở UC-17-Q7 phụ thuộc UC-14-Q11 về khóa thuộc tính sản phẩm đã nhập kho; chuyển draft chờ developer xác nhận phạm vi.
 - v8 (2026-11-23): chốt UC-17-Q7 theo UC-14-Q11: chặn đổi tên taxonomy tác động sản phẩm có phiếu CONFIRMED, kiểm tra toàn sản phẩm qua Service inventory trong transaction có khóa; thêm E5/AC-25..27, giới hạn fixture AC-9/11 trước nhập, khôi phục ready.
+- v9 (2026-11-23): xử lý vòng chờ taxonomy–sản phẩm cùng UC-14/15; sửa/xóa lấy taxonomy FOR UPDATE trước sản phẩm, tạo/đặt tham chiếu lấy KEY SHARE trước sản phẩm; thêm AC-28 kiểm chứng cả hai thứ tự đổi tên/tạo biến thể và bảo toàn SKU cũ.

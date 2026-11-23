@@ -62,7 +62,7 @@ Then: hệ thống sinh lại mã khác
 And: mã đơn mới gồm đúng 8 ký tự trong `0123456789ABCDEFGHJKMNPQRSTVWXYZ`
 
 ### AC-4: Xem lại mã QR
-Given: đơn QR "Chưa thanh toán", còn trong hạn
+Given: đơn QR ở trạng thái "Chưa xử lý", "Chưa thanh toán" và còn trong hạn thanh toán
 When: khách mở chi tiết đơn
 Then: khách thấy lại mã QR và hạn thanh toán
 
@@ -83,10 +83,21 @@ Then: đơn chỉ gắn voucher V, tiền giảm 40.000đ
 And: số tiền trong mã QR = 400.000đ − 40.000đ + phí vận chuyển (mặc định 12.000đ) = 372.000đ
 
 ### AC-8: Kiểm tra lại giá và khuyến mãi
-Given: giá hoặc lượt còn lại của khuyến mãi thay đổi sau khi khách xem trang thanh toán
+Given: giá, mức giảm hoặc điều kiện áp dụng khuyến mãi cho đơn thay đổi sau khi khách xem trang thanh toán
 When: khách xác nhận đặt hàng QR
 Then: hệ thống tính lại tổng thanh toán và yêu cầu khách xác nhận lại
 And: chưa tạo đơn, chưa trừ tồn kho hoặc tăng lượt khuyến mãi
+
+### AC-9: Không hiện QR khi đơn đã hủy nhưng còn hạn
+Given: đơn QR đã "Đã hủy", vẫn "Chưa thanh toán" và còn trong hạn thanh toán
+When: khách mở lại chi tiết đơn
+Then: mã QR không hiển thị
+
+### AC-10: Lượt giảm nhưng khuyến mãi vẫn hợp lệ
+Given: voucher còn 10 lượt lúc khách xem trang thanh toán, sau đó còn 9 lượt; giá, mức giảm và điều kiện áp dụng cho đơn vẫn giữ nguyên
+When: khách xác nhận đặt hàng và hệ thống kiểm tra lại lượt trong transaction
+Then: đơn được tạo với cùng mức giảm và tổng thanh toán, không yêu cầu xác nhận lại
+And: lượt còn lại giảm từ 9 xuống 8 do đơn này, không ghi đè theo số lượt cũ
 
 ## Dependencies
 - **Upstream UC:** UC-02 Đăng nhập, UC-18 Quản lý giỏ hàng, UC-31 Tính mức giảm cho đơn hàng
@@ -94,6 +105,7 @@ And: chưa tạo đơn, chưa trừ tồn kho hoặc tăng lượt khuyến mãi
 - **External Systems:** SePay (nhận giao dịch qua UC-25)
 
 ## Notes
+- Luôn kiểm tra lượt còn lại trong transaction tạo đơn. Chỉ thay đổi số lượt còn lại, trong khi khuyến mãi vẫn hợp lệ và giá, mức giảm, điều kiện áp dụng cho đơn không đổi, không yêu cầu khách xác nhận lại.
 - BR-GIAIDOAN1: đơn chuyển khoản quá 24 giờ kể từ lúc đặt mà chưa thanh toán thì hệ thống tự hủy.
 - Tài khoản nhận chuyển khoản lấy từ cấu hình cửa hàng hard-code; phí vận chuyển lấy từ biến môi trường, mặc định 12.000đ cho mọi đơn.
 - Kiểm tra/trừ tồn kho, áp khuyến mãi/voucher và tạo đơn trong cùng một transaction (AGENTS.md).
@@ -107,7 +119,7 @@ And: chưa tạo đơn, chưa trừ tồn kho hoặc tăng lượt khuyến mãi
 
 ### Giả định [GD]
 - Lượt đã dùng của khuyến mãi được chọn (voucher hoặc khuyến mãi theo hóa đơn) tăng khi tạo đơn; các dòng đã đặt được xóa khỏi giỏ.
-- Khách xem lại được mã QR trong chi tiết đơn khi còn chưa thanh toán và chưa quá hạn; ẩn QR khi đơn đã thanh toán, đã hủy hoặc quá hạn.
+- Khách chỉ xem lại được mã QR trong chi tiết đơn khi đơn "Chưa xử lý", "Chưa thanh toán" và còn trong hạn thanh toán; ẩn QR khi đơn đã thanh toán, đã hủy hoặc quá hạn.
 
 ## History
 - v1 (2026-11-15): initial
@@ -116,3 +128,5 @@ And: chưa tạo đơn, chưa trừ tồn kho hoặc tăng lượt khuyến mãi
 - v4 (2026-11-22): đưa xóa giỏ và kiểm tra lại giá, khuyến mãi vào transaction; bổ sung rollback và AC-7.
 - v5 (2026-11-22): làm rõ công thức ví dụ QR với phí ship 12.000đ; chuẩn hóa số bước và AC-1 đến AC-8.
 - v6 (2026-11-22): bổ sung kiểm tra trạng thái đơn khi xem lại QR, không hiển thị QR cho đơn đã hủy.
+- v7 (2026-11-23): đồng bộ AC-4 và giả định với luồng 4a; thêm AC-9 kiểm tra ẩn QR cho đơn đã hủy nhưng còn hạn.
+- v8 (2026-11-23): sửa điều kiện xác nhận lại trong AC-8; thêm AC-10 cho trường hợp lượt giảm nhưng voucher vẫn hợp lệ, giữ kiểm tra lượt trong transaction.

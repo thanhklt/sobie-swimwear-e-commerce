@@ -97,7 +97,7 @@ Then: chỉ một đơn được tạo
 And: tồn kho "Đỏ / M" là 0, không âm
 
 ### AC-9: Kiểm tra lại giá và khuyến mãi
-Given: giá hoặc lượt còn lại của khuyến mãi thay đổi sau khi khách xem trang thanh toán
+Given: giá, mức giảm hoặc điều kiện áp dụng khuyến mãi cho đơn thay đổi sau khi khách xem trang thanh toán
 When: khách xác nhận đặt hàng COD
 Then: hệ thống tính lại tổng thanh toán và yêu cầu khách xác nhận lại
 And: chưa tạo đơn, chưa trừ tồn kho hoặc tăng lượt khuyến mãi
@@ -108,12 +108,19 @@ When: khách xác nhận đặt hàng COD
 Then: transaction rollback; không tạo đơn, không trừ tồn kho, không tăng lượt khuyến mãi
 And: các dòng giỏ vẫn còn
 
+### AC-11: Lượt giảm nhưng khuyến mãi vẫn hợp lệ
+Given: voucher còn 10 lượt lúc khách xem trang thanh toán, sau đó còn 9 lượt; giá, mức giảm và điều kiện áp dụng cho đơn vẫn giữ nguyên
+When: khách xác nhận đặt hàng và hệ thống kiểm tra lại lượt trong transaction
+Then: đơn được tạo với cùng mức giảm và tổng thanh toán, không yêu cầu xác nhận lại
+And: lượt còn lại giảm từ 9 xuống 8 do đơn này, không ghi đè theo số lượt cũ
+
 ## Dependencies
 - **Upstream UC:** UC-02 Đăng nhập, UC-18 Quản lý giỏ hàng, UC-31 Tính mức giảm cho đơn hàng
 - **Downstream UC:** UC-21 Theo dõi đơn hàng, UC-22 Hủy đơn hàng, UC-23 Xác nhận đơn hàng
 - **External Systems:** Không có
 
 ## Notes
+- Luôn kiểm tra lượt còn lại trong transaction tạo đơn. Chỉ thay đổi số lượt còn lại, trong khi khuyến mãi vẫn hợp lệ và giá, mức giảm, điều kiện áp dụng cho đơn không đổi, không yêu cầu khách xác nhận lại.
 - Phí vận chuyển là 1 mức cho mọi đơn, lấy từ biến môi trường, mặc định 12.000đ (BR-GIAIDOAN1, Constraints chung).
 - Kiểm tra/trừ tồn kho, áp khuyến mãi/voucher và tạo đơn chạy trong cùng một transaction (AGENTS.md).
 
@@ -137,3 +144,4 @@ And: các dòng giỏ vẫn còn
 - v5 (2026-11-22): thống nhất phí vận chuyển mặc định 12.000đ và cập nhật AC-2.
 - v6 (2026-11-22): đưa xóa giỏ và kiểm tra lại giá, khuyến mãi vào transaction; bổ sung rollback và AC-9, AC-10.
 - v7 (2026-11-22): làm rõ sửa thông tin nhận hàng chỉ áp dụng cho đơn đang đặt.
+- v8 (2026-11-23): sửa điều kiện xác nhận lại trong AC-9; thêm AC-11 cho trường hợp lượt giảm nhưng voucher vẫn hợp lệ, giữ kiểm tra lượt trong transaction.

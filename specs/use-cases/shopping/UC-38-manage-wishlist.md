@@ -100,13 +100,13 @@ And: nút tim hiển thị đã chọn theo dữ liệu hiện có; chỉ thay �
 - UC-02 kiểm tra đích return_url ở server; UC-38 không dùng đích quay lại để tự thực hiện hành động thích/bỏ thích. Đồng bộ lần này chỉ chốt nguồn từ trang chi tiết UC-12; vị trí nút tim trên thẻ và các hành vi khác còn giữ giả định riêng bên dưới.
 
 ### Quyết định đã chốt
+- UC thuộc module shopping (cùng giỏ hàng), đã chốt 20/11/2026.
 - Khách vãng lai bấm tim trên trang chi tiết UC-12 đăng nhập xong quay lại bằng return_url nội bộ an toàn; không tự thêm/xóa wishlist_item, tim phản ánh dữ liệu đã lưu của tài khoản. Khách chủ động bấm tim sau khi quay lại để thay đổi (UC-12-Q8, developer yêu cầu đồng bộ tại Codex 23/11/2026).
 - Wishlist là chức năng trong phạm vi MVP: khách thả tim để lưu sản phẩm vào một danh sách (đã chốt 15/11/2026).
 - Mỗi sản phẩm chỉ xuất hiện 1 lần trong danh sách của một tài khoản (theo ERD: unique account + product).
 - Mỗi Khách hàng có đúng 1 danh sách yêu thích trong DB, tạo cùng lúc tạo tài khoản Khách hàng (UC-01, UC-06). Trang danh sách yêu thích luôn có danh sách để đọc / ghi, không tạo danh sách khi thả tim lần đầu (đã chốt 21/11/2026, Q39).
 
 ### Giả định [GD]
-- UC thuộc module shopping (cùng giỏ hàng), đã chốt 20/11/2026.
 - Nút tim có trên cả thẻ sản phẩm và trang chi tiết.
 - Danh sách yêu thích sắp xếp mới thêm nhất trước (theo thứ tự thêm; ERD không có cột thời gian riêng), có phân trang.
 - Sản phẩm ngừng bán vẫn ở danh sách, hiển thị nhãn "Ngừng bán" và không mở được trang chi tiết.
@@ -116,4 +116,7 @@ And: nút tim hiển thị đã chọn theo dữ liệu hiện có; chỉ thay �
 - v2 (2026-11-15): theo data model v1 — sắp xếp theo thứ tự thêm, không dùng cột thời gian
 - v3 (2026-11-21): bổ sung giả định tạo danh sách yêu thích cùng lúc tạo tài khoản Khách hàng
 - v4 (2026-11-21): chốt tạo danh sách yêu thích cùng lúc tạo tài khoản Khách hàng (Q39)
-- v5 (2026-11-23): theo yêu cầu đồng bộ tại Codex, chốt Flow 1b từ trang chi tiết bằng return_url an toàn, không auto-like/unlike, bảo toàn dữ liệu wishlist; mở rộng AC-5 và thêm AC-9 cho sản phẩm đã thích từ trước. Giữ draft và các giả định khác.
+- v5 (2026-11-22): chuyển quyết định module shopping ra khỏi phần giả định.
+- v6 (2026-11-23): theo yêu cầu đồng bộ tại Codex, chốt Flow 1b từ trang chi tiết bằng return_url an toàn, không auto-like/unlike, bảo toàn dữ liệu wishlist; mở rộng AC-5 và thêm AC-9 cho sản phẩm đã thích từ trước. Giữ draft và các giả định khác.
+
+- v7 (2026-11-23): merge main, giữ quyết định module shopping và contract quay lại từ UC-12, bảo toàn wishlist sau đăng nhập.

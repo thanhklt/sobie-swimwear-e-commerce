@@ -24,9 +24,6 @@ Nhân viên chọn một đơn "Đã xác nhận" trong trang quản lý đơn h
 5. Đơn xuất hiện trên Trang giả lập vận chuyển (UC-36) với nút "Đã nhận hàng"; khách thấy trạng thái "Chờ lấy hàng" khi theo dõi đơn (UC-21).
 6. Khi đơn vị vận chuyển bấm "Đã nhận hàng" trên trang giả lập, đơn chuyển sang "Đang giao" (UC-36).
 
-## Alternative Flows
-- **2a. Bàn giao nhiều đơn một lúc `[GD]`:** Nhân viên chọn nhiều đơn "Đã xác nhận" và bấm "Bàn giao vận chuyển"; hệ thống xử lý từng đơn như bước 3–5, đơn nào không hợp lệ thì bỏ qua và báo lại cho Nhân viên.
-
 ## Exceptions
 - **E1. Đơn không ở "Đã xác nhận":** đơn đang "Chưa xử lý", đã "Chờ lấy hàng", "Đang giao" hoặc đã ở trạng thái kết thúc — hệ thống từ chối, báo trạng thái hiện tại, đơn không đổi.
 - **E2. Đơn không tồn tại:** hệ thống báo không tìm thấy đơn.
@@ -55,13 +52,7 @@ Given: đơn 7K3M9Q2X đã ở trạng thái "Chờ lấy hàng"
 When: Nhân viên bấm "Bàn giao vận chuyển" cho 7K3M9Q2X lần nữa
 Then: hệ thống từ chối, đơn giữ trạng thái "Chờ lấy hàng"
 
-### AC-4: Bàn giao nhiều đơn
-Given: đơn 7K3M9Q2X và B6TQ2R5D ở "Đã xác nhận", đơn 4HZP8W1N ở "Chưa xử lý"
-When: Nhân viên chọn cả 3 đơn và bấm "Bàn giao vận chuyển"
-Then: 7K3M9Q2X và B6TQ2R5D chuyển sang "Chờ lấy hàng"
-And: 4HZP8W1N không đổi và hệ thống báo 4HZP8W1N không được bàn giao
-
-### AC-5: Khách thấy trạng thái mới
+### AC-4: Khách thấy trạng thái mới
 Given: đơn 7K3M9Q2X của khách A ở "Đã xác nhận"
 When: Nhân viên bàn giao 7K3M9Q2X
 Then: khách A mở chi tiết đơn thấy trạng thái "Chờ lấy hàng"
@@ -80,9 +71,7 @@ Then: khách A mở chi tiết đơn thấy trạng thái "Chờ lấy hàng"
 - Admin chỉ quản lý tài khoản và gán vai trò cho tài khoản; mọi thao tác vận hành cửa hàng do Nhân viên thực hiện (đã chốt 15/11/2026).
 - Mỗi lần đơn đổi trạng thái, hệ thống lưu lịch sử: trạng thái cũ, trạng thái mới, nguồn thay đổi, người đổi (nếu có), thời điểm (theo ERD).
 
-### Giả định [GD]
-- Có thể bàn giao nhiều đơn một lúc; đơn không hợp lệ thì bỏ qua và báo lại.
-
 ## History
 - v1 (2026-11-15): initial
 - v2 (2026-11-20): bàn giao chuyển đơn sang "Chờ lấy hàng" (không còn sang thẳng "Đang giao"); đơn vị vận chuyển bấm "Đã nhận hàng" mới sang "Đang giao" (UC-36)
+- v3 (2026-11-23): mỗi lần chỉ bàn giao một đơn; bỏ luồng và AC bàn giao nhiều đơn chưa được xác nhận

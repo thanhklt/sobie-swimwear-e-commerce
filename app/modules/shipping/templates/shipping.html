@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trạng thái vận chuyển | Sobie</title>
+<style>body{font:16px system-ui,sans-serif;max-width:900px;margin:36px auto;padding:0 18px;background:#f8f7f4;color:#252525}h1{margin-bottom:4px}.hint{color:#666}article{background:white;border:1px solid #e7e2db;border-radius:12px;padding:16px;margin:12px 0;display:flex;gap:14px;align-items:center;justify-content:space-between}.code{font-weight:700;letter-spacing:.06em}.status{display:inline-block;background:#f2eee7;border-radius:99px;padding:5px 10px}form{display:inline}button{font:inherit;padding:8px 12px;border:0;border-radius:7px;background:#262626;color:white;cursor:pointer}.fail{background:#8f3535}.error{color:#a21b1b}</style></head>
+<body><h1>Trạng thái vận chuyển</h1><p class="hint">Website giả lập · Chỉ hiển thị mã đơn và trạng thái, không hiển thị thông tin cá nhân.</p>
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+{% for order in orders %}<article><div><span class="code">{{ order.order_code }}</span><br><span class="status">{{ order.status_label }}</span></div><div>
+{% if order.status == 'AWAITING_PICKUP' %}<form method="post" action="/shipping/orders/{{ order.order_code }}/status"><input type="hidden" name="action" value="received"><button>Đã nhận hàng</button></form>
+{% else %}<form method="post" action="/shipping/orders/{{ order.order_code }}/status"><input type="hidden" name="action" value="delivered"><button>Đã giao</button></form>
+<form method="post" action="/shipping/orders/{{ order.order_code }}/status"><input type="hidden" name="action" value="failed"><button class="fail">Giao không thành công</button></form>{% endif %}</div></article>
+{% else %}<article>Hiện chưa có đơn đang chờ lấy hoặc đang giao.</article>{% endfor %}
+</body></html>

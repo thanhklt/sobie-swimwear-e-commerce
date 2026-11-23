@@ -80,3 +80,12 @@ async def renew_session(
         account_key=UUID(str(row["session_account_key"])),
         role=Role(row["role_code"]),
     )
+
+
+async def account_email(db, account_key: UUID) -> str | None:
+    result = await db.exec(
+        text("SELECT account_email FROM identity.account WHERE account_key = :account_key"),
+        params={"account_key": account_key},
+    )
+    row = result.first()
+    return row[0] if row else None

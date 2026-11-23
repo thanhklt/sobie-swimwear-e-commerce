@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quản lý khuyến mãi | Sobie</title>
+  <style>
+    body{font:16px system-ui,sans-serif;max-width:1100px;margin:32px auto;padding:0 18px;color:#252525;background:#faf8f5}
+    h1{margin-bottom:6px}section,table{background:white;border:1px solid #e6e0d8;border-radius:12px;padding:18px;margin:18px 0;width:100%;box-sizing:border-box}
+    form.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;align-items:end}
+    label{display:grid;gap:5px;font-size:14px}input,select,button{font:inherit;padding:9px;border:1px solid #ccc;border-radius:7px}button{cursor:pointer;background:#222;color:white;border:0}
+    table{border-collapse:collapse;padding:0}th,td{text-align:left;padding:10px;border-bottom:1px solid #eee}th{background:#f3efe9}.error{color:#a21b1b}
+    .hint{color:#666;font-size:14px}.end{background:#fff;color:#8f2626;border:1px solid #d6aaaa;padding:6px 10px}
+  </style>
+</head>
+<body>
+  <h1>Quản lý khuyến mãi</h1>
+  <p class="hint">UC-28 · UC-29 · UC-30. Đã tạo thì không sửa; chỉ có thể kết thúc.</p>
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+  <section>
+    <h2>Tạo chương trình</h2>
+    <form class="grid" method="post" action="/admin/promotions/create" id="create-promotion">
+      <label>Loại khuyến mãi<select name="promotion_type" id="kind"><option value="PRODUCT">Theo sản phẩm</option><option value="ORDER">Theo hóa đơn</option><option value="CODE">Voucher</option></select></label>
+      <label>Phần trăm giảm<input name="discount_percentage" type="number" min="0.01" max="99.99" step="0.01" required></label>
+      <label data-for="PRODUCT">Mã sản phẩm<input name="product_id" placeholder="SP-0001"></label>
+      <label data-for="ORDER CODE">Giá trị đơn tối thiểu (đ)<input name="threshold_price" type="number" min="0"></label>
+      <label data-for="ORDER CODE">Số lượt tối đa<input name="quantity" type="number" min="1"></label>
+      <label data-for="CODE">Mã voucher<input name="code" maxlength="50"></label>
+      <label data-for="ORDER CODE">Ngày bắt đầu<input name="start_date" type="date"></label>
+      <label data-for="ORDER CODE">Ngày kết thúc<input name="end_date" type="date"></label>
+      <button type="submit">Lưu chương trình</button>
+    </form>
+    <p class="hint">Khuyến mãi sản phẩm có hiệu lực ngay, không giới hạn lượt và không nhập ngày. Khuyến mãi hóa đơn / voucher áp dụng hết ngày kết thúc.</p>
+  </section>
+  <section>
+    <h2>Danh sách</h2>
+    <form method="get" class="grid">
+      <label>Loại<select name="kind"><option value="">Tất cả</option><option value="PRODUCT" {{ 'selected' if kind == 'PRODUCT' }}>Sản phẩm</option><option value="ORDER" {{ 'selected' if kind == 'ORDER' }}>Hóa đơn</option><option value="CODE" {{ 'selected' if kind == 'CODE' }}>Voucher</option></select></label>
+      <label>Từ ngày<input type="date" name="date_from" value="{{ date_from }}"></label>
+      <label>Đến ngày<input type="date" name="date_to" value="{{ date_to }}"></label>
+      <button>Lọc danh sách</button>
+    </form>
+  </section>
+  <table><thead><tr><th>Mã</th><th>Loại</th><th>Đối tượng</th><th>Giảm</th><th>Ngưỡng</th><th>Lượt đã dùng</th><th>Hiệu lực</th><th>Trạng thái</th><th></th></tr></thead><tbody>
+  {% for p in promotions %}<tr>
+    <td>{{ p.promotion_id }}</td><td>{{ {'PRODUCT':'Sản phẩm','ORDER':'Hóa đơn','CODE':'Voucher'}[p.promotion_type] }}</td>
+    <td>{{ p.product_id or p.code or '—' }}</td><td>{{ p.discount_percentage }}%</td>
+    <td>{{ p.threshold_price if p.threshold_price is not none else '—' }}</td>
+    <td>{{ p.used_amount }}{% if p.quantity is not none %} / {{ p.quantity }}{% endif %}</td>
+    <td>{% if p.start_date %}{{ p.start_date.strftime('%d/%m/%Y') }} – {{ p.end_date.strftime('%d/%m/%Y') }}{% else %}Ngay lập tức{% endif %}</td>
+    <td>{{ p.status }}</td><td>{% if p.status != 'Đã kết thúc' %}<form method="post" action="/admin/promotions/{{ p.promotion_id }}/end" onsubmit="return confirm('Kết thúc {{ p.promotion_id }}? Các đơn đã tạo không thay đổi.')"><button class="end">Kết thúc</button></form>{% endif %}</td>
+  </tr>{% else %}<tr><td colspan="9">Chưa có khuyến mãi.</td></tr>{% endfor %}
+  </tbody></table>
+  <script>
+    const kind=document.querySelector('#kind');
+    function syncFields(){for(const label of document.querySelectorAll('[data-for]')){const show=label.dataset.for.split(' ').includes(kind.value);label.hidden=!show;const input=label.querySelector('input');input.required=show;}}
+    kind.addEventListener('change',syncFields);syncFields();
+    document.querySelector('#create-promotion').addEventListener('submit',event=>{
+      const fields=new FormData(event.currentTarget);const labels={PRODUCT:'khuyến mãi theo sản phẩm',ORDER:'khuyến mãi theo hóa đơn',CODE:'voucher'};
+      const type=fields.get('promotion_type');
+      const target=type==='PRODUCT'?`Sản phẩm: ${fields.get('product_id')}`:type==='CODE'?`Mã voucher: ${fields.get('code')}`:'Theo giá trị hóa đơn';
+      const rules=type==='PRODUCT'?'Có hiệu lực ngay khi xác nhận.':`Đơn tối thiểu: ${fields.get('threshold_price')}đ\nSố lượt: ${fields.get('quantity')}\nHiệu lực: ${fields.get('start_date')} đến ${fields.get('end_date')}`;
+      if(!confirm(`Xác nhận tạo ${labels[type]}?\n${target}\nGiảm: ${fields.get('discount_percentage')}%\n${rules}\nLưu ý: đã tạo thì không thể sửa, chỉ có thể kết thúc.`))event.preventDefault();
+    });
+  </script>
+</body></html>

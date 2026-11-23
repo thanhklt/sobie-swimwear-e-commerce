@@ -19,7 +19,7 @@ Khách chọn phương thức "Chuyển khoản qua mã QR" trên trang thanh to
 ## Main Flow
 1. Khách thực hiện bước 1–4 như UC-19, chọn phương thức "Chuyển khoản qua mã QR".
 2. Khách bấm "Xác nhận đặt hàng".
-3. Trong cùng một transaction, hệ thống: kiểm tra lại tồn kho, trừ tồn kho, tăng lượt đã dùng của khuyến mãi được chọn (voucher hoặc khuyến mãi theo hóa đơn) `[GD]`, sinh mã đơn 8 ký tự Crockford Base32 không trùng, tạo đơn trạng thái "Chưa xử lý", thanh toán "Chưa thanh toán", hạn thanh toán = thời điểm đặt + 24 giờ, và lưu lịch sử trạng thái đơn.
+3. Trong cùng một transaction, hệ thống gọi Service công khai của `catalog` để khóa sản phẩm cha `FOR UPDATE` dùng chung với UC-14/15 như bước 6 UC-19 (khóa theo `product_key` tăng dần, giữ từ trước kiểm tra đến commit/rollback), rồi kiểm tra từ Database đồng thời sản phẩm cha có `product_status = ACTIVE` và từng biến thể có `variant_status = ACTIVE`; không dùng cache storefront. Nếu sản phẩm hoặc biến thể không còn được bán thì áp dụng E4. Sau đó, hệ thống kiểm tra lại tồn kho qua Service công khai của `inventory`, trừ tồn kho, tăng lượt đã dùng của khuyến mãi được chọn (voucher hoặc khuyến mãi theo hóa đơn) `[GD]`, sinh mã đơn 8 ký tự Crockford Base32 không trùng, tạo đơn trạng thái "Chưa xử lý", thanh toán "Chưa thanh toán", hạn thanh toán = thời điểm đặt + 24 giờ, và lưu lịch sử trạng thái đơn; tất cả cùng transaction này.
 4. Hệ thống xóa các dòng đã đặt khỏi giỏ `[GD]`.
 5. Hệ thống hiển thị mã VietQR gồm: tài khoản nhận chuyển khoản (hard-code), số tiền = tổng thanh toán, nội dung chuyển khoản = `SOBIE` + mã đơn; kèm số tài khoản, nội dung chuyển khoản dạng chữ để khách chuyển tay, và hạn thanh toán.
 6. Khách chuyển khoản; SePay báo giao dịch qua webhook và hệ thống tự đối soát (UC-25), không cần ai bấm xác nhận.
@@ -32,6 +32,7 @@ Khách chọn phương thức "Chuyển khoản qua mã QR" trên trang thanh to
 - **E1. Hết hàng khi xác nhận:** như UC-19 E1 — không tạo đơn, rollback toàn bộ.
 - **E2. Voucher không hợp lệ:** như UC-19 E2.
 - **E3. Quá 24 giờ chưa thanh toán:** Hệ thống tự hủy đơn (UC-24); mã QR không còn hiển thị `[GD]`.
+- **E4. Sản phẩm hoặc biến thể đã ngừng bán khi xác nhận:** như UC-19 E5 — kiểm tra cả sản phẩm cha và biến thể từ DB qua Service catalog sau khi giữ khóa trong transaction; rollback toàn bộ, báo dòng không còn được bán, không tạo đơn/thanh toán/lịch sử, không trừ kho hoặc tăng lượt dùng khuyến mãi, giữ nguyên giỏ và không hiển thị mã QR cho yêu cầu bị từ chối.
 
 ## Postconditions
 - Đơn QR ở trạng thái "Chưa xử lý", "Chưa thanh toán", có hạn thanh toán; tồn kho đã bị trừ.
@@ -81,17 +82,38 @@ When: khách xác nhận đặt hàng QR
 Then: đơn chỉ gắn voucher V, tiền giảm 40.000đ
 And: số tiền trong mã QR = 400.000đ − 40.000đ + phí vận chuyển (mặc định 12.000đ) = 372.000đ
 
+### AC-7: Chặn đặt QR cho biến thể đã ngừng bán dù cache còn hàng
+Given: khách đã mở thanh toán QR với "Đỏ / M" số lượng 1 và tồn kho 5; Nhân viên chuyển biến thể sang INACTIVE, DB commit thành công nhưng Redis lỗi nên storefront vẫn hiển thị dữ liệu cũ
+When: khách xác nhận đặt hàng chuyển khoản QR
+Then: hệ thống kiểm tra trạng thái hiện hành qua Service công khai của catalog trong transaction tạo đơn và từ chối theo E4, báo dòng "Đỏ / M" không còn được bán
+And: không tạo đơn/thanh toán/lịch sử hoặc hiển thị mã QR, tồn kho vẫn là 5, lượt dùng khuyến mãi và giỏ hàng giữ nguyên
+
+### AC-8: Đồng bộ kiểm tra đặt QR với thao tác ngừng bán biến thể
+Given: transaction UC-15 đang giữ khóa sản phẩm cha của "Đỏ / M" để chuyển biến thể sang INACTIVE và chưa commit
+When: khách xác nhận đặt QR cho "Đỏ / M" và transaction tạo đơn yêu cầu cùng khóa qua Service catalog
+Then: transaction tạo đơn chờ UC-15 kết thúc; sau khi UC-15 commit, hệ thống đọc trạng thái mới là INACTIVE và từ chối theo E4
+And: không tạo đơn/thanh toán hoặc hiển thị QR, không trừ tồn kho hay tăng lượt dùng khuyến mãi, giỏ giữ nguyên
+
+### AC-9: Chặn đặt QR khi sản phẩm cha ngừng bán nhưng biến thể vẫn ACTIVE
+Given: khách đang giữ trang thanh toán QR cũ với "Đỏ / M" số lượng 1; sản phẩm cha đã INACTIVE sau khi UC-14 commit, biến thể vẫn ACTIVE và tồn kho vẫn là 5
+When: khách xác nhận đặt QR
+Then: sau khi có khóa, Service catalog đọc trạng thái hiện hành của cả sản phẩm và biến thể; hệ thống từ chối theo E4 vì sản phẩm cha INACTIVE
+And: transaction tạo đơn rollback toàn bộ; không tạo đơn/thanh toán/lịch sử hoặc hiển thị QR, tồn kho vẫn là 5, lượt dùng khuyến mãi và giỏ hàng giữ nguyên
+
 ## Dependencies
-- **Upstream UC:** UC-02 Đăng nhập, UC-18 Quản lý giỏ hàng, UC-31 Tính mức giảm cho đơn hàng
+- **Upstream UC:** UC-02 Đăng nhập, UC-14 Quản lý sản phẩm, UC-15 Quản lý biến thể màu × size, UC-18 Quản lý giỏ hàng, UC-31 Tính mức giảm cho đơn hàng
 - **Downstream UC:** UC-21 Theo dõi đơn hàng, UC-22 Hủy đơn hàng, UC-23 Xác nhận đơn hàng, UC-24 Tự hủy đơn chuyển khoản quá hạn, UC-25 Tự đối soát chuyển khoản qua webhook SePay
+- **Internal Services:** `catalog` kiểm tra trạng thái sản phẩm cha và biến thể sau khi giữ khóa sản phẩm cha trong cùng transaction; `inventory` kiểm tra/trừ tồn kho. Module ordering không truy cập trực tiếp Repository hoặc bảng của catalog/inventory.
 - **External Systems:** SePay (nhận giao dịch qua UC-25)
 
 ## Notes
 - BR-GIAIDOAN1: đơn chuyển khoản quá 24 giờ kể từ lúc đặt mà chưa thanh toán thì hệ thống tự hủy.
 - Tài khoản nhận chuyển khoản lấy từ cấu hình cửa hàng hard-code; phí vận chuyển lấy từ biến môi trường, mặc định 12.000đ cho mọi đơn.
 - Kiểm tra/trừ tồn kho, áp khuyến mãi/voucher và tạo đơn trong cùng một transaction (AGENTS.md).
+- Kiểm tra trạng thái sản phẩm cha và biến thể phải đọc DB qua Service catalog sau khi giữ khóa cùng transaction tạo đơn như UC-19, không dựa vào cache hoặc kết quả kiểm tra trước đó ở giỏ hàng; khóa dùng chung với thao tác ngừng bán của UC-14/15.
 
 ### Quyết định đã chốt
+- Xác nhận QR phải kiểm tra đồng thời sản phẩm cha ACTIVE, biến thể ACTIVE và tồn kho hiện hành qua Service công khai trong transaction tạo đơn; sản phẩm hoặc biến thể đã ngừng bán thì từ chối, rollback toàn bộ và không hiển thị QR (UC-15-Q7; bổ sung điều kiện sản phẩm cha theo yêu cầu xử lý rà soát vòng 3 tại Codex 23/11/2026).
 - Trạng thái đơn: Chưa xử lý → Đã xác nhận → Chờ lấy hàng → Đang giao → Giao thành công | Giao không thành công; Đã hủy (đã chốt 15/11/2026, cập nhật 20/11/2026).
 - Mã đơn: 8 ký tự ngẫu nhiên Crockford Base32, sinh bằng `secrets`, UNIQUE, trùng thì sinh lại; nội dung chuyển khoản = `SOBIE` + mã đơn (đã chốt 20/11/2026).
 - Mọi mức giảm tính theo phần trăm; tiền làm tròn `ROUND_HALF_UP` về số nguyên VND (đã chốt 15/11/2026).
@@ -106,3 +128,5 @@ And: số tiền trong mã QR = 400.000đ − 40.000đ + phí vận chuyển (m�
 - v1 (2026-11-15): initial
 - v2 (2026-11-15): chốt bộ trạng thái đơn; mức giảm theo %, làm tròn ROUND_HALF_UP; mỗi đơn tối đa 1 khuyến mãi (theo ERD); lưu lịch sử trạng thái đơn (theo ERD); thêm AC-6
 - v3 (2026-11-20): theo BR-GIAIDOAN1 — mã đơn Crockford Base32, nội dung `SOBIE` + mã đơn, đối soát qua SePay (UC-25), phí vận chuyển từ biến môi trường; thêm AC-2b
+- v4 (2026-11-23): theo phê duyệt đồng bộ UC-15-Q7 tại Codex, kiểm tra trạng thái ACTIVE/tồn kho từ DB qua Service trong transaction tạo đơn, khóa sản phẩm đồng bộ UC-15; bổ sung E4 và AC-7/8 cho cache cũ và ngừng bán đồng thời. Giữ draft và các giả định khác.
+- v5 (2026-11-23): theo yêu cầu xử lý rà soát vòng 3 tại Codex, kiểm tra product_status cùng variant_status sau khi giữ khóa đồng bộ UC-14/15 trong transaction; bổ sung AC-9 chặn đặt QR khi sản phẩm cha INACTIVE dù biến thể còn ACTIVE/còn hàng. Giữ nguyên các giả định khác.

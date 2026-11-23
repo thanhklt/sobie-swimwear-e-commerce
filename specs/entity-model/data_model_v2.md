@@ -1,6 +1,6 @@
 # Data Model v2 — Soobin Swimwear
 
-> Bản vẽ Mermaid của [data_model_v2.dbml](data_model_v2.dbml), cập nhật ngày 21/11/2026 — **nguồn chính là file DBML**; khi đổi data model, sửa file DBML trước rồi cập nhật file này cho khớp. Changelog và câu hỏi mở nằm ở cuối file DBML.
+> Bản vẽ Mermaid của [data_model_v2.dbml](data_model_v2.dbml), cập nhật ngày 23/11/2026 — **nguồn chính là file DBML**; khi đổi data model, sửa file DBML trước rồi cập nhật file này cho khớp. Changelog và câu hỏi mở nằm ở cuối file DBML.
 
 ## Quy ước
 
@@ -429,7 +429,7 @@ erDiagram
     PRODUCT {
         uuid product_key PK
         varchar(10) product_id UK "NOT NULL"
-        varchar(255) product_name "NOT NULL"
+        varchar(255) product_name "NOT NULL; UNIQUE LOWER(TRIM(product_name))"
         text product_description
         numeric product_total_score_review "3,2 - NOT NULL - DEFAULT 0"
         varchar(20) product_status "NOT NULL - DEFAULT INACTIVE"
@@ -533,7 +533,7 @@ erDiagram
 |---|---|---|---|---|
 | `product_key` | `uuid` | PK | DEFAULT `gen_random_uuid()` | [KEY] |
 | `product_id` | `varchar(10)` | UK | NOT NULL | [KEY] mã tự nhiên, hệ thống cấp, không sửa (đã chốt): SP-<4 số tăng dần>, ví dụ SP-0001 |
-| `product_name` | `varchar(255)` |  | NOT NULL |  |
+| `product_name` | `varchar(255)` |  | NOT NULL; unique index trên `LOWER(TRIM(product_name))` | Lưu tên đã trim, giữ hoa/thường (UC-14-Q9, chốt 23/11/2026) |
 | `product_description` | `text` |  |  |  |
 | `product_total_score_review` | `numeric(3,2)` |  | NOT NULL DEFAULT `0` | Giữ theo ERD; review là giai đoạn 2, chưa dùng ở MVP |
 | `product_status` | `varchar(20)` |  | NOT NULL DEFAULT `INACTIVE` | CHECK IN (ACTIVE, INACTIVE) |
@@ -542,13 +542,22 @@ erDiagram
 | `product_category_key` | `uuid` | FK | NOT NULL | → `catalog.category.category_key`. [KEY] |
 | `product_gender_key` | `uuid` | FK | NOT NULL | → `catalog.gender.gender_key`. [KEY] |
 
+**Index / ràng buộc biểu thức**
+
+- Unique index `idx_product_name_unique` trên `LOWER(TRIM(product_name))`: bảo đảm tên duy nhất không phân biệt hoa/thường sau trim khi tạo hoặc sửa đồng thời (UC-14-Q9; developer duyệt đồng bộ 23/11/2026 tại Codex).
+
 **Ghi chú**
 
 ```text
 [BO] product_supplier_id (đã chốt Q1) — BR không gắn sản phẩm với 1 nhà cung cấp;
 nhà cung cấp gắn với phiếu nhập (dashboard "tiền nhập theo NCC" lấy từ
 goods_receipt). Giữ FK này sẽ chặn nhập cùng sản phẩm từ NCC khác.
-Chỉ chuyển ACTIVE khi đã có biến thể và mọi size đã có giá (UC-14).
+Suốt khi ACTIVE phải có ít nhất 1 ảnh gallery, ít nhất 1 biến thể tồn tại
+(không yêu cầu biến thể đó ACTIVE), mọi size có giá > 0; tồn kho = 0 vẫn hợp lệ.
+Chặn thao tác làm mất điều kiện, yêu cầu chuyển INACTIVE trước; không tự đổi trạng thái.
+UC-14/15/16 cùng khóa dòng product FOR UPDATE trong một transaction từ trước
+kiểm tra trạng thái/đọc giá/ghi dữ liệu con đến commit (UC-14-Q8, chốt 23/11/2026).
+Đây là bất biến được bảo vệ bởi giao thức transaction, không phải CHECK trên một cột.
 ```
 
 ### `catalog.product_collection`

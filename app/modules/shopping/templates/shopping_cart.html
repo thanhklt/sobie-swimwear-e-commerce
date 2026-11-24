@@ -1,0 +1,136 @@
+{% extends "shopping_base.html" %}
+
+{% block shopping_content %}
+<h1>Giỏ hàng (UC-18)</h1>
+<p class="muted">Account demo: {{ demo_email }}</p>
+
+<div class="panel">
+  <h2>Thêm vào giỏ</h2>
+  <form method="post" action="/dev/shopping/cart/add" class="row-actions">
+    <select name="variant_key" required>
+      {% for v in variants %}
+      <option value="{{ v.variant_key }}">
+        {{ v.variant_id }} — {{ v.label }} (tồn {{ v.stock }}, {{ "{:,.0f}".format(v.price) }}đ)
+      </option>
+      {% endfor %}
+    </select>
+    <input type="number" name="quantity" value="1" min="1" step="1" required style="width:5rem">
+    <button type="submit">Thêm</button>
+  </form>
+</div>
+
+<div class="panel">
+  <h2>Nội dung giỏ</h2>
+  {% if cart.lines %}
+  <table>
+    <thead>
+      <tr>
+        <th>Biến thể</th>
+        <th>SL</th>
+        <th>Đơn giá</th>
+        <th>Thành tiền</th>
+        <th>Trạng thái</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for line in cart.lines %}
+      <tr>
+        <td>
+          <div>{{ labels.get(line.variant_key, line.variant_key) }}</div>
+          <div class="muted">{{ line.variant_key }}</div>
+        </td>
+        <td>
+          <form method="post" action="/dev/shopping/cart/set-qty" class="row-actions">
+            <input type="hidden" name="variant_key" value="{{ line.variant_key }}">
+            <input type="number" name="quantity" value="{{ line.quantity }}" min="1" step="1" style="width:4.5rem">
+            <button type="submit" class="secondary">Lưu</button>
+          </form>
+        </td>
+        <td>{{ "{:,.0f}".format(line.unit_price) }}đ</td>
+        <td>{{ "{:,.0f}".format(line.line_total) }}đ</td>
+        <td>
+          {% if line.is_available %}
+            <span class="tag">Có thể đặt</span>
+          {% else %}
+            <span class="tag warn">{{ line.unavailable_reason }}</span>
+          {% endif %}
+        </td>
+        <td>
+          <form method="post" action="/dev/shopping/cart/remove">
+            <input type="hidden" name="variant_key" value="{{ line.variant_key }}">
+            <button type="submit" class="secondary">Xóa</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p><strong>Tạm tính (chỉ dòng còn hàng):</strong> {{ "{:,.0f}".format(cart.subtotal) }}đ</p>
+  {% else %}
+  <p class="muted">Giỏ trống.</p>
+  {% endif %}
+</div>
+
+<div class="panel">
+  <h2>Gộp giỏ guest (AC-6 / AC-10)</h2>
+  <p class="muted">
+    Giỏ guest lưu ở <code>localStorage</code> (AC-5). Bấm “Lưu guest mẫu” rồi “Gộp vào tài khoản”.
+  </p>
+  <div class="row-actions" style="margin-bottom:.75rem">
+    <button type="button" class="secondary" id="btn-save-guest">Lưu guest mẫu vào localStorage</button>
+    <button type="button" class="secondary" id="btn-show-guest">Xem localStorage</button>
+  </div>
+  <pre id="guest-preview" class="muted" style="white-space:pre-wrap;background:#f8fafc;padding:.75rem;border-radius:8px;min-height:2.5rem"></pre>
+  <form method="post" action="/dev/shopping/cart/merge" id="merge-form">
+    <input type="hidden" name="merge_id" id="merge_id">
+    <input type="hidden" name="guest_json" id="guest_json">
+    <button type="submit">Gộp vào tài khoản</button>
+  </form>
+</div>
+
+<script>
+  const SAMPLE_VARIANT = {{ sample_variant_key|tojson }};
+  const KEY = "sobie_guest_cart_v1";
+  const MERGE_KEY = "sobie_guest_merge_id";
+
+  function readGuest() {
+    try { return JSON.parse(localStorage.getItem(KEY) || "[]"); }
+    catch { return []; }
+  }
+  function showGuest() {
+    document.getElementById("guest-preview").textContent =
+      JSON.stringify(readGuest(), null, 2) || "[]";
+  }
+  document.getElementById("btn-save-guest").onclick = () => {
+    const payload = [{ variant_key: SAMPLE_VARIANT, quantity: 2 }];
+    localStorage.setItem(KEY, JSON.stringify(payload));
+    if (!localStorage.getItem(MERGE_KEY)) {
+      localStorage.setItem(MERGE_KEY, crypto.randomUUID());
+    }
+    showGuest();
+  };
+  document.getElementById("btn-show-guest").onclick = showGuest;
+  document.getElementById("merge-form").addEventListener("submit", (e) => {
+    const lines = readGuest();
+    if (!lines.length) {
+      e.preventDefault();
+      alert("localStorage trống — bấm “Lưu guest mẫu” trước.");
+      return;
+    }
+    let mergeId = localStorage.getItem(MERGE_KEY);
+    if (!mergeId) {
+      mergeId = crypto.randomUUID();
+      localStorage.setItem(MERGE_KEY, mergeId);
+    }
+    document.getElementById("merge_id").value = mergeId;
+    document.getElementById("guest_json").value = JSON.stringify(lines);
+  });
+  // Xóa guest sau khi gộp thành công (flash_ok có chữ Gộp)
+  {% if clear_guest_storage %}
+  localStorage.removeItem(KEY);
+  localStorage.removeItem(MERGE_KEY);
+  {% endif %}
+  showGuest();
+</script>
+{% endblock %}

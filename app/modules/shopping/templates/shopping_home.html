@@ -1,0 +1,25 @@
+{% extends "shopping_base.html" %}
+
+{% block shopping_content %}
+<h1>UI thử module shopping</h1>
+<p class="muted">
+  Dùng tài khoản demo <strong>{{ demo_email }}</strong> (chưa gắn login thật — [GD] adapter tạm).
+  Mục đích: bấm thử giỏ hàng (UC-18) và wishlist (UC-38).
+</p>
+
+<div class="panel">
+  <h2>Chức năng</h2>
+  <ul>
+    <li><a href="/dev/shopping/cart">Giỏ hàng</a> — thêm / đổi số lượng / xóa / xem tạm tính / gộp giỏ guest</li>
+    <li><a href="/dev/shopping/wishlist">Wishlist</a> — thả tim / bỏ tim / danh sách</li>
+  </ul>
+</div>
+
+<div class="panel">
+  <h2>Ghi chú</h2>
+  <p class="muted">
+    Giá và tồn lấy từ DB seed qua adapter tạm. Khi catalog/inventory/identity sẵn service công khai,
+    thay adapter — không đổi tầng service shopping.
+  </p>
+</div>
+{% endblock %}

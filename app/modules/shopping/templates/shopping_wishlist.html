@@ -1,0 +1,64 @@
+{% extends "shopping_base.html" %}
+
+{% block shopping_content %}
+<h1>Wishlist (UC-38)</h1>
+<p class="muted">Account demo: {{ demo_email }}</p>
+
+<div class="panel">
+  <h2>Thả tim sản phẩm</h2>
+  <form method="post" action="/dev/shopping/wishlist/add" class="row-actions">
+    <select name="product_key" required>
+      {% for p in products %}
+      <option value="{{ p.product_key }}">
+        {{ p.product_id }} — {{ p.name }}
+        {% if not p.is_active %}(Ngừng bán){% endif %}
+      </option>
+      {% endfor %}
+    </select>
+    <button type="submit">Thả tim</button>
+  </form>
+</div>
+
+<div class="panel">
+  <h2>Danh sách yêu thích</h2>
+  {% if wishlist.total_items == 0 %}
+  <p>Bạn chưa có sản phẩm yêu thích</p>
+  {% else %}
+  <table>
+    <thead>
+      <tr>
+        <th>Sản phẩm</th>
+        <th>Giá từ</th>
+        <th>Trạng thái</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in wishlist.items %}
+      <tr>
+        <td>
+          <strong>{{ item.name }}</strong>
+          <div class="muted">{{ item.product_id }}</div>
+        </td>
+        <td>{{ "{:,.0f}".format(item.min_price) }}đ</td>
+        <td>
+          {% if item.is_active %}
+            <span class="tag">Đang bán</span>
+          {% else %}
+            <span class="tag warn">Ngừng bán</span>
+          {% endif %}
+        </td>
+        <td>
+          <form method="post" action="/dev/shopping/wishlist/remove">
+            <input type="hidden" name="product_key" value="{{ item.product_key }}">
+            <button type="submit" class="secondary">Bỏ tim</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="muted">Tổng: {{ wishlist.total_items }} · trang {{ wishlist.page }}</p>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends "account.html" %}
+{% block title %}Đăng ký tài khoản · Sobie{% endblock %}
+{% block account_content %}
+  <header class="identity-intro">
+    <h1 id="identity-title">{{ {"email": "Đăng ký tài khoản", "otp": "Xác minh email", "password": "Tạo mật khẩu",
+            "google_link": "Xác minh liên kết Google"}[result.stage] }}</h1>
+    {% if result.stage in ("otp", "google_link") %}
+      <p>Nhập mã xác minh đã gửi đến <strong>{{ result.email }}</strong>.</p>
+    {% elif result.stage == "password" %}
+      <p>Email đã xác minh: <strong>{{ result.email }}</strong></p>
+    {% endif %}
+  </header>
+
+  {% if result.message and not result.field %}
+    <p class="identity-notice" role="{{ 'alert' if result.status >= 400 else 'status' }}">{{ result.message }}</p>
+  {% endif %}
+
+  {% if result.stage == "email" %}
+    <form class="identity-form" action="{{ request.url_for('request_registration_otp').path }}" method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="identity-field">
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" autocomplete="email" required maxlength="255"
+               value="{{ result.email }}" {% if result.field == "email" %}aria-invalid="true" aria-describedby="email-error"{% endif %}>
+        {% if result.field == "email" %}
+          <p class="identity-field-error" id="email-error" role="alert">{{ result.message }}</p>
+        {% endif %}
+      </div>
+      <button class="identity-button" type="submit">Gửi mã xác minh</button>
+    </form>
+    <div class="identity-divider">hoặc</div>
+    <a class="identity-button identity-button--secondary"
+       href="{{ request.url_for('start_google_registration').path }}">Đăng ký với Google</a>
+    <p class="identity-alternative">Đã có tài khoản?
+      <a href="{{ request.url_for('storefront_login').path }}">Đăng nhập</a>
+    </p>
+  {% elif result.stage in ("otp", "google_link") %}
+    {% set route = "verify_registration_otp" if result.stage == "otp" else "confirm_google_link" %}
+    <form class="identity-form" action="{{ request.url_for(route).path }}" method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="identity-field">
+        <label for="otp">Mã xác minh</label>
+        <input id="otp" name="otp" type="text" inputmode="numeric" autocomplete="one-time-code"
+               pattern="[0-9]{6}" maxlength="6" required>
+      </div>
+      <button class="identity-button" type="submit">Xác minh</button>
+    </form>
+    {% if result.stage == "otp" %}
+      <form class="identity-form" action="{{ request.url_for('resend_registration_otp').path }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="identity-button identity-button--secondary" type="submit">Gửi lại mã</button>
+      </form>
+    {% endif %}
+    <p class="identity-alternative"><a href="{{ request.url_for('registration_form').path }}?restart=1">Bắt đầu lại</a></p>
+  {% elif result.stage == "password" %}
+    <form class="identity-form" action="{{ request.url_for('create_registration_password').path }}" method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="identity-field">
+        <label for="password">Mật khẩu mới</label>
+        <input id="password" name="password" type="password" autocomplete="new-password"
+               minlength="6" required {% if result.field == "password" %}aria-invalid="true" aria-describedby="password-error"{% endif %}>
+      </div>
+      <div class="identity-field">
+        <label for="password-confirmation">Xác nhận mật khẩu</label>
+        <input id="password-confirmation" name="password_confirmation" type="password"
+               autocomplete="new-password" required
+               {% if result.field == "password" %}aria-invalid="true" aria-describedby="password-error"{% endif %}>
+      </div>
+      {% if result.field == "password" %}
+        <p class="identity-field-error" id="password-error" role="alert">{{ result.message }}</p>
+      {% endif %}
+      <button class="identity-button" type="submit">Đăng ký</button>
+    </form>
+  {% endif %}
+{% endblock %}

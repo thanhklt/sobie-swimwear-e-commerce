@@ -34,7 +34,7 @@ Khách vãng lai bấm "Đăng ký" trên website.
 2. Khi khách quay lại từ Google, Sobie kiểm tra phản hồi xác thực. Nếu xác thực thất bại, xử lý theo E8. Nếu định danh Google (`sub`) đã liên kết với một tài khoản Sobie, chuyển sang luồng đăng nhập theo E1. Nếu chưa có liên kết, Sobie xác minh email. Nếu email đã có tài khoản Sobie, xử lý theo E1. Nếu Sobie chưa thể xác minh email, xử lý theo E8.
 3. Sau khi xác thực thành công với email chưa được sử dụng, khách hoàn tất đăng ký mà không qua màn hình tạo mật khẩu Sobie.
 4. Trong cùng một transaction, hệ thống cấp mã `KH-<YYYYMMDD ngày đăng ký>-<4 số>`, tạo tài khoản Khách hàng ở trạng thái Hoạt động với email đã xác minh, lưu liên kết với định danh Google (`sub`) của khách và tạo giỏ hàng cùng danh sách yêu thích trống. Tài khoản được tạo không có mật khẩu Sobie.
-5. Hệ thống thông báo đăng ký thành công. Khách có thể dùng “Đăng nhập với Google” ở UC-02. Việc cấp phiên ngay hay chuyển đến màn hình đăng nhập sau khi tạo tài khoản qua Google đang chờ chốt `[GD]`.
+5. Hệ thống thông báo đăng ký thành công. Khách có thể dùng “Đăng nhập với Google” ở UC-02. Sau khi tạo tài khoản qua Google, khách được chuyển đến màn hình đăng nhập.
 
 ## Exceptions
 - **E1. Đã có tài khoản Sobie:** trong luồng email OTP, hệ thống báo "Email đã được sử dụng" và không gửi OTP nếu phát hiện ở bước 2 của luồng chính. Trong luồng Google, nếu định danh Google đã liên kết hoặc email đã xác minh trùng với tài khoản Sobie hiện có, Sobie tiếp tục luồng Google ở UC-02 bằng kết quả xác thực vừa nhận. Nếu chưa liên kết Google, khách xác minh OTP gửi đến email đã lưu trên tài khoản Sobie theo UC-02, nhánh 1d. Khách đăng nhập vào tài khoản Khách hàng hiện có sau khi đáp ứng các điều kiện của UC-02, không cần tạo hoặc nhập mật khẩu Sobie. Sobie không tạo tài khoản mới trong cả hai trường hợp.
@@ -42,7 +42,7 @@ Khách vãng lai bấm "Đăng ký" trên website.
 - **E4. OTP không hợp lệ:** nếu mã sai, không thuộc email đang đăng ký hoặc đã hết hạn, hệ thống báo lỗi tại màn hình xác minh. Khách chỉ được chuyển đến màn hình tạo mật khẩu sau khi xác minh thành công.
 - **E5. Yêu cầu gửi lại OTP quá sớm:** nếu chưa đủ 5 phút từ lần gửi gần nhất, hệ thống từ chối yêu cầu và không gửi mã mới.
 - **E6. Lỗi khi cấp mã hoặc lưu dữ liệu đăng ký:** hệ thống hoàn tác transaction, bao gồm dữ liệu liên kết Google nếu có, và thông báo đăng ký không thành công.
-- **E7. Mật khẩu không hợp lệ:** nếu khách bỏ trống mật khẩu hoặc ô xác nhận, nhập mật khẩu dưới 6 ký tự `[GD]` hoặc nhập hai giá trị không khớp, hệ thống báo lỗi và giữ khách ở màn hình tạo mật khẩu. Hệ thống chưa tạo tài khoản.
+- **E7. Mật khẩu không hợp lệ:** nếu khách bỏ trống mật khẩu hoặc ô xác nhận, nhập mật khẩu dưới 6 ký tự hoặc nhập hai giá trị không khớp, hệ thống báo lỗi và giữ khách ở màn hình tạo mật khẩu. Hệ thống chưa tạo tài khoản.
 - **E8. Xác thực Google chưa thành công:** nếu khách hủy, phản hồi xác thực không hợp lệ hoặc Sobie chưa thể xác minh email, hệ thống chưa tạo tài khoản.
 
 ## Postconditions
@@ -76,7 +76,7 @@ Then: hệ thống báo lỗi tại trường email, không gửi OTP và không
 ### AC-5: Người đã đăng nhập không đăng ký được
 Given: người dùng đang đăng nhập
 When: người dùng mở trang đăng ký
-Then: hệ thống chuyển về trang chủ `[GD]`
+Then: hệ thống chuyển về trang chủ
 
 ### AC-6: Lỗi giữa chừng không để lại dữ liệu dở dang
 Given: khách đã xác minh email và dữ liệu đăng ký hợp lệ
@@ -109,7 +109,7 @@ And: tài khoản chưa được tạo ở bước này
 
 ### AC-13: Mật khẩu không hợp lệ
 Given: khách ở màn hình tạo mật khẩu sau khi xác minh OTP
-When: khách bỏ trống mật khẩu hoặc ô xác nhận, nhập mật khẩu dưới 6 ký tự `[GD]` hoặc xác nhận mật khẩu không khớp
+When: khách bỏ trống mật khẩu hoặc ô xác nhận, nhập mật khẩu dưới 6 ký tự hoặc xác nhận mật khẩu không khớp
 Then: hệ thống hiển thị lỗi và giữ khách ở màn hình tạo mật khẩu
 And: hệ thống không tạo tài khoản
 
@@ -150,12 +150,12 @@ And: không tạo tài khoản, giỏ hàng hoặc danh sách yêu thích mới
 - Nếu khách dùng Google và đã có tài khoản Sobie, hệ thống chuyển sang đăng nhập tài khoản hiện có theo UC-02 (đã chốt 23/11/2026).
 - Giỏ hàng và danh sách yêu thích trống được tạo cùng transaction tạo account; module identity gọi service công khai của shopping (đã chốt 21/11/2026, Q39).
 
-### Câu hỏi mở [GD]
-- `[GD]` Khi nào đồng bộ mô hình dữ liệu và schema PostgreSQL với luồng mới? Mô hình dữ liệu v2 và schema PostgreSQL hiện đặt `NOT NULL` cho `account_phone_number` và `account_name`, trong khi UC-01 tạo tài khoản Khách hàng trước khi khách bổ sung hai trường này ở UC-04.
-- `[GD]` Có giữ ngưỡng tối thiểu 6 ký tự cho mật khẩu Sobie không?
-- `[GD]` Người đã đăng nhập mở trang đăng ký có tiếp tục được chuyển về trang chủ không?
-- `[GD]` Sau khi đăng ký thành công bằng Google, Sobie cấp phiên ngay hay chuyển khách đến màn hình đăng nhập?
-- `[GD]` Mô hình dữ liệu cần biểu diễn tài khoản có liên kết Google và không có mật khẩu Sobie như thế nào? `account_hash_password` hiện là `NOT NULL`.
+### Quyết định bổ sung đã duyệt
+
+- Mật khẩu Sobie có tối thiểu 6 ký tự.
+- Người đã đăng nhập mở trang đăng ký được chuyển về trang chủ.
+- Sau đăng ký mới qua Google, khách được chuyển đến màn hình đăng nhập.
+- Khách mới có thể để trống họ tên và số điện thoại. Tài khoản Google lưu định danh Google và có thể chưa có hash mật khẩu.
 
 ## History
 - v1 (2026-11-15): initial

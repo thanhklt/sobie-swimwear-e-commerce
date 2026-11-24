@@ -1,8 +1,7 @@
 -- =====================================================================
 -- Soobin Swimwear — schema PostgreSQL (data model v2)
--- Nguồn: specs/entity-model/data_model_v2.dbml (bản vẽ: data_model_v2.md)
--- Yêu cầu: PostgreSQL 13+ (gen_random_uuid() có sẵn), extension pgcrypto
---          (seed.sql dùng crypt() để băm mật khẩu mẫu).
+-- Nguồn: specs/business-requirements/BR-GIAIDOAN1.md và specs/use-cases/.
+-- Yêu cầu: PostgreSQL 13+ và extension pgcrypto (bcrypt và mật khẩu ngẫu nhiên).
 -- Chạy 1 lần trên database trống (docker-entrypoint-initdb.d), trước seed.sql.
 --
 -- Quy ước:
@@ -14,6 +13,9 @@
 --   - Khóa ngoại giữa các schema giữ toàn vẹn dữ liệu; code của module chỉ
 --     đọc / ghi bảng của chính module đó.
 -- =====================================================================
+
+BEGIN;
+
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
@@ -35,28 +37,94 @@ CREATE TABLE identity.role (
   role_name varchar(100) NOT NULL UNIQUE
 );
 
+INSERT INTO identity.role (role_code, role_name) VALUES
+  ('customer', 'Khách hàng'),
+  ('employee', 'Nhân viên'),
+  ('admin', 'Admin');
+
+CREATE TABLE identity.account_id_counter (
+  account_prefix varchar(2) PRIMARY KEY CHECK (account_prefix IN ('KH', 'NV', 'AD')),
+  last_number    integer    NOT NULL DEFAULT 0 CHECK (last_number BETWEEN 0 AND 9999)
+);
+
+INSERT INTO identity.account_id_counter (account_prefix) VALUES ('KH'), ('NV'), ('AD');
+
+-- Gọi trong cùng transaction với thao tác tạo tài khoản hoặc đổi vai trò.
+CREATE FUNCTION identity.next_account_suffix(p_prefix text)
+RETURNS text
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  next_number integer;
+BEGIN
+  UPDATE identity.account_id_counter
+  SET last_number = last_number + 1
+  WHERE account_prefix = p_prefix AND last_number < 9999
+  RETURNING last_number INTO next_number;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Không thể cấp mã tài khoản cho tiền tố %', p_prefix;
+  END IF;
+
+  RETURN lpad(next_number::text, 4, '0');
+END;
+$$;
+
 CREATE TABLE identity.account (
   account_key           uuid         PRIMARY KEY DEFAULT gen_random_uuid(),
   account_id            varchar(100) NOT NULL UNIQUE
                         CHECK (account_id ~ '^(KH-[0-9]{8}|(NV|AD)-[A-Z0-9]+-[0-9]{8})-[0-9]{4}$'),
   account_role_key      uuid         NOT NULL REFERENCES identity.role (role_key) ON DELETE RESTRICT,
   account_email         varchar(255) NOT NULL UNIQUE,
-  account_phone_number  varchar(20)  NOT NULL UNIQUE,
-  account_hash_password varchar(255) NOT NULL,
+  account_phone_number  varchar(20)  UNIQUE,
+  account_hash_password varchar(255),
+  account_google_sub    varchar(255) UNIQUE,
   account_status        varchar(20)  NOT NULL DEFAULT 'ACTIVE' CHECK (account_status IN ('ACTIVE', 'LOCKED')),
-  account_name          varchar(255) NOT NULL,
+  account_name          varchar(255),
   account_date_of_birth date,
   account_house_number  varchar(255),
   account_ward          varchar(100),
   account_city          varchar(255),
   account_country       varchar(100),
   account_created_at    timestamptz  NOT NULL DEFAULT now(),
-  -- Nhân viên / Admin bắt buộc ngày sinh (mã dùng ngày sinh); vai trò nằm ở bảng
-  -- role nên service kiểm tra theo vai trò, ở đây chỉ kiểm tra theo tiền tố mã.
-  CONSTRAINT account_staff_dob_required
-    CHECK (account_id LIKE 'KH-%' OR account_date_of_birth IS NOT NULL)
+  CONSTRAINT account_password_hash_ck CHECK (
+    account_hash_password IS NULL OR
+    account_hash_password ~ '^[$]2[aby][$](0[4-9]|[12][0-9]|3[01])[$][./A-Za-z0-9]{53}$'
+  ),
+  CONSTRAINT account_login_method_ck CHECK (
+    account_hash_password IS NOT NULL OR account_google_sub IS NOT NULL
+  ),
+  CONSTRAINT account_google_customer_ck CHECK (
+    account_google_sub IS NULL OR (account_id LIKE 'KH-%' AND btrim(account_google_sub) <> '')
+  ),
+  -- Service kiểm tra vai trò khớp với tiền tố mã.
+  CONSTRAINT account_staff_fields_required CHECK (
+    account_id LIKE 'KH-%' OR
+    (account_name IS NOT NULL AND account_phone_number IS NOT NULL
+      AND account_date_of_birth IS NOT NULL AND account_hash_password IS NOT NULL)
+  )
 );
 CREATE INDEX account_role_key_idx ON identity.account (account_role_key);
+
+-- UC-06: Admin tồn tại khi khởi tạo sạch, kể cả khi không chạy seed demo.
+-- Cấp bcrypt hash qua PGOPTIONS (-c sobie.bootstrap_admin_password_hash=...) cho phiên chạy init.
+-- Nếu không cấu hình, mật khẩu tạo ngẫu nhiên và không xuất ra log. Cần cấp hash trước khi đăng nhập.
+INSERT INTO identity.account (
+  account_id, account_role_key, account_email, account_phone_number,
+  account_hash_password, account_name, account_date_of_birth, account_country
+)
+SELECT
+  'AD-QUANTRIVIEN-19950101-' || identity.next_account_suffix('AD'),
+  role_key,
+  COALESCE(NULLIF(current_setting('sobie.bootstrap_admin_email', true), ''), 'admin@example.com'),
+  COALESCE(NULLIF(current_setting('sobie.bootstrap_admin_phone', true), ''), '0900000001'),
+  COALESCE(
+    NULLIF(current_setting('sobie.bootstrap_admin_password_hash', true), ''),
+    crypt(encode(gen_random_bytes(32), 'hex'), gen_salt('bf', 10))
+  ),
+  'Quản Trị Viên', DATE '1995-01-01', 'Việt Nam'
+FROM identity.role
+WHERE role_code = 'admin';
 
 -- Phiên đăng nhập phía server (data model v2.15, Q35). Cookie chỉ chứa mã phiên gốc;
 -- bảng lưu bản băm SHA-256 (hex). Hạn: Khách hàng 30 phút, Nhân viên / Admin 1 giờ,
@@ -156,8 +224,11 @@ CREATE TABLE shopping.wishlist_item (
   wishlist_item_key          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   wishlist_item_wishlist_key uuid NOT NULL REFERENCES shopping.wishlist (wishlist_key) ON DELETE CASCADE,
   wishlist_item_product_key  uuid NOT NULL REFERENCES catalog.product (product_key) ON DELETE CASCADE,
+  wishlist_item_added_order  bigint GENERATED ALWAYS AS IDENTITY,
   CONSTRAINT wishlist_item_wishlist_product_uq UNIQUE (wishlist_item_wishlist_key, wishlist_item_product_key)
 );
+CREATE INDEX wishlist_item_added_order_idx
+  ON shopping.wishlist_item (wishlist_item_wishlist_key, wishlist_item_added_order DESC);
 
 CREATE TABLE shopping.cart (
   cart_key         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -179,7 +250,7 @@ CREATE TABLE shopping.cart_item (
 CREATE TABLE inventory.supplier (
   supplier_key          uuid         PRIMARY KEY DEFAULT gen_random_uuid(),
   supplier_id           varchar(10)  NOT NULL UNIQUE CHECK (supplier_id ~ '^NCC-[0-9]{4}$'),
-  supplier_name         varchar(255) NOT NULL,
+  supplier_name         varchar(255) NOT NULL UNIQUE,  -- Tên không trùng theo UC-32 [GD]
   supplier_phone_number varchar(20)  NOT NULL,
   supplier_email        varchar(255),
   supplier_address      varchar(255),
@@ -229,6 +300,7 @@ CREATE TABLE promotion.promotion (
   promotion_start_date  timestamptz,
   promotion_end_date    timestamptz,
   promotion_status      varchar(20) NOT NULL DEFAULT 'ENABLED' CHECK (promotion_status IN ('ENABLED', 'DISABLED')),
+  CONSTRAINT promotion_key_status_uq UNIQUE (promotion_key, promotion_status),
   -- PRODUCT: không có ngày bắt đầu / kết thúc, không giới hạn lượt.
   -- ORDER / CODE: có ngày bắt đầu / kết thúc và số lượt.
   CONSTRAINT promotion_type_fields_ck CHECK (
@@ -245,12 +317,20 @@ CREATE TABLE promotion.promotion (
 CREATE INDEX promotion_type_dates_idx ON promotion.promotion (promotion_type, promotion_start_date, promotion_end_date);
 
 CREATE TABLE promotion.product_promotion (
-  promotion_key                         uuid         PRIMARY KEY REFERENCES promotion.promotion (promotion_key) ON DELETE CASCADE,
+  promotion_key                         uuid         PRIMARY KEY,
   product_promotion_product_key         uuid         NOT NULL REFERENCES catalog.product (product_key) ON DELETE RESTRICT,
   product_promotion_discount_percentage numeric(5,2) NOT NULL
-    CHECK (product_promotion_discount_percentage > 0 AND product_promotion_discount_percentage < 100)
+    CHECK (product_promotion_discount_percentage > 0 AND product_promotion_discount_percentage < 100),
+  -- Đồng bộ với bảng cha để ràng buộc tối đa một chương trình đang bật cho mỗi sản phẩm.
+  product_promotion_status              varchar(20)  NOT NULL DEFAULT 'ENABLED',
+  CONSTRAINT product_promotion_parent_status_fk
+    FOREIGN KEY (promotion_key, product_promotion_status)
+    REFERENCES promotion.promotion (promotion_key, promotion_status) ON UPDATE CASCADE ON DELETE CASCADE
 );
 CREATE INDEX product_promotion_product_idx ON promotion.product_promotion (product_promotion_product_key);
+CREATE UNIQUE INDEX product_promotion_enabled_product_uq
+  ON promotion.product_promotion (product_promotion_product_key)
+  WHERE product_promotion_status = 'ENABLED';
 
 CREATE TABLE promotion.order_promotion (
   promotion_key                       uuid          PRIMARY KEY REFERENCES promotion.promotion (promotion_key) ON DELETE CASCADE,
@@ -277,6 +357,8 @@ CREATE TABLE ordering.payment (
   payment_key  uuid         PRIMARY KEY DEFAULT gen_random_uuid(),
   payment_name varchar(100) NOT NULL UNIQUE CHECK (payment_name IN ('COD', 'QR'))
 );
+
+INSERT INTO ordering.payment (payment_name) VALUES ('COD'), ('QR');
 
 CREATE TABLE ordering."order" (
   order_key                   uuid          PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -361,3 +443,5 @@ CREATE TABLE payment.bank_transaction (
   CONSTRAINT bank_transaction_matched_order_ck
     CHECK (bank_transaction_match_status = 'UNMATCHED' OR bank_transaction_order_key IS NOT NULL)
 );
+
+COMMIT;

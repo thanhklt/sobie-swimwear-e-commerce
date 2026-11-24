@@ -7,7 +7,6 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from app.error.exceptions import SessionAccessError
-from app.modules.identity import service
 from app.modules.identity.session import AuthenticatedSession, Role, SessionPortal
 
 PORTAL_PREFIX = "/admin"
@@ -32,7 +31,7 @@ class SessionMiddleware(BaseHTTPMiddleware):
         token = request.cookies.get(cookie_name)
         request.state.auth_portal = portal
         request.state.auth_session = (
-            await service.authenticate_session(token, portal) if token else None
+            await request.app.state.identity_service.authenticate_session(token, portal) if token else None
         )
         return await call_next(request)
 

@@ -45,14 +45,14 @@ Theo SDD Ebook — Tầng 3: Entity Model trả lời câu hỏi *hệ thống �
 - **Đại diện:** một người dùng của hệ thống — Khách hàng, Nhân viên hoặc Admin — gồm thông tin đăng nhập và thông tin cá nhân.
 - **Bảng:** `identity.account`
 - **Mã:** `KH-<YYYYMMDD ngày đăng ký>-<4 số>` | `NV-<HỌ TÊN>-<YYYYMMDD ngày sinh>-<4 số>` | `AD-<HỌ TÊN>-<YYYYMMDD ngày sinh>-<4 số>`
-- **Trường:** email, phone_number, hash_password, status, name, date_of_birth, house_number, ward, city, country, created_at (ngày đăng ký)
+- **Trường:** email, phone_number, hash_password, google_sub, status, name, date_of_birth, house_number, ward, city, country, created_at (ngày đăng ký)
 - **Trạng thái:** Hoạt động (`ACTIVE`) | Bị khóa (`LOCKED`)
 - **Thuộc:** Role (đúng 1)
 - **Có một:** Cart, Wishlist (chỉ Khách hàng)
 - **Có nhiều:** Session, Order (Khách hàng đặt), GoodsReceipt (Nhân viên lập), OrderStatusHistory (người đổi trạng thái)
 - **Quy tắc:**
-  - Đăng ký bắt buộc đủ email và số điện thoại, cả hai duy nhất; đăng nhập bằng một trong hai; không có username.
-  - Mật khẩu băm bằng bcrypt (đã chốt 21/11/2026).
+  - Khách tự đăng ký bằng email đã xác minh qua OTP hoặc Google. Họ tên, số điện thoại, ngày sinh và địa chỉ được bổ sung ở UC-04. Email và số điện thoại đã cung cấp là duy nhất.
+  - Tài khoản đăng ký qua OTP lưu mật khẩu băm bằng bcrypt. Tài khoản mới qua Google lưu định danh duy nhất trong `identity.account.account_google_sub` và có thể để trống hash mật khẩu.
   - Ngày đăng ký trong mã `KH-` lấy theo giờ `Asia/Ho_Chi_Minh` (đã chốt 21/11/2026).
   - Ngày sinh bắt buộc với Nhân viên, Admin (mã dùng ngày sinh); không bắt buộc với Khách hàng.
   - Địa chỉ của Khách hàng là địa chỉ nhận hàng mặc định; mỗi khách 1 địa chỉ.

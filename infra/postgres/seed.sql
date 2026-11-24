@@ -2,12 +2,11 @@
 -- Soobin Swimwear — dữ liệu mẫu cho môi trường dev / demo
 -- Chạy sau init.sql, trên database trống. KHÔNG dùng cho production.
 --
--- Tài khoản mẫu (mật khẩu chỉ dùng cho dev / demo, băm bcrypt bằng pgcrypto):
---   Admin      admin@example.com       / 0900000001 / mật khẩu: Admin@Sobie2026
---   Nhân viên  nhanvien@example.com    / 0900000002 / mật khẩu: Staff@Sobie2026
---   Khách hàng khachhang@example.com   / 0900000003 / mật khẩu: Customer@Sobie2026
--- Mật khẩu băm bằng bcrypt (đã chốt 21/11/2026); seed dùng `crypt(..., gen_salt('bf', 10))`
--- của pgcrypto, ra dạng `$2a$` mà thư viện bcrypt của Python kiểm tra được.
+-- Tài khoản test được liệt kê trong infra/README.md.
+-- Có thể cấp một bcrypt hash chung cho cả ba tài khoản qua PGOPTIONS:
+--   -c sobie.seed_test_password_hash=...
+-- Với Nhân viên và Khách hàng, có thể cấp hash riêng bằng
+-- sobie.seed_employee_password_hash và sobie.seed_customer_password_hash.
 --
 -- Sản phẩm SP-0001 là sản phẩm demo thanh toán QR giá 2.000đ cho mọi size
 -- (BR-006: đơn demo = 2.000đ + phí vận chuyển 12.000đ = 14.000đ).
@@ -21,39 +20,48 @@ BEGIN;
 -- identity
 -- ---------------------------------------------------------------------
 
-INSERT INTO identity.role (role_code, role_name) VALUES
-  ('customer', 'Khách hàng'),
-  ('employee', 'Nhân viên'),
-  ('admin',    'Admin');
+-- Dùng lại bản ghi Admin đã tạo trong init.sql để giữ nguyên mã và khóa tài khoản.
+UPDATE identity.account
+SET account_email = 'admin@gmail.com',
+    account_hash_password = COALESCE(
+      NULLIF(current_setting('sobie.seed_test_password_hash', true), ''),
+      account_hash_password
+    )
+WHERE account_id = 'AD-QUANTRIVIEN-19950101-0001';
 
-INSERT INTO identity.account
-  (account_id, account_role_key, account_email, account_phone_number, account_hash_password,
-   account_name, account_date_of_birth, account_house_number, account_ward, account_city, account_country)
-VALUES
-  ('AD-QUANTRIVIEN-19950101-0001',
-   (SELECT role_key FROM identity.role WHERE role_code = 'admin'),
-   'admin@example.com', '0900000001', crypt('Admin@Sobie2026', gen_salt('bf', 10)),
-   'Quản Trị Viên', DATE '1995-01-01', NULL, NULL, NULL, 'Việt Nam'),
-  ('NV-NHANVIENDEMO-19990101-0001',
-   (SELECT role_key FROM identity.role WHERE role_code = 'employee'),
-   'nhanvien@example.com', '0900000002', crypt('Staff@Sobie2026', gen_salt('bf', 10)),
-   'Nhân Viên Demo', DATE '1999-01-01', NULL, NULL, NULL, 'Việt Nam');
+INSERT INTO identity.account (
+  account_id, account_role_key, account_email, account_phone_number,
+  account_hash_password, account_name, account_date_of_birth, account_country
+)
+SELECT
+  'NV-NHANVIENDEMO-19990101-' || identity.next_account_suffix('NV'),
+  role_key, 'employee@gmail.com', '0900000002',
+  COALESCE(
+    NULLIF(current_setting('sobie.seed_employee_password_hash', true), ''),
+    NULLIF(current_setting('sobie.seed_test_password_hash', true), ''),
+    crypt(encode(gen_random_bytes(32), 'hex'), gen_salt('bf', 10))
+  ),
+  'Nhân Viên Demo', DATE '1999-01-01', 'Việt Nam'
+FROM identity.role
+WHERE role_code = 'employee';
 
--- Mã KH- lấy ngày đăng ký theo giờ Việt Nam (Asia/Ho_Chi_Minh, đã chốt 21/11/2026)
-INSERT INTO identity.account
-  (account_id, account_role_key, account_email, account_phone_number, account_hash_password,
-   account_name, account_date_of_birth, account_house_number, account_ward, account_city, account_country)
-VALUES
-  ('KH-' || to_char(now() AT TIME ZONE 'Asia/Ho_Chi_Minh', 'YYYYMMDD') || '-0001',
-   (SELECT role_key FROM identity.role WHERE role_code = 'customer'),
-   'khachhang@example.com', '0900000003', crypt('Customer@Sobie2026', gen_salt('bf', 10)),
-   'Khách Hàng Demo', NULL, '273 An Dương Vương', 'Phường Chợ Quán', 'TP. Hồ Chí Minh', 'Việt Nam');
-
--- ---------------------------------------------------------------------
--- ordering: phương thức thanh toán
--- ---------------------------------------------------------------------
-
-INSERT INTO ordering.payment (payment_name) VALUES ('COD'), ('QR');
+-- Mã KH- lấy ngày đăng ký theo giờ Việt Nam (Asia/Ho_Chi_Minh, đã chốt 21/11/2026).
+INSERT INTO identity.account (
+  account_id, account_role_key, account_email, account_phone_number, account_hash_password,
+  account_name, account_house_number, account_ward, account_city, account_country
+)
+SELECT
+  'KH-' || to_char(now() AT TIME ZONE 'Asia/Ho_Chi_Minh', 'YYYYMMDD') || '-' ||
+    identity.next_account_suffix('KH'),
+  role_key, 'customer@gmail.com', '0900000003',
+  COALESCE(
+    NULLIF(current_setting('sobie.seed_customer_password_hash', true), ''),
+    NULLIF(current_setting('sobie.seed_test_password_hash', true), ''),
+    crypt(encode(gen_random_bytes(32), 'hex'), gen_salt('bf', 10))
+  ),
+  'Khách Hàng Demo', '273 An Dương Vương', 'Phường Chợ Quán', 'TP. Hồ Chí Minh', 'Việt Nam'
+FROM identity.role
+WHERE role_code = 'customer';
 
 -- ---------------------------------------------------------------------
 -- catalog: thuộc tính phân loại [GD]
@@ -129,7 +137,7 @@ INSERT INTO inventory.goods_receipt
 VALUES
   ('PN-0001', 'CONFIRMED',
    (SELECT supplier_key FROM inventory.supplier WHERE supplier_id = 'NCC-0001'),
-   (SELECT account_key FROM identity.account WHERE account_email = 'nhanvien@example.com'));
+   (SELECT account_key FROM identity.account WHERE account_email = 'employee@gmail.com'));
 
 -- Mỗi biến thể nhập 50 cái; giá nhập: SP-0001 1.000đ, SP-0002 150.000đ
 INSERT INTO inventory.goods_receipt_detail
@@ -161,10 +169,10 @@ FROM inventory.goods_receipt_detail d;
 -- ---------------------------------------------------------------------
 
 INSERT INTO shopping.cart (cart_account_key)
-SELECT account_key FROM identity.account WHERE account_email = 'khachhang@example.com';
+SELECT account_key FROM identity.account WHERE account_email = 'customer@gmail.com';
 
 INSERT INTO shopping.wishlist (wishlist_account_key)
-SELECT account_key FROM identity.account WHERE account_email = 'khachhang@example.com';
+SELECT account_key FROM identity.account WHERE account_email = 'customer@gmail.com';
 
 -- Giỏ: 1 cái SP-0001 đen size M (đơn demo QR), 2 cái SP-0002 đỏ size M
 INSERT INTO shopping.cart_item (cart_item_cart_key, cart_item_variant_key, cart_item_quantity)
@@ -173,15 +181,15 @@ FROM (VALUES ('SP-0001-DEN-M', 1), ('SP-0002-DO-M', 2)) AS x (variant_id, quanti
 JOIN catalog.variant v ON v.variant_id = x.variant_id
 CROSS JOIN shopping.cart c
 JOIN identity.account a ON a.account_key = c.cart_account_key
-WHERE a.account_email = 'khachhang@example.com';
+WHERE a.account_email = 'customer@gmail.com';
 
--- Danh sách yêu thích: thả tim SP-0001 rồi SP-0002 (thứ tự thêm)
+-- Danh sách yêu thích: cấp wishlist_item_added_order cho SP-0001 rồi SP-0002.
 INSERT INTO shopping.wishlist_item (wishlist_item_wishlist_key, wishlist_item_product_key)
 SELECT w.wishlist_key, p.product_key
 FROM shopping.wishlist w
 JOIN identity.account a ON a.account_key = w.wishlist_account_key
 JOIN catalog.product p ON p.product_id IN ('SP-0001', 'SP-0002')
-WHERE a.account_email = 'khachhang@example.com'
+WHERE a.account_email = 'customer@gmail.com'
 ORDER BY p.product_id;
 
 COMMIT;

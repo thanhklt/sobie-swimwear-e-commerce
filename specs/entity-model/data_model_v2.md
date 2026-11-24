@@ -253,10 +253,11 @@ erDiagram
         varchar(100) account_id UK "NOT NULL"
         uuid account_role_key FK "NOT NULL"
         varchar(255) account_email UK "NOT NULL"
-        varchar(20) account_phone_number UK "NOT NULL"
-        varchar(255) account_hash_password "NOT NULL"
+        varchar(20) account_phone_number UK
+        varchar(255) account_hash_password
+        varchar(255) account_google_sub UK
         varchar(20) account_status "NOT NULL - DEFAULT ACTIVE"
-        varchar(255) account_name "NOT NULL"
+        varchar(255) account_name
         date account_date_of_birth
         varchar(255) account_house_number
         varchar(100) account_ward
@@ -323,10 +324,11 @@ Khi cần, thêm identity.permission và identity.role_permission (N-N) mà khô
 | `account_id` | `varchar(100)` | UK | NOT NULL | [KEY][MOI] mã tự nhiên theo vai trò, hệ thống cấp (chuyển từ customer_id / employee_id / admin_id). KH-<YYYYMMDD ngày đăng ký>-<4 số>; NV- / AD-<HỌ TÊN>-<YYYYMMDD ngày sinh>-<4 số>. Bộ đếm 4 số riêng cho từng tiền tố KH, NV, AD. Không sửa, trừ khi đổi vai trò NV <-> AD thì cấp mã mới (Q16, Q32). Ngày đăng ký lấy theo giờ Asia/Ho_Chi_Minh (đã chốt 21/11/2026). |
 | `account_role_key` | `uuid` | FK | NOT NULL | → `identity.role.role_key`. [RBAC] mỗi tài khoản đúng 1 vai trò (đã chốt Q17) |
 | `account_email` | `varchar(255)` | UK | NOT NULL | [MOI] đăng nhập bằng email |
-| `account_phone_number` | `varchar(20)` | UK | NOT NULL | [MOI] đăng nhập bằng SĐT; là SĐT của người dùng (Q5) |
-| `account_hash_password` | `varchar(255)` |  | NOT NULL | Băm bcrypt (đã chốt 21/11/2026) |
+| `account_phone_number` | `varchar(20)` | UK | NULL với Khách hàng | Khách bổ sung số điện thoại ở UC-04. Nhân viên và Admin phải có số điện thoại. |
+| `account_hash_password` | `varchar(255)` |  | NULL với tài khoản chỉ dùng Google | Mật khẩu Sobie được băm bằng bcrypt. Mỗi tài khoản phải có hash mật khẩu hoặc định danh Google. |
+| `account_google_sub` | `varchar(255)` | UK | NULL khi chưa liên kết | Định danh Google duy nhất cho tài khoản Khách hàng. Khi liên kết lần đầu với tài khoản đã có, Sobie xác minh OTP gửi đến email đang lưu. |
 | `account_status` | `varchar(20)` |  | NOT NULL DEFAULT `ACTIVE` | [MOI] khóa / mở khóa. CHECK IN (ACTIVE, LOCKED) |
-| `account_name` | `varchar(255)` |  | NOT NULL | [MOI] họ tên (chuyển từ customer_name / employee_name / admin_name) |
+| `account_name` | `varchar(255)` |  | NULL với Khách hàng | Khách bổ sung họ tên ở UC-04. Nhân viên và Admin phải có họ tên. |
 | `account_date_of_birth` | `date` |  |  | [MOI] ngày sinh. Bắt buộc với Nhân viên / Admin (mã dùng ngày sinh), không bắt buộc với Khách hàng — service kiểm tra theo vai trò |
 | `account_house_number` | `varchar(255)` |  |  | [MOI] số nhà, đường |
 | `account_ward` | `varchar(100)` |  |  | [MOI] phường / xã |

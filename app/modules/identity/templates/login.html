@@ -1,0 +1,13 @@
+{% extends "account.html" %}
+{% block title %}Đăng nhập · Sobie{% endblock %}
+{% block account_content %}
+  <header class="identity-intro">
+    <h1 id="identity-title">Đăng nhập</h1>
+    <p>Sử dụng tài khoản Google đã liên kết với Sobie.</p>
+  </header>
+  {% if registered %}<p class="identity-notice" role="status">Đăng ký thành công.</p>{% endif %}
+  <a class="identity-button" href="{{ request.url_for('start_google_registration').path }}?login=1">Đăng nhập với Google</a>
+  <p class="identity-alternative">Chưa có tài khoản?
+    <a href="{{ request.url_for('registration_form').path }}">Đăng ký tài khoản</a>
+  </p>
+{% endblock %}

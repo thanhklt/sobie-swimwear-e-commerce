@@ -1,0 +1,74 @@
+"""Lưu và chuyển trạng thái xác minh dùng một lần trong Redis."""
+
+from functools import lru_cache
+from typing import Protocol
+
+from redis.asyncio import Redis
+
+from app.config.settings import Config
+
+_COMPARE_AND_SET = """
+local existing = redis.call('GET', KEYS[1])
+if ARGV[1] == 'absent' then
+    if existing then return 0 end
+elseif existing ~= ARGV[2] then
+    return 0
+end
+if ARGV[3] == 'delete' then
+    redis.call('DEL', KEYS[1])
+else
+    redis.call('SET', KEYS[1], ARGV[4], 'EX', ARGV[5])
+end
+return 1
+"""
+
+
+class ChallengeStore(Protocol):
+    async def get(self, key: str) -> str | None: ...
+
+    async def compare_and_set(
+        self, key: str, expected: str | None, value: str | None, ttl: int = 0
+    ) -> bool: ...
+
+
+class RedisChallengeStore:
+    def __init__(self, redis: Redis):
+        self.redis = redis
+
+    async def get(self, key: str) -> str | None:
+        return await self.redis.get(key)
+
+    async def compare_and_set(
+        self, key: str, expected: str | None, value: str | None, ttl: int = 0
+    ) -> bool:
+        result = await self.redis.eval(
+            _COMPARE_AND_SET,
+            1,
+            key,
+            "absent" if expected is None else "present",
+            expected or "",
+            "delete" if value is None else "set",
+            value or "",
+            ttl,
+        )
+        return bool(result)
+
+
+@lru_cache(maxsize=1)
+def get_challenge_store() -> RedisChallengeStore:
+    if not Config.REDIS_URL:
+        raise RuntimeError("REDIS_URL is required for registration")
+    return RedisChallengeStore(
+        Redis.from_url(
+            Config.REDIS_URL,
+            decode_responses=True,
+            socket_connect_timeout=5,
+            socket_timeout=5,
+        )
+    )
+
+
+async def close_challenge_store() -> None:
+    if get_challenge_store.cache_info().currsize:
+        await get_challenge_store().redis.aclose()
+        get_challenge_store.cache_clear()

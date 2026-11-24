@@ -22,7 +22,7 @@ Khách bấm "Đặt hàng" trên trang giỏ hàng.
 3. Khách chọn phương thức "Thanh toán khi nhận hàng (COD)" và có thể nhập mã voucher.
 4. Hệ thống tính và hiển thị: tạm tính (đã áp khuyến mãi theo sản phẩm trên từng dòng), mức giảm do UC-31 chọn (tối đa 1 khuyến mãi: theo hóa đơn hoặc voucher), phí vận chuyển cố định, tổng thanh toán. Mọi mức giảm tính theo phần trăm, tiền làm tròn `ROUND_HALF_UP` về số nguyên VND.
 5. Khách bấm "Xác nhận đặt hàng".
-6. Trong cùng một transaction, hệ thống kiểm tra lại tồn kho từng dòng, giá hiện tại, điều kiện và lượt còn lại của khuyến mãi được chọn; trừ tồn kho, tăng lượt đã dùng của khuyến mãi được chọn (voucher hoặc khuyến mãi theo hóa đơn) `[GD]`, tạo đơn ở trạng thái "Chưa xử lý" với phương thức COD, lưu lịch sử trạng thái đơn và xóa các dòng đã đặt khỏi giỏ `[GD]`.
+6. Trong cùng một transaction, hệ thống gọi Service công khai của `catalog` để khóa các dòng sản phẩm cha theo thứ tự `product_key` tăng dần, dùng chung giao thức `FOR UPDATE` với UC-14/15, rồi kiểm tra từ Database đồng thời sản phẩm cha có `product_status = ACTIVE` và từng biến thể có `variant_status = ACTIVE` (không dùng cache storefront); giữ khóa từ trước kiểm tra đến commit/rollback. Nếu sản phẩm hoặc biến thể không còn được bán thì áp dụng E7. Sau đó, hệ thống kiểm tra lại tồn kho từng dòng qua Service công khai inventory, giá hiện tại, điều kiện và lượt còn lại của khuyến mãi được chọn; trừ tồn kho, tăng lượt đã dùng của khuyến mãi được chọn (voucher hoặc khuyến mãi theo hóa đơn) `[GD]`, tạo đơn ở trạng thái "Chưa xử lý" với phương thức COD, lưu lịch sử trạng thái đơn và xóa các dòng đã đặt khỏi giỏ `[GD]`.
 7. Sau khi transaction thành công, hệ thống hiển thị trang đặt hàng thành công kèm mã đơn.
 
 ## Alternative Flows
@@ -37,6 +37,7 @@ Khách bấm "Đặt hàng" trên trang giỏ hàng.
 - **E4. Giá hoặc mức giảm thay đổi trước khi xác nhận:** hệ thống tính lại theo giá hiện tại, báo khách và yêu cầu xác nhận lại `[GD]`.
 - **E5. Khuyến mãi hết lượt hoặc không còn đủ điều kiện khi xác nhận:** hệ thống không tạo đơn, không trừ tồn kho hoặc tăng lượt khuyến mãi; cập nhật tổng thanh toán và yêu cầu khách xác nhận lại `[GD]`.
 - **E6. Lỗi tạo đơn hoặc cập nhật giỏ:** rollback toàn bộ transaction; đơn, tồn kho, lượt khuyến mãi và giỏ giữ nguyên.
+- **E7. Sản phẩm hoặc biến thể đã ngừng bán khi xác nhận:** tại bước 6, một sản phẩm cha hoặc biến thể không còn tồn tại hoặc đã INACTIVE trong Database → rollback toàn bộ transaction, báo rõ dòng không còn được bán; không tạo đơn, không trừ tồn kho, không thay đổi lượt dùng khuyến mãi hay xóa dòng giỏ.
 
 ## Postconditions
 - Đơn COD ở trạng thái "Chưa xử lý", tồn kho các biến thể đã bị trừ, tồn kho không âm.
@@ -113,18 +114,39 @@ Given: voucher còn 10 lượt lúc khách xem trang thanh toán, sau đó còn 
 When: khách xác nhận đặt hàng và hệ thống kiểm tra lại lượt trong transaction
 Then: đơn được tạo với cùng mức giảm và tổng thanh toán, không yêu cầu xác nhận lại
 And: lượt còn lại giảm từ 9 xuống 8 do đơn này, không ghi đè theo số lượt cũ
+### AC-12: Chặn đặt COD cho biến thể đã ngừng bán dù cache còn hàng
+Given: dữ liệu kiểm thử có sản phẩm cha ACTIVE, "Đỏ / M" đã INACTIVE từ trước khi phiếu nhập chuyển CONFIRMED và hiện tồn 5; khách gửi yêu cầu đặt số lượng 1 từ dữ liệu thanh toán cũ thể hiện biến thể đang bán
+When: khách xác nhận đặt hàng COD
+Then: trong transaction tạo đơn, hệ thống kiểm tra trạng thái hiện hành qua Service công khai của catalog và từ chối theo E7, báo dòng "Đỏ / M" không còn được bán
+And: không tạo đơn hoặc lịch sử đơn, tồn kho vẫn là 5, lượt dùng khuyến mãi và giỏ hàng giữ nguyên
+
+### AC-13: Ngừng bán sau CONFIRMED bị chặn, đặt COD đọc lại trạng thái sau chờ
+Given: sản phẩm cha và "Đỏ / M" đều ACTIVE, đã có phiếu CONFIRMED, tồn 5 và giá hợp lệ; khách đặt 1 sản phẩm với các điều kiện COD khác hợp lệ, không áp dụng khuyến mãi; transaction UC-15 đang giữ khóa cha để xử lý yêu cầu ngừng bán và chưa kết thúc
+When: khách xác nhận đặt COD cho "Đỏ / M" và transaction tạo đơn yêu cầu cùng khóa qua Service catalog
+Then: UC-15 kiểm tra CONFIRMED, từ chối ngừng bán theo E7 của UC-15 và rollback, giữ nguyên trạng thái ACTIVE; transaction tạo đơn chờ đến khi khóa được giải phóng
+And: sau chờ, UC-19 đọc lại cả sản phẩm và biến thể vẫn ACTIVE, tiếp tục đặt COD thành công theo Main Flow; không từ chối với E7 của UC-19
+And: chỉ một đơn và lịch sử tương ứng được tạo, tồn còn 4 và các dòng đã đặt được xóa khỏi giỏ trong transaction tạo đơn; yêu cầu ngừng bán không thay đổi dữ liệu
+
+### AC-14: Chặn đặt COD khi sản phẩm cha ngừng bán nhưng biến thể vẫn ACTIVE
+Given: dữ liệu kiểm thử có sản phẩm cha đã INACTIVE từ trước khi phiếu nhập chuyển CONFIRMED, biến thể "Đỏ / M" vẫn ACTIVE và hiện tồn 5; khách gửi yêu cầu đặt số lượng 1 từ dữ liệu thanh toán cũ thể hiện sản phẩm đang bán
+When: khách xác nhận đặt COD
+Then: sau khi có khóa, Service catalog đọc trạng thái hiện hành của cả sản phẩm và biến thể; hệ thống từ chối theo E7 vì sản phẩm cha INACTIVE
+And: transaction tạo đơn rollback toàn bộ; không tạo đơn/lịch sử đơn, tồn kho vẫn là 5, lượt dùng khuyến mãi và giỏ hàng giữ nguyên
 
 ## Dependencies
-- **Upstream UC:** UC-02 Đăng nhập, UC-18 Quản lý giỏ hàng, UC-31 Tính mức giảm cho đơn hàng
+- **Upstream UC:** UC-02 Đăng nhập, UC-14 Quản lý sản phẩm, UC-15 Quản lý biến thể màu × size, UC-18 Quản lý giỏ hàng, UC-31 Tính mức giảm cho đơn hàng
 - **Downstream UC:** UC-21 Theo dõi đơn hàng, UC-22 Hủy đơn hàng, UC-23 Xác nhận đơn hàng
+- **Internal Services:** `catalog` kiểm tra trạng thái sản phẩm cha và biến thể sau khi giữ khóa sản phẩm cha trong cùng transaction; `inventory` kiểm tra/trừ tồn kho. Module ordering không truy cập trực tiếp Repository hoặc bảng của catalog/inventory.
 - **External Systems:** Không có
 
 ## Notes
 - Luôn kiểm tra lượt còn lại trong transaction tạo đơn. Chỉ thay đổi số lượt còn lại, trong khi khuyến mãi vẫn hợp lệ và giá, mức giảm, điều kiện áp dụng cho đơn không đổi, không yêu cầu khách xác nhận lại.
 - Phí vận chuyển là 1 mức cho mọi đơn, lấy từ biến môi trường, mặc định 12.000đ (BR-GIAIDOAN1, Constraints chung).
 - Kiểm tra/trừ tồn kho, áp khuyến mãi/voucher và tạo đơn chạy trong cùng một transaction (AGENTS.md).
+- Service catalog phải dùng cùng transaction với tạo đơn khi kiểm tra trạng thái sản phẩm cha và biến thể, giữ khóa sản phẩm cha để đồng bộ với UC-14/15; không kiểm tra ACTIVE ngoài transaction rồi tạo đơn sau khi đã nhả khóa. Việc kiểm tra khi thêm giỏ hay TTL cache không thay thế bước này.
 
 ### Quyết định đã chốt
+- Xác nhận COD phải kiểm tra đồng thời sản phẩm cha ACTIVE, biến thể ACTIVE và tồn kho hiện hành qua Service công khai trong transaction tạo đơn; sản phẩm hoặc biến thể đã ngừng bán thì từ chối, rollback toàn bộ và báo dòng lỗi (UC-15-Q7; bổ sung điều kiện sản phẩm cha theo yêu cầu xử lý rà soát vòng 3 tại Codex 23/11/2026).
 - Trạng thái đơn: Chưa xử lý → Đã xác nhận → Chờ lấy hàng → Đang giao → Giao thành công | Giao không thành công; Đã hủy (đã chốt 15/11/2026, cập nhật 20/11/2026: thêm "Chờ lấy hàng", bỏ "Bị từ chối").
 - Mọi mức giảm tính theo phần trăm; tiền làm tròn `ROUND_HALF_UP` về số nguyên VND (đã chốt 15/11/2026).
 - Mỗi đơn áp tối đa 1 khuyến mãi (theo hóa đơn hoặc voucher); khuyến mãi theo sản phẩm được ghi theo từng dòng đơn (theo ERD).
@@ -145,3 +167,8 @@ And: lượt còn lại giảm từ 9 xuống 8 do đơn này, không ghi đè t
 - v6 (2026-11-22): đưa xóa giỏ và kiểm tra lại giá, khuyến mãi vào transaction; bổ sung rollback và AC-9, AC-10.
 - v7 (2026-11-22): làm rõ sửa thông tin nhận hàng chỉ áp dụng cho đơn đang đặt.
 - v8 (2026-11-23): sửa điều kiện xác nhận lại trong AC-9; thêm AC-11 cho trường hợp lượt giảm nhưng voucher vẫn hợp lệ, giữ kiểm tra lượt trong transaction.
+- v9 (2026-11-23): theo phê duyệt đồng bộ UC-15-Q7 tại Codex, kiểm tra trạng thái ACTIVE/tồn kho từ DB qua Service trong transaction tạo đơn, khóa sản phẩm đồng bộ UC-15; bổ sung E7 và AC-12/13 cho cache cũ và ngừng bán đồng thời. Giữ draft và các giả định khác.
+- v10 (2026-11-23): theo yêu cầu xử lý rà soát vòng 3 tại Codex, kiểm tra product_status cùng variant_status sau khi giữ khóa đồng bộ UC-14/15 trong transaction; bổ sung AC-14 chặn đặt COD khi sản phẩm cha INACTIVE dù biến thể còn ACTIVE/còn hàng. Giữ nguyên các giả định khác.
+
+- v11 (2026-11-23): merge main, giữ kiểm tra trạng thái Catalog dưới khóa cha (E7, AC-12..14) cùng kiểm tra lại giá/khuyến mãi và xóa giỏ trong transaction; không thay các giả định chưa chốt.
+- v12 (2026-11-23): sửa AC liên UC theo quy tắc chỉ sửa Mô tả sau CONFIRMED: trạng thái INACTIVE trong fixture được đặt trước xác nhận nhập; thao tác ngừng bán sau CONFIRMED bị từ chối, đặt hàng chờ khóa rồi đọc lại ACTIVE và tiếp tục khi đủ điều kiện. Không đổi luồng nghiệp vụ hoặc các giả định khác.

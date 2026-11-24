@@ -213,7 +213,7 @@ Table catalog.color {
 Table catalog.product {
   product_key                uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
   product_id                 varchar(10) [not null, unique, note: '[KEY] mã tự nhiên, hệ thống cấp, không sửa (đã chốt): SP-<4 số tăng dần>, ví dụ SP-0001']
-  product_name               varchar(255) [not null]
+  product_name               varchar(255) [not null, note: 'Lưu tên đã trim, giữ hoa/thường; duy nhất theo LOWER(TRIM(product_name)) (UC-14-Q9, đã chốt 23/11/2026)']
   product_description        text
   product_total_score_review numeric(3,2) [not null, default: 0, note: 'Giữ theo ERD; review là giai đoạn 2, chưa dùng ở MVP']
   product_status             varchar(20) [not null, default: 'INACTIVE', note: 'CHECK IN (ACTIVE, INACTIVE)']
@@ -222,11 +222,20 @@ Table catalog.product {
   product_category_key       uuid [not null, note: '[KEY]']
   product_gender_key         uuid [not null, note: '[KEY]']
 
+  indexes {
+    (`LOWER(TRIM(product_name))`) [unique, name: 'idx_product_name_unique']
+  }
+
   Note: '''
   [BO] product_supplier_id (đã chốt Q1) — BR không gắn sản phẩm với 1 nhà cung cấp;
   nhà cung cấp gắn với phiếu nhập (dashboard "tiền nhập theo NCC" lấy từ
   goods_receipt). Giữ FK này sẽ chặn nhập cùng sản phẩm từ NCC khác.
-  Chỉ chuyển ACTIVE khi đã có biến thể và mọi size đã có giá (UC-14).
+  Suốt khi ACTIVE phải có ít nhất 1 ảnh gallery, ít nhất 1 biến thể tồn tại
+  (không yêu cầu biến thể đó ACTIVE), mọi size có giá > 0; tồn kho = 0 vẫn hợp lệ.
+  Chặn thao tác làm mất điều kiện, yêu cầu chuyển INACTIVE trước; không tự đổi trạng thái.
+  UC-14/15/16 cùng khóa dòng product FOR UPDATE trong một transaction từ trước
+  kiểm tra trạng thái/đọc giá/ghi dữ liệu con đến commit (UC-14-Q8, chốt 23/11/2026).
+  Đây là bất biến được bảo vệ bởi giao thức transaction, không phải CHECK trên một cột.
   '''
 }
 
@@ -850,6 +859,10 @@ TableGroup inventory {
 // 97  | identity.account.account_hash_password             | Ghi thuật toán băm bcrypt (Q36)
 // 98  | shopping.cart / shopping.wishlist                 | Ghi thời điểm tạo giỏ hàng và danh sách yêu thích (Q39)
 // 99  | inventory.goods_receipt_detail.goods_receipt_detail_unit_price | Ghi rõ giá nhập bằng 0 hợp lệ (Q38)
+//
+// v2.17 — Đồng bộ UC-14-Q8/Q9 (developer duyệt tại Codex 23/11/2026)
+// 100 | catalog.product                                  | Unique index LOWER(TRIM(product_name));
+//     |                                                  | ghi bất biến ACTIVE và khóa chung UC-14/15/16.
 //
 // OPEN QUESTIONS [GD]
 //  Q1. [ĐÃ CHỐT] Bỏ product_supplier_id.

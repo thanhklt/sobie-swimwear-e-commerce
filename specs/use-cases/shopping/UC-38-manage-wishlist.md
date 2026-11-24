@@ -24,7 +24,7 @@ Khách hàng bấm nút thả tim trên thẻ sản phẩm hoặc trang chi ti�
 
 ## Alternative Flows
 - **1a. Bỏ tim:** Khách hàng bấm nút tim của sản phẩm đã có trong danh sách (trên thẻ, trang chi tiết hoặc trang danh sách yêu thích); hệ thống xóa sản phẩm khỏi danh sách và đưa nút tim về trạng thái chưa chọn.
-- **1b. Khách vãng lai bấm tim:** hệ thống yêu cầu đăng nhập (UC-02); sau khi đăng nhập, khách quay lại trang đang xem `[GD]` và có thể bấm tim lại.
+- **1b. Khách vãng lai bấm tim trên trang chi tiết UC-12:** hệ thống chuyển sang đăng nhập storefront (UC-02) kèm `return_url` nội bộ an toàn của trang chi tiết đang xem. Sau khi đăng nhập thành công và đích được UC-02 kiểm tra, khách quay lại trang đó; hệ thống không tự thêm hoặc xóa wishlist_item. Nếu tài khoản chưa lưu sản phẩm thì tim chưa chọn và khách có thể bấm lại để thích; nếu đã lưu từ trước thì tim đã chọn, bảo toàn wishlist cũ. Thao tác bấm tim sau khi quay lại mới áp dụng Main Flow hoặc 1a.
 - **4a. Danh sách rỗng:** hệ thống hiển thị "Bạn chưa có sản phẩm yêu thích".
 - **4b. Sản phẩm đã ngừng bán:** sản phẩm vẫn nằm trong danh sách nhưng hiển thị nhãn "Ngừng bán" và không mở được trang chi tiết `[GD]`; khách vẫn bỏ tim được.
 
@@ -60,10 +60,13 @@ When: hệ thống nhận thêm một yêu cầu thêm sản phẩm A cho cùng 
 Then: danh sách vẫn chỉ có sản phẩm A một lần
 
 ### AC-5: Khách vãng lai bấm tim
-Given: người dùng chưa đăng nhập
+Given: người dùng chưa đăng nhập đang xem chi tiết sản phẩm A tại UC-12; tài khoản Khách hàng sẽ đăng nhập chưa lưu A vào wishlist
 When: người dùng bấm nút tim của sản phẩm A
-Then: hệ thống chuyển tới trang đăng nhập
-And: sản phẩm A không được lưu vào danh sách nào
+Then: hệ thống chuyển tới đăng nhập storefront kèm return_url nội bộ an toàn của trang chi tiết A và không lưu A chỉ vì lần bấm khi chưa đăng nhập
+When: người dùng đăng nhập thành công
+Then: hệ thống quay lại trang chi tiết A, nút tim chưa chọn, wishlist vẫn chưa có A; đăng nhập không tự thực hiện thích/bỏ thích
+When: Khách hàng chủ động bấm tim tại trang chi tiết sau khi quay lại
+Then: hệ thống thêm A theo Main Flow và hiển thị tim đã chọn
 
 ### AC-6: Danh sách rỗng
 Given: Khách hàng chưa thả tim sản phẩm nào
@@ -81,6 +84,12 @@ Given: Khách hàng X đã thả tim sản phẩm A, Khách hàng Y chưa thả 
 When: Khách hàng Y mở trang "Danh sách yêu thích"
 Then: sản phẩm A không xuất hiện trong danh sách của Y
 
+### AC-9: Bảo toàn sản phẩm đã thích trước khi đăng nhập trở lại
+Given: tài khoản Khách hàng X đã có sản phẩm A trong wishlist; X hiện chưa đăng nhập, mở trang chi tiết A và bấm tim để tới đăng nhập
+When: X đăng nhập thành công qua UC-02 và quay lại trang chi tiết A theo return_url hợp lệ
+Then: wishlist_item của A vẫn giữ nguyên, không bị tạo trùng hoặc xóa bởi việc đăng nhập
+And: nút tim hiển thị đã chọn theo dữ liệu hiện có; chỉ thay đổi khi X chủ động thao tác tiếp
+
 ## Dependencies
 - **Upstream UC:** UC-01 Đăng ký tài khoản, UC-02 Đăng nhập, UC-06 Tạo tài khoản, UC-10 Xem sản phẩm theo danh mục, UC-12 Xem chi tiết sản phẩm, UC-14 Quản lý sản phẩm
 - **Downstream UC:** UC-12 Xem chi tiết sản phẩm
@@ -88,16 +97,17 @@ Then: sản phẩm A không xuất hiện trong danh sách của Y
 
 ## Notes
 - Áp dụng constraint cache danh sách (BR-GIAIDOAN1, Constraints chung).
+- UC-02 kiểm tra đích return_url ở server; UC-38 không dùng đích quay lại để tự thực hiện hành động thích/bỏ thích. Đồng bộ lần này chỉ chốt nguồn từ trang chi tiết UC-12; vị trí nút tim trên thẻ và các hành vi khác còn giữ giả định riêng bên dưới.
 
 ### Quyết định đã chốt
 - UC thuộc module shopping (cùng giỏ hàng), đã chốt 20/11/2026.
+- Khách vãng lai bấm tim trên trang chi tiết UC-12 đăng nhập xong quay lại bằng return_url nội bộ an toàn; không tự thêm/xóa wishlist_item, tim phản ánh dữ liệu đã lưu của tài khoản. Khách chủ động bấm tim sau khi quay lại để thay đổi (UC-12-Q8, developer yêu cầu đồng bộ tại Codex 23/11/2026).
 - Wishlist là chức năng trong phạm vi MVP: khách thả tim để lưu sản phẩm vào một danh sách (đã chốt 15/11/2026).
 - Mỗi sản phẩm chỉ xuất hiện 1 lần trong danh sách của một tài khoản (theo ERD: unique account + product).
 - Mỗi Khách hàng có đúng 1 danh sách yêu thích trong DB, tạo cùng lúc tạo tài khoản Khách hàng (UC-01, UC-06). Trang danh sách yêu thích luôn có danh sách để đọc / ghi, không tạo danh sách khi thả tim lần đầu (đã chốt 21/11/2026, Q39).
 
 ### Giả định [GD]
 - Nút tim có trên cả thẻ sản phẩm và trang chi tiết.
-- Khách vãng lai bấm tim thì được yêu cầu đăng nhập; sau đăng nhập quay lại trang đang xem, không tự lưu sản phẩm.
 - Danh sách yêu thích sắp xếp mới thêm nhất trước (theo thứ tự thêm; ERD không có cột thời gian riêng), có phân trang.
 - Sản phẩm ngừng bán vẫn ở danh sách, hiển thị nhãn "Ngừng bán" và không mở được trang chi tiết.
 
@@ -107,3 +117,6 @@ Then: sản phẩm A không xuất hiện trong danh sách của Y
 - v3 (2026-11-21): bổ sung giả định tạo danh sách yêu thích cùng lúc tạo tài khoản Khách hàng
 - v4 (2026-11-21): chốt tạo danh sách yêu thích cùng lúc tạo tài khoản Khách hàng (Q39)
 - v5 (2026-11-22): chuyển quyết định module shopping ra khỏi phần giả định.
+- v6 (2026-11-23): theo yêu cầu đồng bộ tại Codex, chốt Flow 1b từ trang chi tiết bằng return_url an toàn, không auto-like/unlike, bảo toàn dữ liệu wishlist; mở rộng AC-5 và thêm AC-9 cho sản phẩm đã thích từ trước. Giữ draft và các giả định khác.
+
+- v7 (2026-11-23): merge main, giữ quyết định module shopping và contract quay lại từ UC-12, bảo toàn wishlist sau đăng nhập.

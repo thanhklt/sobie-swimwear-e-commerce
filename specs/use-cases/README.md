@@ -35,7 +35,7 @@ Dự án là modular monolith gồm 9 module. Một module dùng chung một tê
 | [promotion](promotion/) | BR-004 | 3 loại khuyến mãi, tính mức giảm | promotion, product_promotion, order_promotion, code_promotion |
 | [inventory](inventory/) | BR-005 | Nhà cung cấp, phiếu nhập, tồn kho, giá vốn | supplier, goods_receipt, goods_receipt_detail, stock |
 | [shipping](shipping/) | BR-006 | Bàn giao vận chuyển, trang giả lập vận chuyển | (không có — đổi trạng thái đơn qua service của ordering) |
-| [reporting](reporting/) | BR-007, BR-002 | Dashboard; khối bán chạy trên trang chủ `[GD]` | (không có — đọc qua service của module khác) |
+| [reporting](reporting/) | BR-007, BR-002 | Dashboard; tác vụ tổng hợp bán chạy cho trang chủ (đã chốt 22/11/2026, UC-09; catalog phụ trách hiển thị) | (không có — đọc qua service của module khác) |
 
 Module giao tiếp qua service công khai; không đọc / ghi bảng hoặc gọi repository của module khác (AGENTS.md).
 
@@ -111,16 +111,27 @@ Chưa xử lý ──(UC-23 xác nhận)──► Đã xác nhận ──(UC-40 
 | Giỏ hàng, danh sách yêu thích | Mỗi Khách hàng có 1 giỏ và 1 danh sách yêu thích, tạo cùng transaction tạo tài khoản Khách hàng; identity gọi service công khai của shopping (21/11/2026, Q39) | UC-01, UC-06, UC-18, UC-38 |
 | Đăng ký / đăng nhập | Đăng ký nhập đủ email và SĐT; đăng nhập bằng một trong hai | UC-01, UC-02 |
 | Cổng đăng nhập | Storefront chỉ cho Khách hàng; Nhân viên / Admin đăng nhập ở storefront bị báo "Thông tin đăng nhập không đúng"; Nhân viên và Admin dùng portal quản trị riêng (21/11/2026) | UC-02 |
+| Quay lại sau đăng nhập | Khách hàng đăng nhập storefront từ checkout hoặc tim trên chi tiết được quay lại theo return_url nội bộ hợp lệ của đúng hai luồng này. Server kiểm tra đích sau chuẩn hóa, chặn URL ngoài/dạng //, gạch chéo ngược/ký tự điều khiển/biến thể mã hóa tới đích bị cấm; đích không hợp lệ dùng nhánh mặc định. Giữ kiểm tra vai trò/cổng, không dùng đích storefront ở portal quản trị và không tự thay đổi wishlist (UC-12-Q8; yêu cầu đồng bộ tại Codex 23/11/2026) | UC-02, UC-12, UC-19, UC-20, UC-38 |
 | Quên mật khẩu | Làm ở giai đoạn 2; giai đoạn 1 storefront có nút "Quên mật khẩu" nhưng không có hành động (21/11/2026) | UC-02 |
 | Xác thực | Website SSR nên dùng phiên phía server lưu ở `identity.session`, không dùng JWT; cookie `HttpOnly`, `Secure`, `SameSite=Lax`, kiểm tra header `Origin` ở mọi request ghi; hạn phiên Khách hàng 30 phút, Nhân viên / Admin 1 giờ, tính từ lần thao tác cuối; rate limit theo IP: đăng nhập 5 lần/phút (21/11/2026) | UC-02, UC-03 |
 | Kết thúc phiên | Đổi vai trò, khóa, đổi mật khẩu xóa mọi `identity.session` của tài khoản → mọi phiên kết thúc ngay (đổi mật khẩu kết thúc cả phiên hiện tại); đăng xuất xóa phiên hiện tại, có hiệu lực ngay (21/11/2026) | UC-03, UC-05, UC-07, UC-08 |
 | Cache | Không phải danh sách nào cũng cache. Chỉ dữ liệu công khai cache ở Redis (cache dữ liệu, không cache HTML): danh mục, thuộc tính, danh sách sản phẩm theo danh mục, trang chủ (theo số phiên bản catalog, TTL 5 phút), khuyến mãi đang hiệu lực, khối bán chạy. Không cache: kết quả tìm kiếm, mọi trang / danh sách cần đăng nhập (kể cả portal quản trị), dashboard. Header: không trang HTML nào `public`; trang công khai `private, no-cache`, không dùng `ETag`; trang cần đăng nhập `no-store`; `Vary: HX-Request`; file tĩnh cache 1 năm (21/11/2026, cập nhật cho SSR) | Mọi UC có danh sách |
-| Khối bán chạy trang chủ | Top 5 sản phẩm theo tổng số lượng bán, 7 ngày gần nhất, tính đơn từ lúc đặt; tác vụ 10 phút; Ngừng bán biến mất ngay (21/11/2026) | UC-09 |
+| Lỗi Redis sau khi DB commit | Trong UC-14/15/16/17, commit PostgreSQL trước rồi mới tăng phiên bản catalog; DB rollback thì không tăng phiên bản. Nếu Redis lỗi/timeout sau commit: ghi log cảnh báo, vẫn báo thành công, không rollback DB. Chỉ dữ liệu thực sự đọc từ cache công khai có thể cũ đến hết TTL còn lại (tối đa 5 phút) hoặc lần tăng phiên bản thành công tiếp theo; request mới làm mới cache sẽ nhận dữ liệu mới. Luồng không cache và lọc trạng thái hiện hành từ DB ở khối Bán chạy không chờ TTL. TTL không tự cập nhật DOM đã mở (22/11/2026, UC-17-Q6 và áp dụng UC-16; mở rộng UC-14-Q10/UC-15-Q7 theo duyệt tại Codex 23/11/2026) | UC-14, UC-15, UC-16, UC-17 |
+| Chặn mua từ dữ liệu storefront cũ | UC-18 kiểm tra cả sản phẩm cha và biến thể đều ACTIVE, cùng tồn kho hiện hành từ DB qua Service công khai trước khi thêm giỏ, kể cả localStorage. UC-19/20 kiểm tra lại sau khi giữ khóa sản phẩm trong transaction tạo đơn, đồng bộ với UC-14/15 qua Service catalog; sản phẩm hoặc biến thể không còn ACTIVE thì rollback, báo dòng lỗi, không tạo đơn hoặc trừ kho. TTL cache không thay thế kiểm tra này (23/11/2026, UC-15-Q7 và yêu cầu xử lý rà soát vòng 3 tại Codex) | UC-18, UC-19, UC-20 |
+| Các khối sản phẩm trang chủ | Hàng mới: tối đa 8 sản phẩm hợp lệ mới nhất theo product_created_at giảm dần. Mỗi bộ sưu tập: tên bộ sưu tập và tối đa 4 sản phẩm hợp lệ mới nhất. Lọc sản phẩm cha ACTIVE có biến thể ACTIVE giá > 0 trước giới hạn 8/4; bù suất bằng sản phẩm hợp lệ tiếp theo, khối rỗng thì ẩn (22/11/2026, UC-09-Q1; cập nhật 23/11/2026 theo UC-10-Q10, duyệt tại Codex) | UC-09 |
+| Khối bán chạy trang chủ | Top 5 theo tổng số lượng bán trong 168 giờ UTC; tính từ lúc đặt, loại Đã hủy/Giao không thành công. Bằng số lượng ưu tiên đơn gần nhất rồi product_id tăng dần. Tác vụ 10 phút tính top 15, TTL 30 phút; khi render đọc trạng thái và biến thể hợp lệ hiện hành từ DB, loại sản phẩm Ngừng bán/không có biến thể ACTIVE giá > 0 rồi lấy tối đa 5 trong top 15. Không lấy ngoài top 15; còn 1–4 hiển thị số còn lại, còn 0 ẩn khối. Lọc hiển thị không đổi thống kê reporting (UC-09-Q2/Q4; cập nhật theo UC-10-Q10, duyệt tại Codex 23/11/2026) | UC-09 |
+| Ranh giới khối bán chạy trang chủ | reporting tổng hợp qua service ordering và ghi Redis; catalog đọc top 15, lọc dữ liệu sản phẩm/biến thể hiện hành trong module catalog trước giới hạn 5, độc lập việc tăng catalog_version thành công hay lỗi; lấy khuyến mãi/tồn kho qua service promotion/inventory. Redis trống/lỗi thì gọi service reporting tính lại qua service ordering (22/11/2026, UC-09-Q2; cập nhật 23/11/2026) | UC-09 |
 | Trang danh mục | Lọc theo giới tính, size, danh mục, bộ sưu tập; sắp xếp mặc định mới nhất | UC-10 |
 | Sản phẩm (ERD) | 1 danh mục, 1 giới tính, nhiều bộ sưu tập; ảnh (gallery) theo sản phẩm, có thứ tự; review để giai đoạn 2 | UC-12, UC-14, UC-17 |
-| Giá bán | Chỉ đổi theo size; cùng size khác màu cùng giá | UC-12, UC-16 |
+| Giá bán | Chỉ đặt/đổi trước nhập kho CONFIRMED, theo size; cùng size khác màu cùng giá | UC-12, UC-16 |
+| Tập biến thể tính giá và nhãn tồn kho | Chỉ biến thể ACTIVE có variant_sell_price > 0 tham gia min giá thẻ và min-max chi tiết khi có tập hợp lệ; không xét tồn khi tính giá. Nhãn Hết hàng trên thẻ khi không có biến thể trong tập này còn tồn khả dụng > 0 (23/11/2026, UC-10-Q9; duyệt đồng bộ tại Codex) | UC-09, UC-10, UC-11, UC-12 |
+| Sản phẩm đủ điều kiện xuất hiện trong danh sách | Sản phẩm cha ACTIVE có ít nhất một biến thể ACTIVE giá > 0; loại từng sản phẩm không đủ điều kiện trước tổng số/tổng trang/giới hạn hiển thị. Không đổi trạng thái DB, không ẩn vì hết tồn. Danh sách rỗng không sinh trang 0 (23/11/2026, UC-10-Q10; duyệt tại Codex) | UC-09, UC-10, UC-11 |
+| URL chi tiết không còn biến thể hợp lệ | Sản phẩm cha ACTIVE nhưng không còn biến thể ACTIVE có giá hợp lệ vẫn trả HTTP 200, hiện tên/mô tả/ảnh và "Sản phẩm tạm ngừng kinh doanh", không hiện khoảng giá, vô hiệu hóa màu/size/số lượng/thêm giỏ. Cha INACTIVE hoặc không tồn tại vẫn 404 (UC-12-Q9b, chốt và đồng bộ tại Codex 23/11/2026) | UC-12 |
 | Trang thông tin | Giới thiệu, chính sách, FAQ có nội dung cố định | UC-13 |
+| Lỗi 404 HTMX trang thông tin | Giữ HTTP 404, dùng htmx:beforeSwap cho riêng response 404 với target #main-content để hiện lỗi trong DOM; không bật swap mọi 4xx/5xx, không thay lỗi session 401/403 (UC-13-Q5, chốt 23/11/2026; đồng bộ tại Codex) | UC-13 |
+| Lịch sử HTMX và phiên | `no-store` chỉ kiểm soát HTTP cache. Layout có nội dung gắn với phiên phải có `hx-history="false"` trước khi rời trang; `historyRestoreAsHxRequest = false` để Back/Forward yêu cầu trang đầy đủ và server kiểm tra lại phiên, không khôi phục DOM riêng của phiên đã đăng xuất (review PR #7, 23/11/2026; UC-13 AC-9) | UC-13, layout chung |
 | Wishlist | Khách hàng thả tim lưu sản phẩm; mỗi sản phẩm 1 lần trong danh sách | UC-38 |
+| Tim sau đăng nhập từ trang chi tiết | Chỉ quay lại trang, không tự thích/bỏ thích. Tim phản ánh wishlist đã lưu: chưa có thì chưa chọn, đã có thì đã chọn; khách chủ động thao tác tiếp để thay đổi (UC-12-Q4/Q8, đồng bộ UC-38 tại Codex 23/11/2026) | UC-12, UC-38 |
 | Khuyến mãi | Giảm theo %, không có mức tối đa; mỗi đơn tối đa 1 khuyến mãi theo hóa đơn hoặc voucher; bằng nhau ưu tiên voucher | UC-28 → UC-31 |
 | Số lượng khuyến mãi | Có số lượng được áp dụng và số đã dùng; khuyến mãi theo sản phẩm không giới hạn, hiệu lực đến khi Nhân viên kết thúc | UC-28, UC-29, UC-30 |
 | Thời gian khuyến mãi | Theo sản phẩm: chỉ có tạo rồi kết thúc, không có ngày bắt đầu / kết thúc, gắn đúng 1 sản phẩm. Theo hóa đơn và voucher: có ngày bắt đầu / kết thúc; hết hiệu lực khi tới ngày kết thúc hoặc Nhân viên ngừng trước hạn (giữ nguyên ngày kết thúc) (20/11/2026) | UC-28, UC-29, UC-30 |
@@ -151,11 +162,33 @@ Chưa xử lý ──(UC-23 xác nhận)──► Đã xác nhận ──(UC-40 
 | Danh sách nhà cung cấp | Có phân trang, tìm theo tên chứa từ khóa; tìm kiếm bỏ khoảng trắng đầu/cuối của tên và từ khóa, không phân biệt hoa/thường nhưng phân biệt dấu tiếng Việt (22/11/2026) | UC-32 |
 | Giá nhập | Số nguyên VND ≥ 0 (21/11/2026) | UC-33 |
 | Phiếu nhập | Không lưu người / thời điểm xác nhận | UC-34 |
-| Phiếu nhập — xử lý đồng thời | Sửa/hủy/xác nhận cùng khóa dòng phiếu rồi kiểm tra lại DRAFT trong transaction; xác nhận khóa inventory.stock và tăng phiên bản cache catalog sau commit thành công (22/11/2026) | UC-33, UC-34 |
+| Phiếu nhập — xử lý đồng thời | Sửa/hủy/xác nhận cùng khóa dòng phiếu rồi kiểm tra lại DRAFT trong transaction; xác nhận khóa sản phẩm/biến thể qua Service Catalog trước inventory.stock và tăng phiên bản cache catalog sau commit thành công (22/11/2026) | UC-33, UC-34 |
 | Phiếu nhập — lỗi cache sau commit | Vẫn báo xác nhận thành công, giữ dữ liệu đã commit, ghi log lỗi cache kèm mã phiếu; chờ TTL dự phòng 5 phút, không retry (22/11/2026) | UC-34 |
 | Phiếu nhập — NCC ngừng hợp tác | Chặn chọn/lưu với NCC ngừng hợp tác; vẫn cho xác nhận phiếu nháp đã lưu trước khi NCC ngừng hợp tác (22/11/2026) | UC-33, UC-34 |
 | Tiền nhập hàng theo NCC | Theo ngày tạo phiếu, chỉ tính phiếu đã xác nhận tại thời điểm xem; xác nhận muộn có thể làm tăng số liệu kỳ cũ (22/11/2026) | UC-34, UC-37 |
 | Hàng hoàn | Khóa và kiểm tra trạng thái đơn để chống cộng tồn hai lần; cộng tồn, đổi trạng thái và ghi lịch sử cùng transaction. Hàng ngừng bán vẫn được cộng tồn; lỗi đã xác định không commit thì rollback và cho gửi lại. Kết quả commit chưa xác định phải kiểm tra lại Database; lỗi cache sau commit chỉ thử lại cache, giữ kết quả nghiệp vụ thành công (22/11/2026) | UC-35 |
+| Sắp xếp trang danh mục và tìm kiếm | Mới nhất: product_created_at DESC, product_id ASC; Giá tăng/giảm: effective_min_price ASC/DESC sau khuyến mãi, luôn product_id ASC làm khóa phụ cuối. Dữ liệu cố định thì phân trang/reload nhất quán (UC-10-Q2/Q11, UC-11-Q10; duyệt đồng bộ tại Codex 23/11/2026) | UC-10, UC-11 |
+| Bộ lọc trang danh mục | Các tiêu chí kết hợp theo VÀ (AND); mỗi tiêu chí chọn tối đa một giá trị (22/11/2026, Q4) | UC-10 |
+| Lọc size trên trang danh mục | Hiển thị sản phẩm có ít nhất một biến thể thuộc size đã chọn, không xét còn hàng hay hết hàng (22/11/2026, Q3) | UC-10 |
+| Giá trị lọc không tồn tại | Bỏ qua tiêu chí lọc không hợp lệ, tiếp tục áp dụng các tiêu chí hợp lệ còn lại (22/11/2026, Q8) | UC-10 |
+| Phân trang danh mục | Cố định 12 sản phẩm/trang (22/11/2026, Q7) | UC-10 |
+| Giá trên thẻ sản phẩm danh mục | Giá thấp nhất từ biến thể ACTIVE có giá > 0; nhiều mức giá dùng `Từ <giá thấp nhất>đ`, cùng giá hiển thị một mức giá; có khuyến mãi hiển thị giá gốc/giá sau giảm, làm tròn VND nguyên ROUND_HALF_UP (22/11/2026, Q1; cập nhật 23/11/2026 theo Q9) | UC-10 |
+| Tham số trang danh mục | Khi có kết quả, trang vượt giới hạn trả trang cuối; trang nhỏ hơn 1 hoặc không hợp lệ trả trang 1. Kết quả rỗng thì hiển thị thông báo rỗng, không sinh trang 0 (22/11/2026, Q5) | UC-10 |
+| Chuẩn hóa tìm kiếm | Tìm kiếm không phân biệt hoa/thường và dấu tiếng Việt (22/11/2026, Q1) | UC-11 |
+| Phạm vi từ khóa tìm kiếm | Khớp chuỗi con trên tên và mô tả của sản phẩm Đang bán (22/11/2026, Q1) | UC-11 |
+| Trang chính sách | Một trang chính sách chung duy nhất (22/11/2026, Q1) | UC-13 |
+| Trạng thái sản phẩm | Đang bán (`ACTIVE`) hoặc Ngừng bán (`INACTIVE`); sản phẩm mới tạo ở trạng thái Ngừng bán (22/11/2026, Q1) | UC-14 |
+| Trường bắt buộc của sản phẩm | Tên sản phẩm, một danh mục và một giới tính là bắt buộc (22/11/2026, Main Flow và Quyết định đã chốt) | UC-14 |
+| Khóa sản phẩm đã nhập kho | Có phiếu CONFIRMED ở bất kỳ biến thể nào thì chỉ được sửa Mô tả toàn sản phẩm; khóa mọi trường khác, ảnh, giá, trạng thái, thêm/xóa/đổi trạng thái biến thể, đổi tên taxonomy liên quan. Tồn kho về 0 không gỡ khóa; DRAFT/CANCELLED chưa kích hoạt khóa sửa, điều kiện chặn xóa do liên kết phiếu nhập vẫn áp dụng. Ưu tiên hơn các quyền sửa cũ; cấu hình trước khi xác nhận nhập (developer chốt tại Codex 23/11/2026, review PR #7, UC-14-Q11/UC-17-Q7) | UC-14, UC-15, UC-16, UC-17 |
+| Thứ tự khóa chống tương tranh | UC-14/15 lấy đủ taxonomy KEY SHARE theo tên bảng/UUID trước sản phẩm; UC-17 lấy taxonomy FOR UPDATE trước sản phẩm. Sản phẩm product_key ASC trước biến thể variant_key ASC. UC-34 khóa dòng phiếu rồi gọi Service Catalog cùng session khóa sản phẩm/biến thể, tiếp đến khóa inventory.stock trước xác nhận; Catalog chỉ đọc CONFIRMED qua Service inventory, không khóa phiếu sau sản phẩm. Đọc lại dữ liệu sau chờ, giữ khóa tới commit/rollback (yêu cầu xử lý rà soát tại Codex 23/11/2026) | UC-14, UC-15, UC-17, UC-34 |
+| Điều kiện mở bán sản phẩm | Có ít nhất một ảnh gallery, ít nhất một biến thể và mọi size đã có giá bán > 0; tồn kho = 0 vẫn cho mở bán. Chặn xóa ảnh cuối khi sản phẩm đang ACTIVE (22/11/2026, Q1/Q7) | UC-14 |
+| Xóa sản phẩm | Chặn xóa nếu đã có trong đơn hàng hoặc phiếu nhập (kể cả nháp), đã từng gắn khuyến mãi theo sản phẩm (kể cả đã kết thúc), hoặc còn tồn kho > 0. Xóa hợp lệ và dọn dữ liệu liên quan qua service công khai trong cùng transaction; lỗi thì rollback (22/11/2026, Q2/Q6) | UC-14 |
+| Tồn kho biến thể mới | Tồn kho và giá vốn ban đầu bằng 0, khởi tạo qua service inventory trong cùng transaction tạo biến thể; không sửa tồn kho trực tiếp trên màn hình biến thể (22/11/2026, Q1) | UC-15 |
+| Xóa biến thể | Chỉ xóa khi tồn kho = 0 và chưa có trong đơn hàng/phiếu nhập; kiểm tra, xóa biến thể và dọn stock qua service inventory trong cùng transaction (22/11/2026, Q3) | UC-15 |
+| Giá đơn hàng đã tạo | Giữ snapshot đơn giá lúc đặt hàng; sản phẩm có phiếu CONFIRMED không được đổi giá nữa (Q1 ngày 22/11/2026, giới hạn bởi UC-14-Q11 ngày 23/11/2026) | UC-16 |
+| Lịch sử giá | Không lưu lịch sử giá; chỉ lưu giá hiện hành tại `catalog.variant.variant_sell_price` (22/11/2026, Q1) | UC-16 |
+| Cấp danh mục | Chỉ có danh mục một cấp, không có danh mục con (22/11/2026, Quyết định đã chốt) | UC-17 |
+| Xóa danh mục và thuộc tính | Chặn xóa danh mục/bộ sưu tập/giới tính khi có sản phẩm liên kết; chặn xóa màu/size khi có biến thể liên kết, kiểm tra tại thời điểm xóa và báo số lượng đang dùng (22/11/2026, Q1) | UC-17 |
 
 ## Data model
 
@@ -172,7 +205,6 @@ Mỗi dòng là một giả định đang có trong mục *Notes* của UC, ch�
 | UC-01 | Đăng ký xong chuyển tới trang đăng nhập, không tự đăng nhập. |
 | UC-01 | Người đã đăng nhập mở trang đăng ký thì bị chuyển về trang chủ. |
 | UC-02 | Sau đăng nhập: Khách hàng về trang bán hàng; Nhân viên và Admin về trang đầu của portal quản trị. |
-| UC-02 | Đăng nhập khi đang đặt hàng thì quay lại trang đang thao tác. |
 | UC-02 | Sai thông tin đăng nhập báo chung, không chỉ rõ sai tài khoản hay mật khẩu. |
 | UC-02 | Portal quản trị từ chối tài khoản Khách hàng với cùng thông báo "Thông tin đăng nhập không đúng". |
 | UC-02 | Portal quản trị không có nút "Quên mật khẩu". |
@@ -194,31 +226,7 @@ Mỗi dòng là một giả định đang có trong mục *Notes* của UC, ch�
 | UC-07 | Đổi vai trò giữ nguyên thông tin cá nhân, email, số điện thoại, mật khẩu; lưu trong một transaction, lỗi thì hủy toàn bộ. |
 | UC-08 | Khóa và mở khóa áp dụng cho mọi vai trò (Khách hàng, Nhân viên, Admin). |
 | UC-08 | Khóa không xóa dữ liệu của tài khoản. |
-| UC-09 | Trang chủ gồm khối hàng mới và khối sản phẩm theo bộ sưu tập. |
-| UC-09 | Khối không có sản phẩm thì ẩn. |
-| UC-09 | Khối bán chạy: "7 ngày gần nhất" là 7 × 24 giờ tính lùi; loại đơn "Đã hủy"; còn dưới 5 sản phẩm sau khi lọc thì hiển thị số còn lại. |
-| UC-09 | Khối bán chạy thuộc module `reporting`, đọc số lượng bán qua `ordering`, lọc trạng thái sản phẩm qua `catalog`. |
 | Chung | Khuyến mãi đang hiệu lực trong Redis: TTL hết hạn ở mốc bắt đầu / kết thúc gần nhất, xóa key khi tạo hoặc kết thúc khuyến mãi. |
-| UC-10 | Các tiêu chí sắp xếp khác ngoài mặc định: giá tăng dần, giá giảm dần. |
-| UC-10 | Các tiêu chí lọc kết hợp theo kiểu "và" (thỏa đồng thời); mỗi tiêu chí chọn một giá trị. |
-| UC-10 | Lọc theo size: sản phẩm có ít nhất một biến thể size đó, không xét còn hàng. |
-| UC-10 | Giá trị lọc không tồn tại thì bỏ qua tiêu chí đó. |
-| UC-10 | Mỗi trang 12 sản phẩm. |
-| UC-10 | Thẻ sản phẩm hiển thị giá thấp nhất trong các size. |
-| UC-10 | Yêu cầu trang vượt quá tổng số trang thì hiển thị trang cuối. |
-| UC-11 | Tìm kiếm không phân biệt hoa thường và dấu tiếng Việt. |
-| UC-11 | "Từ khóa" khớp trên tên và mô tả sản phẩm. |
-| UC-13 | Chỉ có một trang chính sách chung. |
-| UC-14 | Sản phẩm có 2 trạng thái: Đang bán, Ngừng bán; sản phẩm mới tạo ở trạng thái Ngừng bán. |
-| UC-14 | Tên, danh mục, giới tính là trường bắt buộc. |
-| UC-14 | Chỉ chuyển Đang bán khi đã có biến thể và mọi size đã có giá. |
-| UC-14 | Không xóa sản phẩm đã có trong đơn hàng hoặc phiếu nhập. |
-| UC-15 | Biến thể mới tạo có tồn kho = 0; tồn kho không sửa tay. |
-| UC-15 | Chỉ xóa được biến thể có tồn kho = 0 và chưa có trong đơn hàng hoặc phiếu nhập. |
-| UC-16 | Đổi giá không ảnh hưởng đơn hàng đã tạo. |
-| UC-16 | Không lưu lịch sử giá. |
-| UC-17 | Danh mục một cấp (không có danh mục con). |
-| UC-17 | Không xóa danh mục, bộ sưu tập, giới tính, màu hoặc size đang được sử dụng. |
 | UC-18 | Khi đăng nhập, giỏ trong `localStorage` gộp vào giỏ tài khoản; dòng trùng cộng dồn nhưng không vượt tồn kho. |
 | UC-18 | Dòng hết hàng/ngừng bán vẫn nằm trong giỏ nhưng không tính tiền và không đặt được. |
 | UC-19 | Thông tin nhận hàng được điền sẵn từ hồ sơ khách, khách sửa được cho riêng đơn này. |
@@ -258,7 +266,6 @@ Mỗi dòng là một giả định đang có trong mục *Notes* của UC, ch�
 | UC-33 | Danh sách phiếu nhập lọc được theo trạng thái và nhà cung cấp. |
 | UC-36 | Danh sách trên trang giả lập gồm: mã đơn, trạng thái, người nhận, số điện thoại, địa chỉ, người gửi, số tiền thu khi giao với đơn COD. |
 | UC-38 | Nút tim có trên cả thẻ sản phẩm và trang chi tiết. |
-| UC-38 | Khách vãng lai bấm tim thì được yêu cầu đăng nhập; sau đăng nhập quay lại trang đang xem, không tự lưu sản phẩm. |
 | UC-38 | Danh sách yêu thích sắp xếp mới thêm nhất trước (theo thứ tự thêm; ERD không có cột thời gian riêng), có phân trang. |
 | UC-38 | Sản phẩm ngừng bán vẫn ở danh sách, hiển thị nhãn "Ngừng bán" và không mở được trang chi tiết. |
 | UC-40 | Có thể bàn giao nhiều đơn một lúc; đơn không hợp lệ thì bỏ qua và báo lại. |

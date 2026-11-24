@@ -80,7 +80,12 @@ def _parse_expected_total(raw: str | None) -> Decimal | None:
 
 
 @router.get("")
-async def ordering_home(request: Request):
+async def ordering_home(request: Request, db: DbSession):
+    # Ảnh hero từ seed catalog (adapter shopping tạm) — [GD]
+    from app.modules.shopping import adapters as shopping_adapters
+
+    products = await shopping_adapters.list_seed_products(db)
+    hero = next((p for p in products if p.get("image_url")), products[0] if products else None)
     return templates.TemplateResponse(
         request,
         "ordering_home.html",
@@ -88,6 +93,8 @@ async def ordering_home(request: Request):
             "title": "Thử ordering",
             "demo_customer": DEMO_CUSTOMER_EMAIL,
             "demo_employee": DEMO_EMPLOYEE_EMAIL,
+            "hero": hero,
+            "nav_active": "home",
             **_flash(request),
         },
     )
@@ -134,6 +141,7 @@ async def checkout_page(request: Request, db: DbSession):
                 "city": "TP. Hồ Chí Minh",
                 "country": "Việt Nam",
             },
+            "nav_active": "checkout",
             **_flash(request),
         },
     )
@@ -225,6 +233,7 @@ async def orders_list(request: Request, db: DbSession):
             "demo_customer": DEMO_CUSTOMER_EMAIL,
             "orders": views,
             "total": total,
+            "nav_active": "orders",
             **_flash(request),
         },
     )
@@ -255,6 +264,7 @@ async def order_detail(request: Request, db: DbSession, order_code: str):
             "demo_customer": DEMO_CUSTOMER_EMAIL,
             "order": view,
             "invoice": invoice,
+            "nav_active": "orders",
             **_flash(request),
         },
     )
@@ -302,6 +312,7 @@ async def order_invoice_customer(request: Request, db: DbSession, order_code: st
             "demo_employee": None,
             "invoice": invoice,
             "staff_mode": False,
+            "nav_active": "orders",
             **_flash(request),
         },
     )
@@ -315,6 +326,7 @@ async def staff_page(request: Request):
         {
             "title": "NV — ordering",
             "demo_employee": DEMO_EMPLOYEE_EMAIL,
+            "nav_active": "staff",
             **_flash(request),
         },
     )
@@ -428,6 +440,7 @@ async def staff_invoice(request: Request, db: DbSession, invoice_id: str):
             "demo_employee": DEMO_EMPLOYEE_EMAIL,
             "invoice": invoice,
             "staff_mode": True,
+            "nav_active": "staff",
             **_flash(request),
         },
     )

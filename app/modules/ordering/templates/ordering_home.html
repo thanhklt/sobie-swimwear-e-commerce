@@ -1,27 +1,97 @@
 {% extends "ordering_base.html" %}
 
-{% block ordering_content %}
-<h1>UI thử module ordering</h1>
-<p class="muted">
-  Khách: <strong>{{ demo_customer }}</strong> · NV: <strong>{{ demo_employee }}</strong>
-  (chưa gắn login thật — [GD] adapter tạm).
-</p>
+{% block ordering_shell %}
+<style>
+  .hero {
+    position: relative; min-height: min(86vh, 720px); width: 100%;
+    overflow: hidden; isolation: isolate;
+  }
+  .hero-media, .hero-fallback {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  }
+  .hero-media { animation: drift 14s ease-in-out infinite alternate; }
+  .hero-fallback { background: linear-gradient(140deg, #0a4c54, #116a74 45%, #2f97a0); }
+  .hero-shade {
+    position: absolute; inset: 0;
+    background: linear-gradient(105deg, rgba(8, 30, 38, 0.78) 0%, rgba(8, 30, 38, 0.42) 42%, rgba(8, 30, 38, 0.16) 100%);
+  }
+  .hero-copy {
+    position: relative; z-index: 1; max-width: 1120px; margin: 0 auto;
+    padding: clamp(3rem, 10vh, 6.5rem) 1.25rem; color: #f4fbfa;
+    animation: rise .7s ease both;
+  }
+  .hero-brand {
+    font-family: var(--font-display);
+    font-size: clamp(3.2rem, 9vw, 5.4rem);
+    margin: 0 0 .4rem; letter-spacing: 0.04em; line-height: .95;
+  }
+  .hero-line {
+    font-family: var(--font-display); font-style: italic;
+    font-size: clamp(1.35rem, 3vw, 1.9rem); font-weight: 400;
+    margin: 0 0 .7rem; max-width: 20ch;
+  }
+  .hero-sub { margin: 0 0 1.5rem; max-width: 30rem; line-height: 1.55; opacity: .92; }
+  .hero-cta { display: flex; gap: .7rem; flex-wrap: wrap; }
+  .hero-cta .btn { min-width: 9rem; padding: .78rem 1.15rem; border-radius: 12px; }
+  .hero-cta .btn.ghost {
+    background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.55);
+  }
+  .hero-cta .btn.ghost:hover { background: rgba(255,255,255,.1); }
+  .steps {
+    max-width: 1120px; margin: 0 auto; padding: 1.5rem 1.25rem 2.75rem;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: .85rem;
+  }
+  .step {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+    padding: 1rem 1.05rem;
+  }
+  .step strong {
+    display: block; font-family: var(--font-display); font-size: 1.2rem; margin-bottom: .35rem;
+  }
+  .step a { color: var(--lagoon-deep); font-weight: 600; }
+  @keyframes drift {
+    from { transform: scale(1.03); }
+    to { transform: scale(1.08) translate(-1.2%, -0.8%); }
+  }
+</style>
 
-<div class="panel">
-  <h2>Luồng thử nhanh</h2>
-  <ol>
-    <li>Thêm hàng ở <a href="/dev/shopping/cart">/dev/shopping/cart</a></li>
-    <li><a href="/dev/ordering/checkout">Đặt COD hoặc QR</a> (UC-19 / UC-20)</li>
-    <li>Xem / hủy đơn ở <a href="/dev/ordering/orders">Đơn của tôi</a> (UC-21 / UC-22)</li>
-    <li>NV xác nhận, giả lập PAID, chuyển trạng thái giao, UC-24 tại <a href="/dev/ordering/staff">NV</a></li>
-  </ol>
-</div>
+<section class="hero" aria-label="Sobie ordering">
+  {% if hero and hero.image_url %}
+  <img class="hero-media" src="{{ hero.image_url }}" alt="{{ hero.name }}">
+  {% else %}
+  <div class="hero-fallback" aria-hidden="true"></div>
+  {% endif %}
+  <div class="hero-shade" aria-hidden="true"></div>
+  <div class="hero-copy">
+    <p class="hero-brand">SOBIE</p>
+    <h1 class="hero-line">Đặt hàng COD &amp; QR, sẵn sàng thử</h1>
+    <p class="hero-sub">
+      KH {{ demo_customer }} · NV {{ demo_employee }}. UC-19→27 trên seed — chưa login thật.
+    </p>
+    <div class="hero-cta">
+      <a class="btn" href="/dev/ordering/checkout">Đặt hàng</a>
+      <a class="btn ghost" href="/dev/ordering/orders">Đơn của tôi</a>
+      <a class="btn ghost" href="/dev/ordering/staff">Cổng NV</a>
+    </div>
+  </div>
+</section>
 
-<div class="panel">
-  <h2>Ghi chú</h2>
-  <p class="muted">
-    Inventory/catalog/identity qua adapter tạm. Promotion = NoPromotionGateway.
-    Giả lập thanh toán QR: nút «Đánh dấu PAID» trên trang NV (thay UC-25 payment).
-  </p>
+<div class="steps">
+  <div class="step">
+    <strong>1. Giỏ</strong>
+    Thêm hàng ở <a href="/dev/shopping/cart">/dev/shopping/cart</a>
+  </div>
+  <div class="step">
+    <strong>2. Checkout</strong>
+    COD hoặc QR tại <a href="/dev/ordering/checkout">Đặt hàng</a>
+  </div>
+  <div class="step">
+    <strong>3. Theo dõi</strong>
+    Xem / hủy tại <a href="/dev/ordering/orders">Đơn của tôi</a>
+  </div>
+  <div class="step">
+    <strong>4. NV</strong>
+    PAID giả · xác nhận · giao · UC-24 tại <a href="/dev/ordering/staff">NV</a>
+  </div>
 </div>
 {% endblock %}

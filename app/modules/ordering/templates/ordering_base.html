@@ -1,63 +1,178 @@
 {% extends "base.html" %}
 
-{% block title %}{{ title }} – Sobie (thử ordering){% endblock %}
+{% block title %}{{ title }} – Sobie{% endblock %}
 
 {% block content %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --ink: #1a2332;
-    --muted: #5c6b7a;
-    --line: #d7e0ea;
-    --bg: #f3f7fb;
-    --card: #fff;
-    --accent: #0b6e6e;
-    --danger: #a33b3b;
-    --ok: #1f6b3a;
+    --ink: #0e2430;
+    --muted: #5d7582;
+    --line: #c5d8de;
+    --surface: rgba(255, 255, 255, 0.82);
+    --lagoon: #116a74;
+    --lagoon-deep: #0a4c54;
+    --sea: #2f97a0;
+    --mist: #eaf5f3;
+    --danger: #a23d48;
+    --ok: #1d6a4c;
+    --font-display: "Instrument Serif", Georgia, serif;
+    --font-body: "Sora", system-ui, sans-serif;
   }
-  body { margin: 0; background: var(--bg); color: var(--ink); font-family: "Segoe UI", system-ui, sans-serif; }
-  .wrap { max-width: 960px; margin: 0 auto; padding: 1.25rem; }
-  .nav { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; padding-bottom: .75rem; border-bottom: 1px solid var(--line); }
-  .nav a { color: var(--accent); text-decoration: none; font-weight: 600; }
-  .banner { padding: .75rem 1rem; border-radius: 8px; margin-bottom: 1rem; }
-  .banner.ok { background: #e7f6ec; color: var(--ok); }
-  .banner.err { background: #fdecec; color: var(--danger); }
-  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem; margin-bottom: 1rem; }
-  table { width: 100%; border-collapse: collapse; }
-  th, td { text-align: left; padding: .5rem; border-bottom: 1px solid var(--line); vertical-align: top; }
-  th { color: var(--muted); font-size: .85rem; font-weight: 600; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    color: var(--ink);
+    font-family: var(--font-body);
+    background:
+      radial-gradient(900px 420px at 0% 0%, rgba(47, 151, 160, 0.22), transparent 60%),
+      radial-gradient(700px 380px at 100% 8%, rgba(17, 106, 116, 0.16), transparent 55%),
+      linear-gradient(180deg, #f3faf8 0%, #e9f3f1 100%);
+  }
+  .topbar {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem; flex-wrap: wrap;
+    padding: .9rem 1.25rem;
+    background: rgba(243, 250, 248, 0.88);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(197, 216, 222, 0.7);
+  }
+  .brand {
+    font-family: var(--font-display);
+    font-size: 1.7rem;
+    letter-spacing: 0.05em;
+    color: var(--lagoon-deep);
+    text-decoration: none;
+  }
+  .brand em { font-style: italic; color: var(--sea); font-size: .95rem; margin-left: .25rem; }
+  .nav { display: flex; gap: .25rem; flex-wrap: wrap; }
+  .nav a {
+    text-decoration: none; color: var(--ink); font-weight: 600; font-size: .88rem;
+    padding: .5rem .85rem; border-radius: 10px; border: 1px solid transparent;
+  }
+  .nav a:hover { background: rgba(17, 106, 116, 0.08); }
+  .nav a.is-active { background: #fff; border-color: var(--line); color: var(--lagoon-deep); }
+
+  .shell { max-width: 1120px; margin: 0 auto; padding: 1.35rem 1.25rem 3rem; }
+  .banner {
+    max-width: 1120px; margin: 1rem auto 0; padding: .8rem 1rem;
+    border-radius: 12px; width: calc(100% - 2.5rem);
+  }
+  .banner.ok { background: #e4f5eb; color: var(--ok); border: 1px solid #bde4cd; }
+  .banner.err { background: #fbeeee; color: var(--danger); border: 1px solid #efc5ca; }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid rgba(197, 216, 222, 0.95);
+    border-radius: 18px;
+    padding: 1.15rem 1.2rem;
+    margin-bottom: 1rem;
+  }
   .muted { color: var(--muted); }
-  .row-actions { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+  .mono { font-family: ui-monospace, Consolas, monospace; font-size: .78rem; word-break: break-all; }
+
+  h1 {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 4vw, 2.6rem);
+    font-weight: 400; margin: 0 0 .35rem; letter-spacing: -0.02em;
+  }
+  h2 {
+    font-family: var(--font-display);
+    font-size: 1.35rem; font-weight: 400; margin: 0 0 .85rem;
+  }
+  .page-lead { margin: 0 0 1.25rem; }
+
+  .row-actions { display: flex; gap: .55rem; flex-wrap: wrap; align-items: center; }
   .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
   @media (max-width: 640px) { .form-grid { grid-template-columns: 1fr; } }
-  label { display: block; font-size: .85rem; color: var(--muted); margin-bottom: .2rem; }
-  input, select, button, textarea { font: inherit; padding: .4rem .55rem; border-radius: 6px; border: 1px solid var(--line); width: 100%; box-sizing: border-box; }
-  button, .btn { background: var(--accent); color: #fff; border: none; cursor: pointer; text-decoration: none; display: inline-block; width: auto; }
-  button.secondary { background: #fff; color: var(--ink); border: 1px solid var(--line); }
-  button.danger { background: var(--danger); }
-  .tag { display: inline-block; padding: .15rem .45rem; border-radius: 999px; background: #eef3f7; font-size: .8rem; }
-  .tag.warn { background: #fff3cd; }
-  .tag.ok { background: #e7f6ec; }
-  .qr-box { border: 2px dashed var(--line); padding: 1rem; text-align: center; border-radius: 10px; background: #fafcfe; }
+  label { display: block; font-size: .82rem; color: var(--muted); margin-bottom: .25rem; font-weight: 500; }
+
+  input, select, button, textarea {
+    font: inherit; padding: .58rem .75rem; border-radius: 11px;
+    border: 1px solid var(--line); background: #fff; color: var(--ink);
+  }
+  input, select, textarea { width: 100%; box-sizing: border-box; }
+
+  button, .btn {
+    background: var(--lagoon); color: #fff; border: none; cursor: pointer;
+    font-weight: 600; text-decoration: none; display: inline-flex;
+    align-items: center; justify-content: center; width: auto;
+    transition: background .18s ease, transform .15s ease;
+  }
+  button:hover, .btn:hover { background: var(--lagoon-deep); transform: translateY(-1px); }
+  button.secondary, .btn.secondary {
+    background: #fff; color: var(--ink); border: 1px solid var(--line);
+  }
+  button.secondary:hover, .btn.secondary:hover { background: var(--mist); }
+  button.danger {
+    background: #fff; color: var(--danger); border: 1px solid #e7b8bd;
+  }
+  button.danger.solid { background: var(--danger); color: #fff; border: none; }
+
+  .tag {
+    display: inline-block; padding: .18rem .5rem; border-radius: 8px;
+    background: #e3eef0; font-size: .75rem; font-weight: 600;
+  }
+  .tag.ok { background: #e4f5eb; color: var(--ok); }
+  .tag.warn { background: #fff3d8; color: #7a5a12; }
+
+  .layout-2 {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(280px, .9fr);
+    gap: 1rem; align-items: start;
+  }
+  @media (max-width: 860px) { .layout-2 { grid-template-columns: 1fr; } }
+
   .totals { list-style: none; padding: 0; margin: 0; }
-  .totals li { display: flex; justify-content: space-between; padding: .35rem 0; border-bottom: 1px solid var(--line); }
-  .totals li.grand { font-weight: 700; border-bottom: none; padding-top: .6rem; }
-  h1 { font-size: 1.4rem; margin: 0 0 .5rem; }
-  h2 { font-size: 1.05rem; margin: 0 0 .75rem; }
+  .totals li {
+    display: flex; justify-content: space-between; gap: 1rem;
+    padding: .45rem 0; border-bottom: 1px solid var(--line);
+  }
+  .totals li.grand {
+    border: none; padding-top: .85rem;
+    font-family: var(--font-display); font-size: 1.2rem;
+  }
+
+  .sticky-side { position: sticky; top: 4.5rem; }
+
+  .tools-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+  }
+
+  .rise { animation: rise .55s ease both; }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: none; }
+  }
 </style>
-<div class="wrap">
-  <nav class="nav">
-    <a href="/dev/ordering">Tổng quan</a>
-    <a href="/dev/ordering/checkout">Đặt hàng</a>
-    <a href="/dev/ordering/orders">Đơn của tôi</a>
-    <a href="/dev/ordering/staff">NV</a>
-    <a href="/dev/shopping/cart">Giỏ (shopping)</a>
+
+<header class="topbar">
+  <a class="brand" href="/dev/ordering">SOBIE<em>order</em></a>
+  <nav class="nav" aria-label="Ordering thử">
+    <a href="/dev/ordering" class="{% if nav_active == 'home' %}is-active{% endif %}">Tổng quan</a>
+    <a href="/dev/ordering/checkout" class="{% if nav_active == 'checkout' %}is-active{% endif %}">Đặt hàng</a>
+    <a href="/dev/ordering/orders" class="{% if nav_active == 'orders' %}is-active{% endif %}">Đơn của tôi</a>
+    <a href="/dev/ordering/staff" class="{% if nav_active == 'staff' %}is-active{% endif %}">NV</a>
+    <a href="/dev/shopping/cart">Giỏ</a>
   </nav>
-  {% if flash_ok %}
-  <div class="banner ok">{{ flash_ok }}</div>
-  {% endif %}
-  {% if flash_error %}
-  <div class="banner err">{{ flash_error }}</div>
-  {% endif %}
+</header>
+
+{% if flash_ok %}
+<div class="banner ok">{{ flash_ok }}</div>
+{% endif %}
+{% if flash_error %}
+<div class="banner err">{{ flash_error }}</div>
+{% endif %}
+
+{% block ordering_shell %}
+<div class="shell">
   {% block ordering_content %}{% endblock %}
 </div>
+{% endblock %}
 {% endblock %}

@@ -56,6 +56,11 @@ class OrderView:
     payment_deadline: datetime | None  # QR: created + 24h
     show_qr: bool
     transfer_content: str | None  # SOBIE + code
+    # VietQR hiển thị (UC-20) — chỉ có khi show_qr
+    bank_id: str | None = None
+    bank_account_no: str | None = None
+    bank_account_name: str | None = None
+    vietqr_image_url: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

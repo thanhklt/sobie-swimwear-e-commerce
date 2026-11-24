@@ -303,12 +303,33 @@ def _show_qr(order: Order, payment_name: str, now: datetime | None = None) -> bo
     return current < deadline
 
 
+def _vietqr_image_url(*, amount: Decimal, transfer_content: str) -> str | None:
+    """URL ảnh VietQR (UC-20). Thiếu cấu hình TK → None, UI vẫn hiện chữ CK."""
+    from urllib.parse import urlencode
+
+    bank = (Config.VIETQR_BANK_ID or "").strip()
+    account = (Config.VIETQR_ACCOUNT_NO or "").strip()
+    name = (Config.VIETQR_ACCOUNT_NAME or "").strip()
+    if not bank or not account:
+        return None
+    query = urlencode(
+        {
+            "amount": str(int(to_vnd(amount))),
+            "addInfo": transfer_content,
+            "accountName": name,
+        }
+    )
+    return f"https://img.vietqr.io/image/{bank}-{account}-compact2.png?{query}"
+
+
 async def to_order_view(db: AsyncSession, order: Order) -> OrderView:
     payment_name = await repository.payment_name_of(db, order.order_payment_key)
     created = order.order_created_date or datetime.now(UTC)
     if created.tzinfo is None:
         created = created.replace(tzinfo=UTC)
     show = _show_qr(order, payment_name)
+    transfer = f"SOBIE{order.order_code}" if show else None
+    total = to_vnd(order.order_total_price)
     return OrderView(
         order_key=order.order_key,
         order_code=order.order_code,
@@ -318,13 +339,25 @@ async def to_order_view(db: AsyncSession, order: Order) -> OrderView:
         payment_status=order.order_payment_status,
         discount_amount=to_vnd(order.order_discount_amount),
         shipping_fee=to_vnd(order.order_shipping_fee),
-        total_price=to_vnd(order.order_total_price),
+        total_price=total,
         customer_name=order.order_customer_name,
         customer_phone=order.order_customer_phone_number,
         created_at=created,
         payment_deadline=_payment_deadline(order, payment_name),
         show_qr=show,
-        transfer_content=f"SOBIE{order.order_code}" if show else None,
+        transfer_content=transfer,
+        bank_id=((Config.VIETQR_BANK_ID or "").strip() or None) if show else None,
+        bank_account_no=(
+            ((Config.VIETQR_ACCOUNT_NO or "").strip() or None) if show else None
+        ),
+        bank_account_name=(
+            ((Config.VIETQR_ACCOUNT_NAME or "").strip() or None) if show else None
+        ),
+        vietqr_image_url=(
+            _vietqr_image_url(amount=total, transfer_content=transfer)
+            if show and transfer
+            else None
+        ),
     )
 
 

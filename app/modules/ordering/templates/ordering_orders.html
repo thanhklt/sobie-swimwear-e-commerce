@@ -1,37 +1,63 @@
 {% extends "ordering_base.html" %}
 
 {% block ordering_content %}
-<h1>Đơn của tôi (UC-21)</h1>
-<p class="muted">{{ demo_customer }} · {{ total }} đơn</p>
+<style>
+  .order-list { display: flex; flex-direction: column; gap: .75rem; }
+  .order-card {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: .75rem 1rem;
+    padding: 1rem 1.1rem;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: #fff;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color .18s ease, transform .18s ease;
+  }
+  .order-card:hover { border-color: var(--sea); transform: translateY(-2px); }
+  .order-code {
+    font-family: var(--font-display);
+    font-size: 1.35rem;
+    margin: 0 0 .35rem;
+  }
+  .order-meta { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .45rem; }
+  .order-total {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    text-align: right;
+  }
+</style>
 
-<div class="panel">
-  {% if orders %}
-  <table>
-    <thead>
-      <tr>
-        <th>Mã</th>
-        <th>TT đơn</th>
-        <th>Thanh toán</th>
-        <th>Tổng</th>
-        <th>Tạo</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for o in orders %}
-      <tr>
-        <td><a href="/dev/ordering/orders/{{ o.order_code }}">{{ o.order_code }}</a></td>
-        <td><span class="tag">{{ o.status }}</span></td>
-        <td>{{ o.payment_name }} / {{ o.payment_status }}</td>
-        <td>{{ "{:,.0f}".format(o.total_price) }}đ</td>
-        <td class="muted">{{ o.created_at }}</td>
-        <td><a class="btn" href="/dev/ordering/orders/{{ o.order_code }}">Chi tiết</a></td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-  <p class="muted">Chưa có đơn. <a href="/dev/ordering/checkout">Đặt hàng</a></p>
-  {% endif %}
+<div class="rise">
+  <h1>Đơn của tôi</h1>
+  <p class="page-lead muted">UC-21 · {{ demo_customer }} · {{ total }} đơn</p>
 </div>
+
+<section class="panel rise">
+  {% if orders %}
+  <div class="order-list">
+    {% for o in orders %}
+    <a class="order-card" href="/dev/ordering/orders/{{ o.order_code }}">
+      <div>
+        <p class="order-code">{{ o.order_code }}</p>
+        <div class="order-meta">
+          <span class="tag">{{ o.status }}</span>
+          <span class="tag {% if o.payment_status == 'PAID' %}ok{% else %}warn{% endif %}">
+            {{ o.payment_name }} · {{ o.payment_status }}
+          </span>
+        </div>
+        <div class="muted" style="font-size:.85rem">{{ o.created_at }}</div>
+      </div>
+      <div class="order-total">{{ "{:,.0f}".format(o.total_price) }}đ</div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:1.5rem">
+    <p class="muted">Chưa có đơn.</p>
+    <a class="btn" href="/dev/ordering/checkout">Đặt hàng</a>
+  </div>
+  {% endif %}
+</section>
 {% endblock %}

@@ -8,81 +8,25 @@ from __future__ import annotations
 
 from decimal import Decimal
 from typing import TYPE_CHECKING
-from uuid import UUID, uuid4
+from uuid import UUID
 
-from sqlalchemy import Column, Numeric
-from sqlmodel import Field, SQLModel, col, select
+from sqlmodel import col, select
 
 from app.modules.ordering.exceptions import InsufficientStockError
+from app.shared.seed_refs import (
+    AccountRef,
+    ColorRef,
+    ProductRef,
+    SizeRef,
+    StockRef,
+    VariantRef,
+)
 
 if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 DEMO_CUSTOMER_EMAIL = "khachhang@example.com"
 DEMO_EMPLOYEE_EMAIL = "nhanvien@example.com"
-
-
-# --- SQLModel tạm [GD]: map bảng ngoài schema ordering ---
-
-
-class AccountRef(SQLModel, table=True):
-    __tablename__ = "account"
-    __table_args__ = {"schema": "identity"}
-
-    account_key: UUID = Field(primary_key=True)
-    account_email: str = Field(max_length=255, unique=True)
-
-
-class StockRef(SQLModel, table=True):
-    __tablename__ = "stock"
-    __table_args__ = {"schema": "inventory"}
-
-    stock_key: UUID = Field(default_factory=uuid4, primary_key=True)
-    stock_variant_key: UUID = Field(unique=True, index=True)
-    stock_quantity: int = Field(default=0, ge=0)
-    stock_cost_price: Decimal = Field(
-        default=Decimal("0"),
-        sa_column=Column(Numeric(12, 0), nullable=False, server_default="0"),
-    )
-
-
-class VariantRef(SQLModel, table=True):
-    __tablename__ = "variant"
-    __table_args__ = {"schema": "catalog"}
-
-    variant_key: UUID = Field(primary_key=True)
-    variant_id: str = Field(max_length=60, unique=True)
-    variant_product_key: UUID
-    variant_size_key: UUID
-    variant_color_key: UUID
-    variant_sell_price: Decimal | None = Field(
-        default=None,
-        sa_column=Column(Numeric(12, 0), nullable=True),
-    )
-
-
-class ProductRef(SQLModel, table=True):
-    __tablename__ = "product"
-    __table_args__ = {"schema": "catalog"}
-
-    product_key: UUID = Field(primary_key=True)
-    product_name: str = Field(max_length=255)
-
-
-class ColorRef(SQLModel, table=True):
-    __tablename__ = "color"
-    __table_args__ = {"schema": "catalog"}
-
-    color_key: UUID = Field(primary_key=True)
-    color_name: str = Field(max_length=50)
-
-
-class SizeRef(SQLModel, table=True):
-    __tablename__ = "size"
-    __table_args__ = {"schema": "catalog"}
-
-    size_key: UUID = Field(primary_key=True)
-    size_name: str = Field(max_length=50)
 
 
 async def get_account_key_by_email(db: AsyncSession, email: str) -> UUID:

@@ -6,9 +6,9 @@
 |---|---|
 | GET `/dev/ordering/checkout` | [dev-checkout.md](./dev-checkout.md) |
 | POST `/dev/ordering/checkout/cod` | [dev-place-cod.md](./dev-place-cod.md) |
-| POST `/dev/ordering/checkout/qr` | cùng place (gọi `place_qr_order`) |
+| POST `/dev/ordering/checkout/qr` | [dev-place-qr.md](./dev-place-qr.md) |
 | GET `/dev/ordering/orders` | [dev-orders-list.md](./dev-orders-list.md) |
-| GET `/dev/ordering/orders/{code}` | cùng list (gọi `get_customer_order`) |
+| GET `/dev/ordering/orders/{code}` | [dev-order-detail.md](./dev-order-detail.md) |
 | POST `/dev/ordering/orders/{code}/cancel` | [dev-cancel-customer.md](./dev-cancel-customer.md) |
 | GET `/dev/ordering/orders/{code}/invoice` | [dev-invoice.md](./dev-invoice.md) |
 | POST `/dev/ordering/staff/confirm` | [dev-staff-confirm.md](./dev-staff-confirm.md) |

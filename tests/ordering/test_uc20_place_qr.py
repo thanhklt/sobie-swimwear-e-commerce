@@ -34,6 +34,12 @@ async def test_uc20_ac1_create_qr_order(
     assert view.created_at + timedelta(hours=24) == view.payment_deadline
     assert view.show_qr is True
     assert view.transfer_content == f"SOBIE{order.order_code}"
+    assert view.bank_account_no
+    assert view.bank_account_name
+    assert view.vietqr_image_url is not None
+    assert "img.vietqr.io" in view.vietqr_image_url
+    assert view.transfer_content in view.vietqr_image_url
+    assert str(int(view.total_price)) in view.vietqr_image_url
 
 
 @pytest.mark.asyncio
@@ -70,6 +76,8 @@ async def test_uc20_ac5_hide_qr_when_paid(
     )
     assert refreshed.payment_status == "PAID"
     assert refreshed.show_qr is False
+    assert refreshed.vietqr_image_url is None
+    assert refreshed.transfer_content is None
 
 
 @pytest.mark.asyncio

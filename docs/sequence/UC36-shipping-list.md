@@ -4,12 +4,14 @@
 sequenceDiagram
     actor Demo as Người demo
     participant R as Route Shipping
-    participant S as Ordering Service
+    participant SS as Shipping Service
+    participant O as Ordering Service
     participant P as Ordering Repository
     participant DB as PostgreSQL
     Demo->>R: GET /shipping/
-    R->>S: list_shipping_orders(db)
-    S->>P: Đọc đơn AWAITING_PICKUP / SHIPPING
+    R->>SS: list_simulator_orders(db)
+    SS->>O: list_shipping_orders(db)
+    O->>P: Đọc đơn AWAITING_PICKUP / SHIPPING
     P->>DB: SELECT mã đơn và trạng thái
     DB-->>R: Danh sách không chứa thông tin cá nhân
     R-->>Demo: Website giả lập vận chuyển

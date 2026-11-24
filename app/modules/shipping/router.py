@@ -1,19 +1,20 @@
-"""Website giao hàng giả lập và thao tác bàn giao UC-36/UC-40."""
+"""Thao tác bàn giao UC-40 dành cho nhân viên."""
 
 from pathlib import Path
-from urllib.parse import parse_qs
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from app.modules.identity.session import Role
-from app.modules.ordering import service as ordering_service
+from app.modules.shipping import service
 from app.shared.web.session import require_roles
 
 router = APIRouter(tags=["shipping"])
 templates = Jinja2Templates(directory=Path(__file__).with_name("templates"))
 employee_only = require_roles(Role.EMPLOYEE, login_route="portal_login")
+_NO_STORE = {"Cache-Control": "no-store", "Vary": "HX-Request"}
 
 
 async def _db():
@@ -28,39 +29,46 @@ def _same_origin(request: Request) -> bool:
     return origin is not None and origin.rstrip("/") == str(request.base_url).rstrip("/")
 
 
-@router.get("/shipping/", response_class=HTMLResponse, name="shipping_simulator")
-async def shipping_simulator(request: Request, error: str | None = None, db=Depends(_db)):
-    orders = await ordering_service.list_shipping_orders(db)
-    return templates.TemplateResponse(request, "shipping.html", {"orders": orders, "error": error})
-
-
-@router.post("/shipping/orders/{order_code}/status", name="shipping_update_status")
-async def shipping_update_status(order_code: str, request: Request, db=Depends(_db)):
-    if not _same_origin(request):
-        return HTMLResponse("Yêu cầu không hợp lệ.", status_code=403)
-    form = parse_qs((await request.body()).decode("utf-8"))
-    action = form.get("action", [""])[0]
-    try:
-        await ordering_service.update_shipping_status(db, order_code, action)
-    except LookupError as exc:
-        return RedirectResponse(f"/shipping/?error={exc}", status_code=303)
-    except ValueError as exc:
-        return RedirectResponse(f"/shipping/?error={exc}", status_code=303)
-    return RedirectResponse("/shipping/", status_code=303)
-
-
 @router.get("/admin/shipping", response_class=HTMLResponse, name="shipping_handoff")
-async def shipping_handoff(request: Request, error: str | None = None,
-                           _employee=Depends(employee_only), db=Depends(_db)):
-    orders = await ordering_service.list_confirmed_orders(db)
-    return templates.TemplateResponse(request, "handoff.html", {"orders": orders, "error": error})
+async def shipping_handoff(
+    request: Request,
+    error: str | None = None,
+    q: str | None = None,
+    _employee=Depends(employee_only),
+    db=Depends(_db),
+):
+    orders = await service.list_orders_ready_for_handoff(db, q=q)
+    return templates.TemplateResponse(
+        request,
+        "handoff.html",
+        {"orders": orders, "error": error, "q": q or ""},
+        headers=_NO_STORE,
+    )
 
 
 @router.post("/admin/shipping/{order_code}/handoff", name="shipping_handoff_order")
-async def shipping_handoff_order(order_code: str, request: Request,
-                                 employee=Depends(employee_only), db=Depends(_db)):
+async def shipping_handoff_order(
+    order_code: str,
+    request: Request,
+    employee=Depends(employee_only),
+    db=Depends(_db),
+):
     if not _same_origin(request):
-        return HTMLResponse("Yêu cầu không hợp lệ.", status_code=403)
-    if not await ordering_service.handoff_order(db, order_code, employee.account_key):
-        return RedirectResponse("/admin/shipping?error=Đơn không tồn tại hoặc không ở trạng thái Đã xác nhận.", status_code=303)
-    return RedirectResponse("/admin/shipping", status_code=303)
+        return HTMLResponse("Yêu cầu không hợp lệ.", status_code=403, headers=_NO_STORE)
+    try:
+        await service.handoff_order(db, order_code, employee.account_key)
+    except LookupError as exc:
+        # UC-40 E2 — must stay distinct from E1 status message.
+        return RedirectResponse(
+            f"/admin/shipping?error={quote(str(exc), safe='')}",
+            status_code=303,
+            headers=_NO_STORE,
+        )
+    except ValueError as exc:
+        # UC-40 E1 — report actual status (e.g. already "Chờ lấy hàng").
+        return RedirectResponse(
+            f"/admin/shipping?error={quote(str(exc), safe='')}",
+            status_code=303,
+            headers=_NO_STORE,
+        )
+    return RedirectResponse("/admin/shipping", status_code=303, headers=_NO_STORE)

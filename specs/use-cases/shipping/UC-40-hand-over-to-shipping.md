@@ -49,8 +49,9 @@ And: 4HZP8W1N không xuất hiện trên Trang giả lập vận chuyển
 
 ### AC-3: Đơn đã bàn giao
 Given: đơn 7K3M9Q2X đã ở trạng thái "Chờ lấy hàng"
-When: Nhân viên bấm "Bàn giao vận chuyển" cho 7K3M9Q2X lần nữa
-Then: hệ thống từ chối, đơn giữ trạng thái "Chờ lấy hàng"
+When: Nhân viên bấm "Bàn giao vận chuyển" cho 7K3M9Q2X lần nữa (ví dụ từ tab cũ)
+Then: hệ thống từ chối và báo đơn đang "Chờ lấy hàng"
+And: đơn giữ trạng thái "Chờ lấy hàng"
 
 ### AC-4: Khách thấy trạng thái mới
 Given: đơn 7K3M9Q2X của khách A ở "Đã xác nhận"
@@ -63,15 +64,18 @@ Then: khách A mở chi tiết đơn thấy trạng thái "Chờ lấy hàng"
 - **External Systems:** Trang giả lập vận chuyển
 
 ## Notes
-- Thông tin người gửi hiển thị trên trang giả lập lấy từ cấu hình hard-code.
+- Trang giả lập vận chuyển (UC-36) chỉ hiển thị mã đơn và trạng thái; không hiển thị thông tin người gửi, người nhận, địa chỉ hay tiền COD.
 
 ### Quyết định đã chốt
 - Nhân viên bấm "Bàn giao vận chuyển" cho đơn "Đã xác nhận" thì đơn sang "Chờ lấy hàng" và xuất hiện trên Trang giả lập vận chuyển (đã chốt 15/11/2026; đổi đích từ "Đang giao" sang "Chờ lấy hàng" ngày 20/11/2026).
+- Mỗi lần bàn giao đúng một đơn; không bàn giao nhiều đơn trong một thao tác (đã chốt 23/11/2026).
 - Trạng thái đơn: Chưa xử lý → Đã xác nhận → Chờ lấy hàng → Đang giao → Giao thành công | Giao không thành công; Đã hủy (đã chốt 15/11/2026, cập nhật 20/11/2026).
 - Admin chỉ quản lý tài khoản và gán vai trò cho tài khoản; mọi thao tác vận hành cửa hàng do Nhân viên thực hiện (đã chốt 15/11/2026).
 - Mỗi lần đơn đổi trạng thái, hệ thống lưu lịch sử: trạng thái cũ, trạng thái mới, nguồn thay đổi, người đổi (nếu có), thời điểm (theo ERD).
+- E1 báo đúng trạng thái thực tế của đơn; E2 báo không tìm thấy đơn — hai thông báo phải khác nhau (đã chốt 24/11/2026).
 
 ## History
 - v1 (2026-11-15): initial
 - v2 (2026-11-20): bàn giao chuyển đơn sang "Chờ lấy hàng" (không còn sang thẳng "Đang giao"); đơn vị vận chuyển bấm "Đã nhận hàng" mới sang "Đang giao" (UC-36)
 - v3 (2026-11-23): mỗi lần chỉ bàn giao một đơn; bỏ luồng và AC bàn giao nhiều đơn chưa được xác nhận
+- v4 (2026-11-24): đồng bộ Notes với UC-36 — trang giả lập chỉ mã đơn và trạng thái; ghi rõ mỗi lần bàn giao một đơn; chốt E1/E2 trả lỗi khác nhau

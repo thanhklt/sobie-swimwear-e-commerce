@@ -90,8 +90,19 @@ async def update_shipping_status(db, order_code: str, action: str) -> str:
 
 
 async def handoff_order(db, order_code: str, employee_key) -> bool:
+    """UC-40: E2 LookupError khi không có đơn; E1 ValueError kèm trạng thái thực tế."""
     async with transaction(db):
-        return await repository.handoff_order(db, order_code.strip().upper(), employee_key) is not None
+        normalized_code = order_code.strip().upper()
+        order_key = await repository.handoff_order(db, normalized_code, employee_key)
+        if order_key is not None:
+            return True
+        current_status = await repository.order_status_by_code(db, normalized_code)
+        if current_status is None:
+            raise LookupError("Không tìm thấy đơn.")
+        label = ORDER_STATUS_LABELS.get(current_status, current_status)
+        raise ValueError(
+            f"Đơn đang ở trạng thái «{label}»; chỉ bàn giao được khi đơn «Đã xác nhận»."
+        )
 
 
 async def list_confirmed_orders(db):

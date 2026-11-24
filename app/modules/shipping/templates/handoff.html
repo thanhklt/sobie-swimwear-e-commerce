@@ -1,5 +1,52 @@
 <!doctype html>
-<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Bàn giao vận chuyển | Sobie</title>
-<style>body{font:16px system-ui,sans-serif;max-width:850px;margin:36px auto;padding:0 18px;background:#f8f7f4;color:#252525}article{background:#fff;border:1px solid #e7e2db;border-radius:12px;padding:16px;margin:12px 0;display:flex;justify-content:space-between;align-items:center}button{font:inherit;padding:8px 12px;border:0;border-radius:7px;background:#262626;color:white;cursor:pointer}.error{color:#a21b1b}</style></head>
-<body><h1>Bàn giao đơn cho vận chuyển</h1><p>UC-40 · Đơn đã xác nhận sẽ chuyển sang trạng thái “Chờ lấy hàng”.</p>{% if error %}<p class="error">{{ error }}</p>{% endif %}
-{% for order in orders %}<article><span>{{ order.order_code }}</span><span>{{ order.order_created_date.strftime('%d/%m/%Y %H:%M') }}</span><form method="post" action="/admin/shipping/{{ order.order_code }}/handoff" onsubmit="return confirm('Bàn giao {{ order.order_code }} cho vận chuyển?')"><button>Bàn giao vận chuyển</button></form></article>{% else %}<article>Không có đơn đang chờ bàn giao.</article>{% endfor %}</body></html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bàn giao vận chuyển | Sobie</title>
+  <style>
+    body{font:16px "Segoe UI",system-ui,sans-serif;max-width:900px;margin:36px auto;padding:0 18px;background:#f8f7f4;color:#252525}
+    h1{margin-bottom:4px}.hint{color:#666;margin-top:0}
+    .toolbar{display:grid;grid-template-columns:1fr auto;gap:10px;margin:18px 0;align-items:end}
+    label{display:grid;gap:4px;font-size:13px;color:#555}
+    input,button{font:inherit;padding:9px 12px;border:1px solid #d5cfc6;border-radius:8px}
+    button{background:#262626;color:#fff;border:0;cursor:pointer}
+    button.secondary{background:#fff;color:#262626;border:1px solid #d5cfc6}
+    article{background:#fff;border:1px solid #e7e2db;border-radius:12px;padding:16px;margin:12px 0;display:flex;justify-content:space-between;align-items:center;gap:12px}
+    .code{font-weight:700;letter-spacing:.05em;font-family:ui-monospace,Consolas,monospace}
+    .when{color:#777;font-size:14px}.error{color:#a21b1b}
+    .meta{font-size:13px;color:#777}
+  </style>
+</head>
+<body>
+  <h1>Bàn giao đơn cho vận chuyển</h1>
+  <p class="hint">Bàn giao từng đơn đã xác nhận cho đơn vị vận chuyển. Tìm theo mã đơn (chứa / đúng mã).</p>
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+  <form class="toolbar" method="get" action="/admin/shipping">
+    <label>Mã đơn
+      <input name="q" value="{{ q }}" placeholder="VD: 7K3M hoặc 7K3M9Q2X" autocomplete="off">
+    </label>
+    <div style="display:flex;gap:8px">
+      <button type="submit">Tìm</button>
+      <a href="/admin/shipping"><button type="button" class="secondary">Xóa lọc</button></a>
+    </div>
+  </form>
+  <p class="meta">Hiển thị {{ orders|length }} đơn chờ bàn giao</p>
+
+  {% for order in orders %}
+  <article>
+    <div>
+      <div class="code">{{ order.order_code }}</div>
+      <div class="when">{{ order.order_created_date.strftime('%d/%m/%Y %H:%M') }}</div>
+    </div>
+    <form method="post" action="/admin/shipping/{{ order.order_code }}/handoff"
+          onsubmit="return confirm('Bàn giao {{ order.order_code }} cho vận chuyển?')">
+      <button>Bàn giao vận chuyển</button>
+    </form>
+  </article>
+  {% else %}
+  <article>Không có đơn khớp bộ lọc (hoặc không còn đơn chờ bàn giao).</article>
+  {% endfor %}
+</body>
+</html>

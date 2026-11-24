@@ -1,12 +1,73 @@
 <!doctype html>
-<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Trạng thái vận chuyển | Sobie</title>
-<style>body{font:16px system-ui,sans-serif;max-width:900px;margin:36px auto;padding:0 18px;background:#f8f7f4;color:#252525}h1{margin-bottom:4px}.hint{color:#666}article{background:white;border:1px solid #e7e2db;border-radius:12px;padding:16px;margin:12px 0;display:flex;gap:14px;align-items:center;justify-content:space-between}.code{font-weight:700;letter-spacing:.06em}.status{display:inline-block;background:#f2eee7;border-radius:99px;padding:5px 10px}form{display:inline}button{font:inherit;padding:8px 12px;border:0;border-radius:7px;background:#262626;color:white;cursor:pointer}.fail{background:#8f3535}.error{color:#a21b1b}</style></head>
-<body><h1>Trạng thái vận chuyển</h1><p class="hint">Website giả lập · Chỉ hiển thị mã đơn và trạng thái, không hiển thị thông tin cá nhân.</p>
-{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
-{% for order in orders %}<article><div><span class="code">{{ order.order_code }}</span><br><span class="status">{{ order.status_label }}</span></div><div>
-{% if order.status == 'AWAITING_PICKUP' %}<form method="post" action="/shipping/orders/{{ order.order_code }}/status"><input type="hidden" name="action" value="received"><button>Đã nhận hàng</button></form>
-{% else %}<form method="post" action="/shipping/orders/{{ order.order_code }}/status"><input type="hidden" name="action" value="delivered"><button>Đã giao</button></form>
-<form method="post" action="/shipping/orders/{{ order.order_code }}/status"><input type="hidden" name="action" value="failed"><button class="fail">Giao không thành công</button></form>{% endif %}</div></article>
-{% else %}<article>Hiện chưa có đơn đang chờ lấy hoặc đang giao.</article>{% endfor %}
-</body></html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trạng thái vận chuyển | Sobie</title>
+  <style>
+    body{font:16px "Segoe UI",system-ui,sans-serif;max-width:920px;margin:36px auto;padding:0 18px;background:#f8f7f4;color:#252525}
+    h1{margin-bottom:4px}.hint{color:#666;margin-top:0}
+    .toolbar{display:grid;grid-template-columns:1.4fr 1fr auto;gap:10px;margin:18px 0;align-items:end}
+    label{display:grid;gap:4px;font-size:13px;color:#555}
+    input,select,button{font:inherit;padding:9px 12px;border:1px solid #d5cfc6;border-radius:8px;background:#fff}
+    button{background:#262626;color:#fff;border:0;cursor:pointer}
+    button.secondary{background:#fff;color:#262626;border:1px solid #d5cfc6}
+    article{background:#fff;border:1px solid #e7e2db;border-radius:12px;padding:16px;margin:12px 0;display:flex;gap:14px;align-items:center;justify-content:space-between}
+    .code{font-weight:700;letter-spacing:.06em;font-family:ui-monospace,Consolas,monospace}
+    .status{display:inline-block;background:#f2eee7;border-radius:8px;padding:5px 10px;font-size:14px}
+    form.inline{display:inline}button.fail{background:#8f3535}.error{color:#a21b1b}
+    .meta{font-size:13px;color:#777;margin-bottom:8px}
+  </style>
+</head>
+<body>
+  <h1>Trạng thái vận chuyển</h1>
+  <p class="hint">Website giả lập · Chỉ mã đơn và trạng thái. Tìm theo mã (chứa / đúng mã) hoặc trạng thái.</p>
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+  <form class="toolbar" method="get" action="/">
+    <label>Mã đơn
+      <input name="q" value="{{ q }}" placeholder="VD: 7K3M hoặc 7K3M9Q2X" autocomplete="off">
+    </label>
+    <label>Trạng thái
+      <select name="status">
+        <option value="">Tất cả</option>
+        <option value="AWAITING_PICKUP" {{ 'selected' if status == 'AWAITING_PICKUP' }}>Chờ lấy hàng</option>
+        <option value="SHIPPING" {{ 'selected' if status == 'SHIPPING' }}>Đang giao</option>
+      </select>
+    </label>
+    <div style="display:flex;gap:8px">
+      <button type="submit">Tìm</button>
+      <a href="/"><button type="button" class="secondary">Xóa lọc</button></a>
+    </div>
+  </form>
+  <p class="meta">Hiển thị {{ orders|length }} đơn</p>
+
+  {% for order in orders %}
+  <article>
+    <div>
+      <span class="code">{{ order.order_code }}</span><br>
+      <span class="status">{{ order.status_label }}</span>
+    </div>
+    <div>
+      {% if order.status == 'AWAITING_PICKUP' %}
+      <form class="inline" method="post" action="/orders/{{ order.order_code }}/status">
+        <input type="hidden" name="action" value="received">
+        <button>Đã nhận hàng</button>
+      </form>
+      {% else %}
+      <form class="inline" method="post" action="/orders/{{ order.order_code }}/status">
+        <input type="hidden" name="action" value="delivered">
+        <button>Đã giao</button>
+      </form>
+      <form class="inline" method="post" action="/orders/{{ order.order_code }}/status">
+        <input type="hidden" name="action" value="failed">
+        <button class="fail">Giao không thành công</button>
+      </form>
+      {% endif %}
+    </div>
+  </article>
+  {% else %}
+  <article>Không có đơn khớp bộ lọc (hoặc chưa có đơn chờ lấy / đang giao).</article>
+  {% endfor %}
+</body>
+</html>

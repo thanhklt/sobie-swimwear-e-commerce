@@ -60,7 +60,7 @@ async def order_lines_for_delivery(db, order_key) -> list[dict[str, Any]]:
 async def create_delivery_invoice(db, order: dict[str, Any], snapshot: dict[str, Any]) -> None:
     await db.exec(text('''
         UPDATE ordering."order" AS order_row SET order_payment_status = 'PAID'
-        WHERE order_key = :order_key AND EXISTS (
+        WHERE order_key = :order_key AND :payment_name = 'COD' AND EXISTS (
             SELECT 1 FROM ordering.payment
             WHERE payment_key = order_row.order_payment_key AND payment_name = :payment_name
         )
@@ -69,7 +69,7 @@ async def create_delivery_invoice(db, order: dict[str, Any], snapshot: dict[str,
         INSERT INTO ordering.invoice (invoice_id, invoice_order_key, invoice_snapshot_json)
         VALUES (:invoice_id, :order_key, CAST(:snapshot AS jsonb))
         ON CONFLICT (invoice_order_key) DO NOTHING
-    '''), params={"invoice_id": f"HD-{order['order_code']}", "order_key": order["order_key"], "payment_name": "COD", "snapshot": json.dumps(snapshot, ensure_ascii=False, default=str)})
+    '''), params={"invoice_id": f"HD-{order['order_code']}", "order_key": order["order_key"], "snapshot": json.dumps(snapshot, ensure_ascii=False, default=str)})
 
 
 async def handoff_order(db, order_code: str, employee_key) -> str | None:
@@ -90,6 +90,14 @@ async def handoff_order(db, order_code: str, employee_key) -> str | None:
         VALUES (:order_key, 'CONFIRMED', 'AWAITING_PICKUP', 'EMPLOYEE', :employee_key)
     '''), params={"order_key": row["order_key"], "employee_key": employee_key})
     return str(row["order_key"])
+
+
+async def order_status_by_code(db, order_code: str) -> str | None:
+    result = await db.exec(text('''
+        SELECT order_status FROM ordering."order" WHERE order_code = :order_code
+    '''), params={"order_code": order_code})
+    row = result.first()
+    return row[0] if row else None
 
 
 async def confirmed_orders(db) -> list[dict[str, Any]]:

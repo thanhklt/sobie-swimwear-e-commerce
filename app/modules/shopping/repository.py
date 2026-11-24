@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy import func
-from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, select
 
 from app.modules.shopping.models import (
@@ -143,18 +143,21 @@ async def get_wishlist_key(db: AsyncSession, account_key: UUID) -> UUID | None:
 async def insert_wishlist_item(
     db: AsyncSession, wishlist_key: UUID, product_key: UUID
 ) -> bool:
-    """True nếu thêm mới; False nếu đã có (ON CONFLICT DO NOTHING)."""
-    stmt = (
-        insert(WishlistItem)
-        .values(
-            wishlist_item_wishlist_key=wishlist_key,
-            wishlist_item_product_key=product_key,
-        )
-        .on_conflict_do_nothing(constraint="wishlist_item_wishlist_product_uq")
-        .returning(WishlistItem.wishlist_item_key)
-    )
-    result = await db.exec(stmt)
-    return result.first() is not None
+    """True nếu thêm mới; False nếu đã có (unique + savepoint, chống race)."""
+    if await wishlist_has_product(db, wishlist_key, product_key):
+        return False
+    try:
+        async with db.begin_nested():
+            db.add(
+                WishlistItem(
+                    wishlist_item_wishlist_key=wishlist_key,
+                    wishlist_item_product_key=product_key,
+                )
+            )
+            await db.flush()
+        return True
+    except IntegrityError:
+        return False
 
 
 async def delete_wishlist_item(
@@ -227,15 +230,19 @@ async def insert_merge_request(
     db: AsyncSession, account_key: UUID, merge_id: str, payload_hash: str
 ) -> bool:
     """True nếu đây là lần đầu lưu mã gộp; False nếu mã đã tồn tại (race AC-11)."""
-    stmt = (
-        insert(CartMergeRequest)
-        .values(
-            cart_merge_request_account_key=account_key,
-            cart_merge_request_id=merge_id,
-            cart_merge_request_payload_hash=payload_hash,
-        )
-        .on_conflict_do_nothing(constraint="cart_merge_request_account_id_uq")
-        .returning(CartMergeRequest.cart_merge_request_key)
-    )
-    result = await db.exec(stmt)
-    return result.first() is not None
+    existing = await get_merge_payload_hash(db, account_key, merge_id)
+    if existing is not None:
+        return False
+    try:
+        async with db.begin_nested():
+            db.add(
+                CartMergeRequest(
+                    cart_merge_request_account_key=account_key,
+                    cart_merge_request_id=merge_id,
+                    cart_merge_request_payload_hash=payload_hash,
+                )
+            )
+            await db.flush()
+        return True
+    except IntegrityError:
+        return False

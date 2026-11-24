@@ -11,16 +11,24 @@ from dataclasses import dataclass
 from decimal import Decimal
 from uuid import UUID
 
-import pytest
 import pytest_asyncio
-from sqlalchemy import text
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.modules.shopping import repository as shopping_repository
+from app.modules.shopping.adapters import (
+    DEMO_EMAIL,
+    get_account_key_by_email,
+    get_product_key_by_id,
+    get_stock_quantity,
+    get_variant_key_by_id,
+    set_stock_quantity,
+)
 from app.modules.shopping.dependencies import ProductCardData
+from app.modules.shopping.models import CartItem, CartMergeRequest, WishlistItem
 from app.shared.database.engine import session_factory
 from tests.shopping.fakes import FakeAvailability, FakePricing, FakeProductCatalog
 
-DEMO_EMAIL = "khachhang@example.com"
 VARIANT_DO_M = "SP-0002-DO-M"
 VARIANT_XANH_S = "SP-0002-XANHDUONG-S"
 PRODUCT_SP1 = "SP-0001"
@@ -47,132 +55,67 @@ async def db() -> AsyncIterator[AsyncSession]:
 @pytest_asyncio.fixture
 async def demo(db: AsyncSession) -> DemoIds:
     """Load mọi UUID seed trong một lượt — tránh fixture song song trên cùng session."""
-    account = (
-        await db.exec(
-            text(
-                "SELECT account_key FROM identity.account WHERE account_email = :email"
-            ),
-            params={"email": DEMO_EMAIL},
-        )
-    ).one()[0]
-    do_m = (
-        await db.exec(
-            text("SELECT variant_key FROM catalog.variant WHERE variant_id = :vid"),
-            params={"vid": VARIANT_DO_M},
-        )
-    ).one()[0]
-    xanh = (
-        await db.exec(
-            text("SELECT variant_key FROM catalog.variant WHERE variant_id = :vid"),
-            params={"vid": VARIANT_XANH_S},
-        )
-    ).one()[0]
-    sp1 = (
-        await db.exec(
-            text("SELECT product_key FROM catalog.product WHERE product_id = :pid"),
-            params={"pid": PRODUCT_SP1},
-        )
-    ).one()[0]
-    sp2 = (
-        await db.exec(
-            text("SELECT product_key FROM catalog.product WHERE product_id = :pid"),
-            params={"pid": PRODUCT_SP2},
-        )
-    ).one()[0]
     return DemoIds(
-        account_key=UUID(str(account)),
-        variant_do_m=UUID(str(do_m)),
-        variant_xanh_s=UUID(str(xanh)),
-        product_sp1=UUID(str(sp1)),
-        product_sp2=UUID(str(sp2)),
+        account_key=await get_account_key_by_email(db, DEMO_EMAIL),
+        variant_do_m=await get_variant_key_by_id(db, VARIANT_DO_M),
+        variant_xanh_s=await get_variant_key_by_id(db, VARIANT_XANH_S),
+        product_sp1=await get_product_key_by_id(db, PRODUCT_SP1),
+        product_sp2=await get_product_key_by_id(db, PRODUCT_SP2),
     )
 
 
 @pytest_asyncio.fixture
 async def clean_cart(db: AsyncSession, demo: DemoIds) -> None:
-    await db.exec(
-        text(
-            """
-            DELETE FROM shopping.cart_merge_request
-            WHERE cart_merge_request_account_key = :account_key
-            """
-        ),
-        params={"account_key": demo.account_key},
+    merge_rows = await db.exec(
+        select(CartMergeRequest).where(
+            CartMergeRequest.cart_merge_request_account_key == demo.account_key
+        )
     )
-    await db.exec(
-        text(
-            """
-            DELETE FROM shopping.cart_item
-            WHERE cart_item_cart_key = (
-              SELECT cart_key FROM shopping.cart WHERE cart_account_key = :account_key
-            )
-            """
-        ),
-        params={"account_key": demo.account_key},
-    )
+    for row in merge_rows.all():
+        await db.delete(row)
+
+    cart_key = await shopping_repository.get_cart_key(db, demo.account_key)
+    if cart_key is not None:
+        items = await db.exec(
+            select(CartItem).where(CartItem.cart_item_cart_key == cart_key)
+        )
+        for item in items.all():
+            await db.delete(item)
     await db.commit()
 
 
 @pytest_asyncio.fixture
 async def clean_wishlist(db: AsyncSession, demo: DemoIds) -> None:
-    await db.exec(
-        text(
-            """
-            DELETE FROM shopping.wishlist_item
-            WHERE wishlist_item_wishlist_key = (
-              SELECT wishlist_key FROM shopping.wishlist
-              WHERE wishlist_account_key = :account_key
+    wishlist_key = await shopping_repository.get_wishlist_key(db, demo.account_key)
+    if wishlist_key is not None:
+        items = await db.exec(
+            select(WishlistItem).where(
+                WishlistItem.wishlist_item_wishlist_key == wishlist_key
             )
-            """
-        ),
-        params={"account_key": demo.account_key},
-    )
+        )
+        for item in items.all():
+            await db.delete(item)
     await db.commit()
 
 
 async def db_cart_qty(
     db: AsyncSession, account_key: UUID, variant_key: UUID
 ) -> int | None:
-    result = await db.exec(
-        text(
-            """
-            SELECT ci.cart_item_quantity
-            FROM shopping.cart_item ci
-            JOIN shopping.cart c ON c.cart_key = ci.cart_item_cart_key
-            WHERE c.cart_account_key = :account_key
-              AND ci.cart_item_variant_key = :variant_key
-            """
-        ),
-        params={"account_key": account_key, "variant_key": variant_key},
-    )
-    row = result.first()
-    return int(row[0]) if row else None
+    cart_key = await shopping_repository.get_cart_key(db, account_key)
+    if cart_key is None:
+        return None
+    row = await shopping_repository.get_cart_item_quantity(db, cart_key, variant_key)
+    if row is None:
+        return None
+    return row[1]
 
 
 async def db_stock(db: AsyncSession, variant_key: UUID) -> int:
-    result = await db.exec(
-        text(
-            """
-            SELECT stock_quantity FROM inventory.stock
-            WHERE stock_variant_key = :variant_key
-            """
-        ),
-        params={"variant_key": variant_key},
-    )
-    return int(result.one()[0])
+    return await get_stock_quantity(db, variant_key)
 
 
 async def set_stock(db: AsyncSession, variant_key: UUID, quantity: int) -> None:
-    await db.exec(
-        text(
-            """
-            UPDATE inventory.stock
-            SET stock_quantity = :quantity
-            WHERE stock_variant_key = :variant_key
-            """
-        ),
-        params={"variant_key": variant_key, "quantity": quantity},
-    )
+    await set_stock_quantity(db, variant_key, quantity)
     await db.commit()
 
 

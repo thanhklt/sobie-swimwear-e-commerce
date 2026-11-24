@@ -1,96 +1,158 @@
 {% extends "shopping_base.html" %}
 
 {% block shopping_content %}
-<h1>Giỏ hàng (UC-18)</h1>
-<p class="muted">Account demo: {{ demo_email }}</p>
+<style>
+  .line {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: .75rem 1rem;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--line);
+    animation: rise .45s ease both;
+  }
+  .line:last-child { border-bottom: none; }
+  .line-title { margin: 0 0 .25rem; font-weight: 600; }
+  .line-actions { display: flex; flex-direction: column; align-items: flex-end; gap: .45rem; }
+  .price { font-family: var(--font-display); font-size: 1.2rem; }
+  .empty {
+    padding: 1.5rem 0;
+    color: var(--muted);
+    text-align: center;
+  }
 
-<div class="panel">
-  <h2>Thêm vào giỏ</h2>
-  <form method="post" action="/dev/shopping/cart/add" class="row-actions">
+  .summary-box { position: sticky; top: 4.5rem; }
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: .45rem 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .summary-row.total {
+    border: none;
+    padding-top: .85rem;
+    font-size: 1.15rem;
+    font-family: var(--font-display);
+  }
+  .guest-box {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px dashed var(--line);
+  }
+  .preview {
+    white-space: pre-wrap;
+    background: var(--mist);
+    border: 1px dashed var(--line);
+    border-radius: 10px;
+    padding: .7rem;
+    min-height: 2.5rem;
+    margin: .65rem 0;
+    font-size: .8rem;
+  }
+  .add-form select { flex: 1; min-width: min(100%, 14rem); }
+</style>
+
+<div class="rise">
+  <h1>Giỏ hàng</h1>
+  <p class="page-lead muted">UC-18 · {{ demo_email }}</p>
+</div>
+
+<section class="panel rise">
+  <h2>Thêm từ catalog seed</h2>
+  <form method="post" action="/dev/shopping/cart/add" class="row-actions add-form">
     <select name="variant_key" required>
       {% for v in variants %}
-      <option value="{{ v.variant_key }}">
-        {{ v.variant_id }} — {{ v.label }} (tồn {{ v.stock }}, {{ "{:,.0f}".format(v.price) }}đ)
+      <option value="{{ v.variant_key }}" {% if sample_variant_key and v.variant_key|string == sample_variant_key %}selected{% endif %}>
+        {{ v.variant_id }} — {{ v.label }} · tồn {{ v.stock }} · {{ "{:,.0f}".format(v.price) }}đ
+        {% if not v.sellable %}(Ngừng bán){% endif %}
       </option>
       {% endfor %}
     </select>
     <input type="number" name="quantity" value="1" min="1" step="1" required style="width:5rem">
     <button type="submit">Thêm</button>
   </form>
-</div>
+</section>
 
-<div class="panel">
-  <h2>Nội dung giỏ</h2>
-  {% if cart.lines %}
-  <table>
-    <thead>
-      <tr>
-        <th>Biến thể</th>
-        <th>SL</th>
-        <th>Đơn giá</th>
-        <th>Thành tiền</th>
-        <th>Trạng thái</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
+<div class="layout-2 rise">
+  <section class="panel">
+    <h2>Trong giỏ</h2>
+    {% if cart.lines %}
       {% for line in cart.lines %}
-      <tr>
-        <td>
-          <div>{{ labels.get(line.variant_key, line.variant_key) }}</div>
-          <div class="muted">{{ line.variant_key }}</div>
-        </td>
-        <td>
+      <article class="line">
+        <div>
+          <p class="line-title">{{ labels.get(line.variant_key, line.variant_key) }}</p>
+          <div class="muted mono">{{ line.variant_key }}</div>
+          <div style="margin-top:.45rem">
+            {% if line.is_available %}
+              <span class="tag ok">Có thể đặt</span>
+            {% else %}
+              <span class="tag warn">{{ line.unavailable_reason }}</span>
+            {% endif %}
+          </div>
+          <div class="muted" style="margin-top:.45rem">
+            Đơn giá {{ "{:,.0f}".format(line.unit_price) }}đ
+          </div>
+        </div>
+        <div class="line-actions">
+          <div class="price">{{ "{:,.0f}".format(line.line_total) }}đ</div>
           <form method="post" action="/dev/shopping/cart/set-qty" class="row-actions">
             <input type="hidden" name="variant_key" value="{{ line.variant_key }}">
-            <input type="number" name="quantity" value="{{ line.quantity }}" min="1" step="1" style="width:4.5rem">
-            <button type="submit" class="secondary">Lưu</button>
+            <input type="number" name="quantity" value="{{ line.quantity }}" min="1" step="1" style="width:4.2rem">
+            <button type="submit" class="secondary">Lưu SL</button>
           </form>
-        </td>
-        <td>{{ "{:,.0f}".format(line.unit_price) }}đ</td>
-        <td>{{ "{:,.0f}".format(line.line_total) }}đ</td>
-        <td>
-          {% if line.is_available %}
-            <span class="tag">Có thể đặt</span>
-          {% else %}
-            <span class="tag warn">{{ line.unavailable_reason }}</span>
-          {% endif %}
-        </td>
-        <td>
           <form method="post" action="/dev/shopping/cart/remove">
             <input type="hidden" name="variant_key" value="{{ line.variant_key }}">
-            <button type="submit" class="secondary">Xóa</button>
+            <button type="submit" class="danger">Xóa</button>
           </form>
-        </td>
-      </tr>
+        </div>
+      </article>
       {% endfor %}
-    </tbody>
-  </table>
-  <p><strong>Tạm tính (chỉ dòng còn hàng):</strong> {{ "{:,.0f}".format(cart.subtotal) }}đ</p>
-  {% else %}
-  <p class="muted">Giỏ trống.</p>
-  {% endif %}
-</div>
+    {% else %}
+      <div class="empty">Giỏ trống — chọn biến thể ở dropdown phía trên.</div>
+    {% endif %}
+  </section>
 
-<div class="panel">
-  <h2>Gộp giỏ guest (AC-6 / AC-10)</h2>
-  <p class="muted">
-    Giỏ guest lưu ở <code>localStorage</code> (AC-5). Bấm “Lưu guest mẫu” rồi “Gộp vào tài khoản”.
-  </p>
-  <div class="row-actions" style="margin-bottom:.75rem">
-    <button type="button" class="secondary" id="btn-save-guest">Lưu guest mẫu vào localStorage</button>
-    <button type="button" class="secondary" id="btn-show-guest">Xem localStorage</button>
-  </div>
-  <pre id="guest-preview" class="muted" style="white-space:pre-wrap;background:#f8fafc;padding:.75rem;border-radius:8px;min-height:2.5rem"></pre>
-  <form method="post" action="/dev/shopping/cart/merge" id="merge-form">
-    <input type="hidden" name="merge_id" id="merge_id">
-    <input type="hidden" name="guest_json" id="guest_json">
-    <button type="submit">Gộp vào tài khoản</button>
-  </form>
+  <aside class="panel summary-box">
+    <h2>Tạm tính</h2>
+    <div class="summary-row">
+      <span class="muted">Dòng trong giỏ</span>
+      <strong>{{ cart.lines|length }}</strong>
+    </div>
+    <div class="summary-row total">
+      <span>Còn hàng</span>
+      <strong>{{ "{:,.0f}".format(cart.subtotal) }}đ</strong>
+    </div>
+    <p class="muted" style="margin:.75rem 0 0;font-size:.85rem">
+      Chỉ cộng dòng còn hàng / còn bán.
+    </p>
+
+    <div class="guest-box">
+      <h2>Gộp giỏ guest</h2>
+      <p class="muted" style="margin:0 0 .65rem;font-size:.85rem">
+        Mô phỏng AC-5/6/10: lưu <strong>đúng các dòng đang có trong giỏ</strong> vào
+        <code>localStorage</code> như giỏ vãng lai, rồi gộp vào tài khoản demo.
+      </p>
+      <div class="row-actions">
+        <button type="button" class="secondary" id="btn-save-guest">Lưu giỏ hiện tại → guest</button>
+        <button type="button" class="secondary" id="btn-clear-guest">Xóa guest</button>
+      </div>
+      <pre id="guest-preview" class="preview muted"></pre>
+      <form method="post" action="/dev/shopping/cart/merge" id="merge-form">
+        <input type="hidden" name="merge_id" id="merge_id">
+        <input type="hidden" name="guest_json" id="guest_json">
+        <button type="submit" style="width:100%">Gộp guest vào tài khoản</button>
+      </form>
+    </div>
+  </aside>
 </div>
 
 <script>
-  const SAMPLE_VARIANT = {{ sample_variant_key|tojson }};
+  // Snapshot giỏ account hiện tại (từ server) — dùng khi bấm lưu guest
+  const CART_LINES = [
+    {% for line in cart.lines %}
+    { variant_key: "{{ line.variant_key }}", quantity: {{ line.quantity }} }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ];
   const KEY = "sobie_guest_cart_v1";
   const MERGE_KEY = "sobie_guest_merge_id";
 
@@ -103,19 +165,25 @@
       JSON.stringify(readGuest(), null, 2) || "[]";
   }
   document.getElementById("btn-save-guest").onclick = () => {
-    const payload = [{ variant_key: SAMPLE_VARIANT, quantity: 2 }];
-    localStorage.setItem(KEY, JSON.stringify(payload));
-    if (!localStorage.getItem(MERGE_KEY)) {
-      localStorage.setItem(MERGE_KEY, crypto.randomUUID());
+    if (!CART_LINES.length) {
+      alert("Giỏ đang trống — thêm sản phẩm trước rồi mới lưu guest.");
+      return;
     }
+    localStorage.setItem(KEY, JSON.stringify(CART_LINES));
+    // Mỗi lần lưu guest mới → merge_id mới (một “lần gộp” riêng)
+    localStorage.setItem(MERGE_KEY, crypto.randomUUID());
     showGuest();
   };
-  document.getElementById("btn-show-guest").onclick = showGuest;
+  document.getElementById("btn-clear-guest").onclick = () => {
+    localStorage.removeItem(KEY);
+    localStorage.removeItem(MERGE_KEY);
+    showGuest();
+  };
   document.getElementById("merge-form").addEventListener("submit", (e) => {
     const lines = readGuest();
     if (!lines.length) {
       e.preventDefault();
-      alert("localStorage trống — bấm “Lưu guest mẫu” trước.");
+      alert("localStorage guest trống — bấm “Lưu giỏ hiện tại → guest” trước.");
       return;
     }
     let mergeId = localStorage.getItem(MERGE_KEY);
@@ -126,7 +194,6 @@
     document.getElementById("merge_id").value = mergeId;
     document.getElementById("guest_json").value = JSON.stringify(lines);
   });
-  // Xóa guest sau khi gộp thành công (flash_ok có chữ Gộp)
   {% if clear_guest_storage %}
   localStorage.removeItem(KEY);
   localStorage.removeItem(MERGE_KEY);

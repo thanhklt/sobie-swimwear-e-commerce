@@ -55,13 +55,17 @@ def _flash(request: Request) -> dict[str, str | None]:
 
 
 @router.get("")
-async def shopping_home(request: Request):
+async def shopping_home(request: Request, db: DbSession):
+    products = await adapters.list_seed_products(db)
+    hero = next((p for p in products if p.get("image_url")), products[0] if products else None)
     return templates.TemplateResponse(
         request,
         "shopping_home.html",
         {
             "title": "Thử shopping",
             "demo_email": DEMO_EMAIL,
+            "hero": hero,
+            "nav_active": "home",
             **_flash(request),
         },
     )
@@ -100,6 +104,7 @@ async def cart_page(request: Request, db: DbSession):
             "labels": labels,
             "sample_variant_key": sample_variant,
             "clear_guest_storage": clear_guest,
+            "nav_active": "cart",
             **_flash(request),
         },
     )
@@ -208,6 +213,8 @@ async def wishlist_page(request: Request, db: DbSession):
             "demo_email": DEMO_EMAIL,
             "wishlist": wishlist,
             "products": products,
+            "wishlist_keys": {item.product_key for item in wishlist.items},
+            "nav_active": "wishlist",
             **_flash(request),
         },
     )

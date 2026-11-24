@@ -10,7 +10,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
       POSTGRES_DB: ${POSTGRES_DB:-sobieDB}
     ports:
-      - "5432:5432"
+      # 5433 trên host tránh xung đột với PostgreSQL Windows local (thường giữ 5432)
+      - "5433:5432"
     networks:
       - sobie_network
     volumes:

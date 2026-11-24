@@ -156,6 +156,8 @@ CREATE TABLE shopping.wishlist_item (
   wishlist_item_key          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   wishlist_item_wishlist_key uuid NOT NULL REFERENCES shopping.wishlist (wishlist_key) ON DELETE CASCADE,
   wishlist_item_product_key  uuid NOT NULL REFERENCES catalog.product (product_key) ON DELETE CASCADE,
+  -- [GD] UC-38 AC-3: sắp xếp mới thêm nhất trước; ERD chưa có cột thời gian
+  wishlist_item_added_at     timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT wishlist_item_wishlist_product_uq UNIQUE (wishlist_item_wishlist_key, wishlist_item_product_key)
 );
 
@@ -170,6 +172,18 @@ CREATE TABLE shopping.cart_item (
   cart_item_variant_key uuid NOT NULL REFERENCES catalog.variant (variant_key) ON DELETE CASCADE,
   cart_item_quantity    int  NOT NULL DEFAULT 1 CHECK (cart_item_quantity > 0),
   CONSTRAINT cart_item_cart_variant_uq UNIQUE (cart_item_cart_key, cart_item_variant_key)
+);
+
+-- [GD] UC-18 AC-10/AC-11: chống cộng trùng khi gộp giỏ (mã yêu cầu theo tài khoản)
+CREATE TABLE shopping.cart_merge_request (
+  cart_merge_request_key           uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  cart_merge_request_account_key   uuid        NOT NULL
+    REFERENCES identity.account (account_key) ON DELETE CASCADE,
+  cart_merge_request_id            varchar(64) NOT NULL,
+  cart_merge_request_payload_hash  char(64)    NOT NULL,
+  cart_merge_request_created_at    timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT cart_merge_request_account_id_uq
+    UNIQUE (cart_merge_request_account_key, cart_merge_request_id)
 );
 
 -- ---------------------------------------------------------------------

@@ -22,7 +22,7 @@ Nhân viên mở màn hình quản lý khuyến mãi theo sản phẩm để t�
 3. Hệ thống kiểm tra dữ liệu hợp lệ và sản phẩm được chọn chưa thuộc khuyến mãi theo sản phẩm nào khác chưa kết thúc.
 4. Hệ thống hiển thị popup xác nhận tóm tắt khuyến mãi: phần trăm giảm, sản phẩm, kèm lưu ý "Khuyến mãi có hiệu lực ngay khi xác nhận; đã tạo thì không thể sửa, chỉ có thể kết thúc".
 5. Nhân viên bấm "Xác nhận".
-6. Hệ thống lưu khuyến mãi với loại PRODUCT, trạng thái bật, ghi thời điểm tạo; khuyến mãi có hiệu lực ngay.
+6. Hệ thống lưu khuyến mãi với loại PRODUCT, trạng thái bật; khuyến mãi có hiệu lực ngay. Không lưu thời điểm tạo hay thời điểm kết thúc.
 7. Từ lúc tạo cho đến khi Nhân viên kết thúc chương trình, giá sau giảm = giá bán theo size × (100% − phần trăm giảm), làm tròn `ROUND_HALF_UP` về số nguyên VND; giá này được hiển thị trên trang chi tiết sản phẩm (UC-12) và dùng khi tính tiền đơn (UC-31).
 
 ## Alternative Flows
@@ -137,3 +137,4 @@ Then: giá sau giảm = 169.999đ (169.999,15 làm tròn `ROUND_HALF_UP`)
 - v7 (2026-11-20): theo data model v2 — bỏ ngày bắt đầu / ngày kết thúc, khuyến mãi có hiệu lực ngay khi tạo (bước 2, 4, 6, 7; E1; AC-1, AC-2, AC-5, AC-7); thay AC-4 bằng "Có hiệu lực ngay khi tạo"; trạng thái chỉ còn Đang hiệu lực / Đã kết thúc (1b); lọc theo thời điểm tạo → kết thúc (1c, AC-11)
 - v8 (2026-11-20): theo data model v2, Q30 — bỏ lọc theo khoảng thời gian (xóa 1c, AC-11); không ghi thời điểm kết thúc (1a)
 - v9 (2026-11-23): bỏ nhãn giả định ở E1 vì ngưỡng phần trăm đã được chốt bằng CHECK constraint trong database
+- v10 (2026-11-24): bỏ yêu cầu ghi thời điểm tạo ở bước 6 — đồng bộ data model v2 (Q30): hệ thống không lưu thời điểm tạo / kết thúc khuyến mãi sản phẩm

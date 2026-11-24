@@ -29,6 +29,16 @@ async def active_product_key(db, product_id: str):
     return row[0] if row else None
 
 
+async def active_products_for_promotion(db):
+    result = await db.exec(text("""
+        SELECT product_id, product_name
+        FROM catalog.product
+        WHERE product_status = 'ACTIVE'
+        ORDER BY product_name, product_id
+    """))
+    return [dict(row) for row in result.mappings().all()]
+
+
 async def product_ids_by_keys(db, product_keys):
     if not product_keys:
         return {}

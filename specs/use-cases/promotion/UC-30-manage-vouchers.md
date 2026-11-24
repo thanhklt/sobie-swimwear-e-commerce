@@ -29,7 +29,7 @@ Nhân viên mở màn hình quản lý voucher để tạo hoặc ngừng một 
 - **1a. Ngừng voucher (kết thúc trước hạn):** Nhân viên chọn một voucher chưa kết thúc và bấm "Ngừng" → voucher chuyển trạng thái tắt, hết hiệu lực ngay, khách nhập mã sẽ bị báo không hợp lệ (UC-31, E1); ngày kết thúc đã chọn khi tạo giữ nguyên; voucher không bật lại được; đơn đã tạo không thay đổi.
 - **1b. Xem danh sách voucher:** Nhân viên xem danh sách voucher kèm tổng lượt dùng, số lượt đã dùng và trạng thái: "Sắp diễn ra" (chưa tới ngày bắt đầu), "Đang hiệu lực", "Đã kết thúc" (đã tới ngày kết thúc hoặc đã bị ngừng). Danh sách không có thao tác sửa.
 - **1c. Lọc theo khoảng thời gian:** Nhân viên chọn "từ ngày" và "đến ngày" → hệ thống chỉ hiển thị các voucher có thời gian hiệu lực giao với khoảng đã chọn (kể cả giao một phần).
-- **7a. Hết hạn:** tới ngày kết thúc → voucher tự hết hiệu lực, chuyển "Đã kết thúc", không cần Nhân viên thao tác.
+- **7a. Hết hạn:** hết ngày kết thúc đã chọn (múi giờ `Asia/Ho_Chi_Minh`) → voucher tự hết hiệu lực tại mốc 00:00:00 của ngày kế tiếp, chuyển "Đã kết thúc", không cần Nhân viên thao tác.
 
 ## Exceptions
 - **E1 [GD]. Trùng mã không phân biệt hoa thường:** mã voucher đã tồn tại (không phân biệt hoa thường) → hệ thống báo lỗi, không lưu.
@@ -101,6 +101,13 @@ When: Nhân viên mở danh sách voucher, sau đó khách nhập "P1" khi đặ
 Then: "P1" hiển thị "Sắp diễn ra", "Q1" hiển thị "Đang hiệu lực", "R1" hiển thị "Đã kết thúc"
 And: hệ thống báo "P1" chưa đến thời gian hiệu lực (UC-31 E2)
 
+### AC-11: Hết hiệu lực đúng mốc hết ngày kết thúc
+Given: voucher "SUMMER10" có ngày kết thúc 20/11/2026 theo lịch `Asia/Ho_Chi_Minh` (mốc hết hiệu lực = 00:00:00 ngày 21/11/2026 `Asia/Ho_Chi_Minh`, lưu UTC)
+When: tại thời điểm ngay trước mốc (23:59:59 ngày 20/11/2026 `Asia/Ho_Chi_Minh`), khách nhập "SUMMER10" với đơn đủ điều kiện
+Then: voucher vẫn "Đang hiệu lực" và được xét trong UC-31
+When: tại đúng mốc 00:00:00 ngày 21/11/2026 `Asia/Ho_Chi_Minh`, khách nhập "SUMMER10"
+Then: voucher hiển thị "Đã kết thúc" và hệ thống báo đã hết hạn (UC-31 E2)
+
 ## Dependencies
 - **Upstream UC:** UC-02
 - **Downstream UC:** UC-31, UC-37
@@ -115,7 +122,8 @@ And: hệ thống báo "P1" chưa đến thời gian hiệu lực (UC-31 E2)
 - Voucher (loại CODE) có: mã duy nhất, phần trăm giảm, giá trị đơn tối thiểu, tổng lượt dùng (số lượng được áp dụng), số lượt đã dùng, ngày bắt đầu, ngày kết thúc, trạng thái (theo ERD).
 - Voucher chỉ giới hạn tổng lượt dùng; không giới hạn số lần mỗi khách (đã chốt 15/11/2026).
 - Voucher đã tạo thì không được sửa (kể cả mã, phần trăm, giá trị đơn tối thiểu, tổng lượt dùng, thời gian); chỉ có thể ngừng để các đơn sau không được áp nữa; đơn đã tạo không đổi (đã chốt 15/11/2026).
-- Hết hiệu lực theo 2 cách: tới ngày kết thúc, hoặc Nhân viên ngừng trước hạn; ngừng trước hạn chỉ đổi trạng thái sang tắt, ngày kết thúc giữ nguyên (đã chốt 20/11/2026, data model v2, Q25, Q28).
+- Hết hiệu lực theo 2 cách: hết ngày kết thúc đã chọn, hoặc Nhân viên ngừng trước hạn; ngừng trước hạn chỉ đổi trạng thái sang tắt, ngày kết thúc giữ nguyên (đã chốt 20/11/2026, data model v2, Q25, Q28).
+- Nhân viên chọn ngày bắt đầu / ngày kết thúc theo lịch `Asia/Ho_Chi_Minh`. Ngày bắt đầu có hiệu lực từ 00:00:00 ngày đó; ngày kết thúc áp dụng đến hết ngày đã chọn — hết hiệu lực tại 00:00:00 của ngày kế tiếp (`Asia/Ho_Chi_Minh`). Hệ thống lưu các mốc dạng `timestamptz` UTC; điều kiện hiệu lực: `start <= now < end` (đã chốt 24/11/2026).
 - Voucher đã ngừng không bật lại được; muốn áp lại thì tạo voucher mới (đã chốt 20/11/2026, data model v2, Q22).
 - Trạng thái hiển thị: Sắp diễn ra, Đang hiệu lực, Đã kết thúc — tính từ trạng thái bật / tắt và ngày bắt đầu / kết thúc, không lưu riêng (đã chốt 20/11/2026, data model v2, Q23c, Q27).
 - Khi tạo voucher, hệ thống hiển thị popup xác nhận; chỉ lưu khi Nhân viên bấm xác nhận (đã chốt 15/11/2026).
@@ -133,3 +141,4 @@ And: hệ thống báo "P1" chưa đến thời gian hiệu lực (UC-31 E2)
 - v5 (2026-11-15): chốt quy tắc lọc theo thời gian (giao khoảng)
 - v6 (2026-11-20): theo data model v2 — ngừng trước hạn giữ ngày kết thúc, không bật lại (1a, AC-7); thêm 7a hết hạn; chốt trạng thái Sắp diễn ra / Đang hiệu lực / Đã kết thúc (1b, AC-10)
 - v7 (2026-11-23): đồng bộ ràng buộc dữ liệu với data model v2; làm rõ giả định mã voucher không phân biệt hoa thường tại AC/E1; đồng bộ hành vi voucher đã ngừng với UC-31
+- v8 (2026-11-24): chốt mốc hết hiệu lực = hết ngày kết thúc theo `Asia/Ho_Chi_Minh` (7a, Quyết định đã chốt); thêm AC-11 nghiệm thu ngay trước và đúng tại mốc

@@ -7,21 +7,25 @@
     body{font:16px system-ui,sans-serif;max-width:1100px;margin:32px auto;padding:0 18px;color:#252525;background:#faf8f5}
     h1{margin-bottom:6px}section,table{background:white;border:1px solid #e6e0d8;border-radius:12px;padding:18px;margin:18px 0;width:100%;box-sizing:border-box}
     form.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;align-items:end}
-    label{display:grid;gap:5px;font-size:14px}input,select,button{font:inherit;padding:9px;border:1px solid #ccc;border-radius:7px}button{cursor:pointer;background:#222;color:white;border:0}
+    label{display:grid;gap:5px;font-size:14px}label[hidden],[hidden]{display:none!important}input,select,button{font:inherit;padding:9px;border:1px solid #ccc;border-radius:7px}button{cursor:pointer;background:#222;color:white;border:0}
     table{border-collapse:collapse;padding:0}th,td{text-align:left;padding:10px;border-bottom:1px solid #eee}th{background:#f3efe9}.error{color:#a21b1b}
     .hint{color:#666;font-size:14px}.end{background:#fff;color:#8f2626;border:1px solid #d6aaaa;padding:6px 10px}
+    .quote-result{margin-top:14px;padding:16px;border:1px solid #d9e6dc;border-radius:10px;background:#f5faf6}
+    .quote-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:12px 0}
+    .quote-item{padding:12px;background:#fff;border:1px solid #e6e0d8;border-radius:8px}.quote-label{display:block;color:#666;font-size:13px;margin-bottom:4px}.quote-value{font-weight:650}
+    .quote-note{margin:8px 0 0;color:#7b4b10}.quote-error{margin-top:12px;color:#9d2929}
   </style>
 </head>
 <body>
   <h1>Quản lý khuyến mãi</h1>
-  <p class="hint">UC-28 · UC-29 · UC-30. Đã tạo thì không sửa; chỉ có thể kết thúc.</p>
+  <p class="hint">Chương trình đã tạo không thể chỉnh sửa; nhân viên có thể kết thúc chương trình đang hiệu lực.</p>
   {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
   <section>
     <h2>Tạo chương trình</h2>
     <form class="grid" method="post" action="/admin/promotions/create" id="create-promotion">
       <label>Loại khuyến mãi<select name="promotion_type" id="kind"><option value="PRODUCT">Theo sản phẩm</option><option value="ORDER">Theo hóa đơn</option><option value="CODE">Voucher</option></select></label>
       <label>Phần trăm giảm<input name="discount_percentage" type="number" min="0.01" max="99.99" step="0.01" required></label>
-      <label data-for="PRODUCT">Mã sản phẩm<input name="product_id" placeholder="SP-0001"></label>
+      <label data-for="PRODUCT">Sản phẩm<select name="product_id"><option value="">Chọn sản phẩm</option>{% for product in products %}<option value="{{ product.product_id }}">{{ product.product_id }} — {{ product.product_name }}</option>{% endfor %}</select></label>
       <label data-for="ORDER CODE">Giá trị đơn tối thiểu (đ)<input name="threshold_price" type="number" min="0"></label>
       <label data-for="ORDER CODE">Số lượt tối đa<input name="quantity" type="number" min="1"></label>
       <label data-for="CODE">Mã voucher<input name="code" maxlength="50"></label>
@@ -29,14 +33,35 @@
       <label data-for="ORDER CODE">Ngày kết thúc<input name="end_date" type="date"></label>
       <button type="submit">Lưu chương trình</button>
     </form>
-    <p class="hint">Khuyến mãi sản phẩm có hiệu lực ngay, không giới hạn lượt và không nhập ngày. Khuyến mãi hóa đơn / voucher áp dụng hết ngày kết thúc.</p>
+    <p class="hint">Khuyến mãi sản phẩm có hiệu lực ngay, không giới hạn lượt và không nhập ngày. Hóa đơn / voucher: ngày theo lịch Asia/Ho_Chi_Minh — bắt đầu 00:00 ngày bắt đầu, áp đến hết ngày kết thúc (hết hiệu lực 00:00 ngày kế tiếp).</p>
+  </section>
+  <section>
+    <h2>Thử tính ưu đãi cho đơn hàng</h2>
+    <p class="hint">Công cụ mô phỏng để xem khuyến mãi hóa đơn hoặc voucher nào được chọn. Không tạo đơn và không thay đổi lượt sử dụng.</p>
+    <form class="grid" id="quote-form">
+      <label>Tạm tính sau ưu đãi sản phẩm (đ)<input name="subtotal" type="number" min="0" step="1" required placeholder="Ví dụ: 500000"></label>
+      <label>Mã voucher (có thể để trống)<input name="voucher_code" maxlength="50" placeholder="Ví dụ: HE2026"></label>
+      <button type="submit" id="quote-submit">Tính mức giảm</button>
+    </form>
+    <div id="quote-error" class="quote-error" role="alert" hidden></div>
+    <div id="quote-result" class="quote-result" aria-live="polite" hidden>
+      <strong>Kết quả tính thử</strong>
+      <div class="quote-grid">
+        <div class="quote-item"><span class="quote-label">Tạm tính</span><span class="quote-value" id="quote-subtotal"></span></div>
+        <div class="quote-item"><span class="quote-label">Mức giảm được chọn</span><span class="quote-value" id="quote-discount"></span></div>
+        <div class="quote-item"><span class="quote-label">Ưu đãi được áp dụng</span><span class="quote-value" id="quote-source"></span></div>
+        <div class="quote-item"><span class="quote-label">Còn lại trước phí vận chuyển</span><span class="quote-value" id="quote-payable"></span></div>
+      </div>
+      <p id="quote-note" class="quote-note" hidden></p>
+    </div>
+    <p class="hint">Nếu để trống mã voucher, hệ thống chỉ xét các khuyến mãi theo hóa đơn đang hiệu lực và còn lượt. Số lượt chỉ thay đổi khi một đơn thật được tạo hoặc hủy.</p>
   </section>
   <section>
     <h2>Danh sách</h2>
     <form method="get" class="grid">
-      <label>Loại<select name="kind"><option value="">Tất cả</option><option value="PRODUCT" {{ 'selected' if kind == 'PRODUCT' }}>Sản phẩm</option><option value="ORDER" {{ 'selected' if kind == 'ORDER' }}>Hóa đơn</option><option value="CODE" {{ 'selected' if kind == 'CODE' }}>Voucher</option></select></label>
-      <label>Từ ngày<input type="date" name="date_from" value="{{ date_from }}"></label>
-      <label>Đến ngày<input type="date" name="date_to" value="{{ date_to }}"></label>
+      <label>Loại<select name="kind" id="filter-kind"><option value="">Tất cả</option><option value="PRODUCT" {{ 'selected' if kind == 'PRODUCT' }}>Sản phẩm</option><option value="ORDER" {{ 'selected' if kind == 'ORDER' }}>Hóa đơn</option><option value="CODE" {{ 'selected' if kind == 'CODE' }}>Voucher</option></select></label>
+      <label data-date-filter>Từ ngày<input type="date" name="date_from" value="{{ date_from }}"></label>
+      <label data-date-filter>Đến ngày<input type="date" name="date_to" value="{{ date_to }}"></label>
       <button>Lọc danh sách</button>
     </form>
   </section>
@@ -47,19 +72,123 @@
     <td>{{ p.threshold_price if p.threshold_price is not none else '—' }}</td>
     <td>{{ p.used_amount }}{% if p.quantity is not none %} / {{ p.quantity }}{% endif %}</td>
     <td>{% if p.start_date %}{{ p.start_date.strftime('%d/%m/%Y') }} – {{ p.end_date.strftime('%d/%m/%Y') }}{% else %}Ngay lập tức{% endif %}</td>
-    <td>{{ p.status }}</td><td>{% if p.status != 'Đã kết thúc' %}<form method="post" action="/admin/promotions/{{ p.promotion_id }}/end" onsubmit="return confirm('Kết thúc {{ p.promotion_id }}? Các đơn đã tạo không thay đổi.')"><button class="end">Kết thúc</button></form>{% endif %}</td>
+    <td>{{ p.status }}</td><td>{% if p.status != 'Đã kết thúc' %}<form method="post" action="/admin/promotions/{{ p.promotion_id }}/end" onsubmit="return confirm('Kết thúc {{ p.promotion_id }}? Các đơn đã tạo không thay đổi.')"><button class="end">{{ 'Kết thúc chương trình' if p.promotion_type == 'PRODUCT' else 'Ngừng' }}</button></form>{% endif %}</td>
   </tr>{% else %}<tr><td colspan="9">Chưa có khuyến mãi.</td></tr>{% endfor %}
   </tbody></table>
   <script>
     const kind=document.querySelector('#kind');
-    function syncFields(){for(const label of document.querySelectorAll('[data-for]')){const show=label.dataset.for.split(' ').includes(kind.value);label.hidden=!show;const input=label.querySelector('input');input.required=show;}}
-    kind.addEventListener('change',syncFields);syncFields();
-    document.querySelector('#create-promotion').addEventListener('submit',event=>{
-      const fields=new FormData(event.currentTarget);const labels={PRODUCT:'khuyến mãi theo sản phẩm',ORDER:'khuyến mãi theo hóa đơn',CODE:'voucher'};
-      const type=fields.get('promotion_type');
-      const target=type==='PRODUCT'?`Sản phẩm: ${fields.get('product_id')}`:type==='CODE'?`Mã voucher: ${fields.get('code')}`:'Theo giá trị hóa đơn';
-      const rules=type==='PRODUCT'?'Có hiệu lực ngay khi xác nhận.':`Đơn tối thiểu: ${fields.get('threshold_price')}đ\nSố lượt: ${fields.get('quantity')}\nHiệu lực: ${fields.get('start_date')} đến ${fields.get('end_date')}`;
-      if(!confirm(`Xác nhận tạo ${labels[type]}?\n${target}\nGiảm: ${fields.get('discount_percentage')}%\n${rules}\nLưu ý: đã tạo thì không thể sửa, chỉ có thể kết thúc.`))event.preventDefault();
+    const filterKind=document.querySelector('#filter-kind');
+    const form=document.querySelector('#create-promotion');
+    function syncFields(){
+      for(const label of document.querySelectorAll('[data-for]')){
+        const show=label.dataset.for.split(' ').includes(kind.value);
+        label.hidden=!show;
+        const control=label.querySelector('input,select');
+        control.required=show;
+        control.disabled=!show;
+        if(!show)control.value='';
+      }
+    }
+    function syncDateFilters(){
+      for(const label of document.querySelectorAll('[data-date-filter]'))label.hidden=filterKind.value==='PRODUCT';
+    }
+    kind.addEventListener('change',syncFields);filterKind.addEventListener('change',syncDateFilters);
+    syncFields();syncDateFilters();
+    form.querySelectorAll('input,select').forEach(input=>input.addEventListener('input',()=>input.setCustomValidity('')));
+    form.querySelectorAll('select').forEach(input=>input.addEventListener('change',()=>input.setCustomValidity('')));
+    form.addEventListener('submit',async event=>{
+      event.preventDefault();
+      const fields=new FormData(form);
+      try{
+        const response=await fetch('/admin/promotions/validate',{
+          method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+          body:new URLSearchParams(fields)
+        });
+        if(!response.headers.get('content-type')?.includes('application/json')){
+          if(response.redirected&&response.url.includes('/admin/login'))window.location.assign('/admin/login');
+          else alert('Không thể kiểm tra dữ liệu lúc này. Vui lòng thử lại.');
+          return;
+        }
+        const result=await response.json();
+        if(!response.ok){
+          const errors=result.errors||{};let shown=false;
+          for(const [name,message] of Object.entries(errors)){
+            const input=form.elements.namedItem(name);
+            if(input&&typeof input.setCustomValidity==='function'){
+              input.setCustomValidity(message);input.reportValidity();shown=true;
+            }else alert(message);
+          }
+          if(!shown&&!Object.keys(errors).length)alert('Không thể kiểm tra dữ liệu khuyến mãi.');
+          return;
+        }
+        const labels={PRODUCT:'khuyến mãi theo sản phẩm',ORDER:'khuyến mãi theo hóa đơn',CODE:'voucher'};
+        const type=fields.get('promotion_type');
+        const target=type==='PRODUCT'?`Sản phẩm: ${form.elements.namedItem('product_id').selectedOptions[0].textContent}`:type==='CODE'?`Mã voucher: ${fields.get('code')}`:'Theo giá trị hóa đơn';
+        const rules=type==='PRODUCT'?'Có hiệu lực ngay khi xác nhận.':`Đơn tối thiểu: ${fields.get('threshold_price')}đ\nSố lượt: ${fields.get('quantity')}\nHiệu lực: ${fields.get('start_date')} đến ${fields.get('end_date')}`;
+        if(confirm(`Xác nhận tạo ${labels[type]}?\n${target}\nGiảm: ${fields.get('discount_percentage')}%\n${rules}\nLưu ý: đã tạo thì không thể sửa, chỉ có thể kết thúc.`))form.submit();
+      }catch(error){alert('Không thể kiểm tra dữ liệu lúc này. Vui lòng thử lại.');}
+    });
+    {% if error_field %}
+    const failedField=form.elements.namedItem('{{ error_field }}');
+    if(failedField){failedField.setCustomValidity({{ error|tojson }});failedField.reportValidity();}
+    {% endif %}
+
+    const quoteForm=document.querySelector('#quote-form');
+    const quoteResult=document.querySelector('#quote-result');
+    const quoteError=document.querySelector('#quote-error');
+    const quoteButton=document.querySelector('#quote-submit');
+    const money=value=>`${new Intl.NumberFormat('vi-VN').format(value)} đ`;
+    quoteForm?.addEventListener('submit',async event=>{
+      event.preventDefault();
+      quoteError.hidden=true;quoteError.textContent='';quoteResult.hidden=true;
+      quoteButton.disabled=true;quoteButton.textContent='Đang tính…';
+      try{
+        const body=new URLSearchParams(new FormData(quoteForm));
+        const response=await fetch('/admin/promotions/quote-preview',{
+          method:'POST',
+          headers:{'Content-Type':'application/x-www-form-urlencoded'},
+          body,
+          credentials:'same-origin',
+          redirect:'manual',
+        });
+        if(response.type==='opaqueredirect'||response.status===0||response.status===303||response.status===302){
+          quoteError.textContent='Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại rồi thử tính ưu đãi.';
+          quoteError.hidden=false;return;
+        }
+        const contentType=response.headers.get('content-type')||'';
+        if(!contentType.includes('application/json')){
+          if(response.status===401||response.status===403){
+            quoteError.textContent='Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại rồi thử tính ưu đãi.';
+          }else{
+            quoteError.textContent=`Máy chủ trả phản hồi không đọc được (HTTP ${response.status}).`;
+          }
+          quoteError.hidden=false;return;
+        }
+        const data=await response.json();
+        if(!response.ok){
+          quoteError.textContent=data.error||data.detail||`Không tính được ưu đãi (HTTP ${response.status}).`;
+          quoteError.hidden=false;return;
+        }
+        const subtotal=Number(data.subtotal)||0;
+        const discount=Number(data.selected_discount)||0;
+        const payable=Number.isFinite(Number(data.payable_before_shipping))
+          ? Number(data.payable_before_shipping)
+          : subtotal-discount;
+        document.querySelector('#quote-subtotal').textContent=money(subtotal);
+        document.querySelector('#quote-discount').textContent=money(discount);
+        document.querySelector('#quote-source').textContent=data.selected_promotion_label||'Không có ưu đãi đơn hàng';
+        document.querySelector('#quote-payable').textContent=money(payable);
+        const note=document.querySelector('#quote-note');
+        note.textContent=data.notice||'';
+        note.hidden=!data.notice;
+        quoteResult.hidden=false;
+        quoteResult.scrollIntoView({behavior:'smooth',block:'nearest'});
+      }catch(error){
+        quoteError.textContent='Không kết nối được. Hãy thử lại.';
+        quoteError.hidden=false;
+      }finally{
+        quoteButton.disabled=false;quoteButton.textContent='Tính mức giảm';
+      }
     });
   </script>
 </body></html>

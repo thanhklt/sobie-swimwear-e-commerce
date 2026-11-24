@@ -64,6 +64,30 @@ def test_uc29_ac10_status_uses_enabled_and_time_window():
     assert promotion_service.display_status(stopped, now) == "Đã kết thúc"
 
 
+def test_uc29_uc30_ac11_end_of_selected_day_asia_ho_chi_minh():
+    """End date 20/11 ICT applies until exclusive 00:00 21/11 ICT."""
+    from zoneinfo import ZoneInfo
+    from datetime import date
+
+    local = ZoneInfo("Asia/Ho_Chi_Minh")
+    end_bound = promotion_service._as_utc(date(2026, 11, 20), next_day=True)
+    assert end_bound == datetime(2026, 11, 20, 17, 0, tzinfo=UTC)  # 00:00 21/11 ICT
+
+    just_before = datetime(2026, 11, 20, 16, 59, 59, tzinfo=UTC)  # 23:59:59 20/11 ICT
+    at_boundary = end_bound
+    row = {
+        "promotion_status": "ENABLED",
+        "promotion_start_date": promotion_service._as_utc(date(2026, 11, 1)),
+        "promotion_end_date": end_bound,
+        "promotion_used_amount": 0,
+        "promotion_quantity": 10,
+    }
+    assert promotion_service.display_status(row, just_before) == "Đang hiệu lực"
+    assert promotion_service.display_status(row, at_boundary) == "Đã kết thúc"
+    assert just_before.astimezone(local).date().isoformat() == "2026-11-20"
+    assert at_boundary.astimezone(local).date().isoformat() == "2026-11-21"
+
+
 def test_uc31_ac2_ac3_ac4_select_larger_discount_and_prefer_voucher_on_tie(monkeypatch):
     async def quote(order_percent, voucher_percent):
         async def eligible(db, subtotal, now):
@@ -90,6 +114,44 @@ def test_uc31_ac2_ac3_ac4_select_larger_discount_and_prefer_voucher_on_tie(monke
     assert asyncio.run(quote("10", "6"))["selected_source"] == "ORDER"
     assert asyncio.run(quote("8", "8"))["selected_source"] == "CODE"
 
+
+def test_uc31_ac10_reconfirm_when_only_source_changes():
+    previous = {"selected_discount": 40_000, "selected_source": "CODE", "selected_promotion_id": "KM-0002"}
+    current = {"selected_discount": 40_000, "selected_source": "ORDER", "selected_promotion_id": "KM-0001"}
+    assert promotion_service.quote_requires_reconfirm(previous, current) is True
+    same = {"selected_discount": 40_000, "selected_source": "CODE", "selected_promotion_id": "KM-0002"}
+    assert promotion_service.quote_requires_reconfirm(previous, same) is False
+
+
+def test_uc31_invalid_voucher_still_keeps_best_order_promotion(monkeypatch):
+    async def eligible(_db, _subtotal, _now):
+        return [{"promotion_key": "order-key", "promotion_id": "KM-0003",
+                 "discount_percentage": Decimal("10")}]
+
+    async def no_voucher(_db, _code):
+        return None
+
+    monkeypatch.setattr(promotion_service.repository, "find_eligible_order_promotions", eligible)
+    monkeypatch.setattr(promotion_service.repository, "find_code_promotion", no_voucher)
+    quote = asyncio.run(promotion_service.quote_order_discount(
+        object(), 500_000, voucher_code="KM-0001",
+    ))
+    assert quote["selected_source"] == "ORDER"
+    assert quote["selected_promotion_id"] == "KM-0003"
+    assert quote["selected_discount"] == 50_000
+    assert quote["notice"] == "Voucher không hợp lệ."
+
+
+def test_uc31_ac11_refund_applies_to_order_and_voucher(monkeypatch):
+    calls = []
+
+    async def decrement(_db, key):
+        calls.append(key)
+
+    monkeypatch.setattr(promotion_service.repository, "decrement_used", decrement)
+    asyncio.run(promotion_service.refund_promotion(object(), "order-promo-key"))
+    asyncio.run(promotion_service.refund_promotion(object(), "voucher-promo-key"))
+    assert calls == ["order-promo-key", "voucher-promo-key"]
 
 
 def test_promotion_sql_uses_existing_schema_when_database_is_configured():
@@ -131,6 +193,12 @@ def test_promotion_sql_uses_existing_schema_when_database_is_configured():
                     assert await repository.find_code_promotion(db, "uc30-smoke") is not None
                     eligible = await repository.find_eligible_order_promotions(db, 100_000, now)
                     assert any(row["promotion_key"] == order["promotion_key"] for row in eligible)
+                    quote = await promotion_service.quote_order_discount(
+                        db, 100_000, voucher_code="KM-0001", now=now,
+                    )
+                    assert quote["selected_source"] == "ORDER"
+                    assert quote["selected_discount"] > 0
+                    assert quote["notice"] == "Voucher không hợp lệ."
                     assert product["promotion_id"].startswith("KM-")
                     assert voucher["promotion_id"].startswith("KM-")
                     raise RollbackCheck
@@ -144,13 +212,17 @@ def test_uc28_29_30_ac2_admin_template_has_confirmation_and_no_edit(monkeypatch)
     from fastapi.testclient import TestClient
     from app.main import app
     from app.modules.promotion import router as promotion_router
+    from app.modules.catalog import service as catalog_service
 
     async def rows(_db, *_args):
+        return []
+    async def products(_db):
         return []
     async def fake_db():
         yield object()
 
     monkeypatch.setattr(promotion_service, "list_promotions", rows)
+    monkeypatch.setattr(catalog_service, "active_products_for_promotion", products)
     app.dependency_overrides[promotion_router.employee_only] = lambda: object()
     app.dependency_overrides[promotion_router._db] = fake_db
     try:
@@ -159,7 +231,46 @@ def test_uc28_29_30_ac2_admin_template_has_confirmation_and_no_edit(monkeypatch)
         app.dependency_overrides.pop(promotion_router.employee_only, None)
         app.dependency_overrides.pop(promotion_router._db, None)
     assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
     assert "Xác nhận tạo" in response.text
     assert "đã tạo thì không thể sửa" in response.text
     assert "Số lượt tối đa" in response.text
     assert "Sửa chương trình" not in response.text
+    assert "Thử tính ưu đãi cho đơn hàng" in response.text
+    assert "/admin/promotions/quote-preview" in response.text
+    assert "label[hidden],[hidden]{display:none!important}" in response.text
+    assert "control.disabled=!show" in response.text
+
+
+@pytest.mark.parametrize("query", [
+    "?kind=PRODUCT&date_from=&date_to=",
+    "?date_from=2026-11-01&date_to=",
+    "?date_from=&date_to=2026-11-30",
+    "?date_from=not-a-date&date_to=",
+])
+def test_promotion_list_optional_date_filters_do_not_return_422(query, monkeypatch):
+    from fastapi.testclient import TestClient
+    from app.main import app
+    from app.modules.promotion import router as promotion_router
+    from app.modules.catalog import service as catalog_service
+
+    async def rows(_db, *_args):
+        return []
+    async def products(_db):
+        return []
+    async def fake_db():
+        yield object()
+
+    monkeypatch.setattr(promotion_service, "list_promotions", rows)
+    monkeypatch.setattr(catalog_service, "active_products_for_promotion", products)
+    app.dependency_overrides[promotion_router.employee_only] = lambda: object()
+    app.dependency_overrides[promotion_router._db] = fake_db
+    try:
+        response = TestClient(app).get("/admin/promotions" + query)
+    finally:
+        app.dependency_overrides.pop(promotion_router.employee_only, None)
+        app.dependency_overrides.pop(promotion_router._db, None)
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    if "not-a-date" in query:
+        assert "Ngày lọc không hợp lệ." in response.text

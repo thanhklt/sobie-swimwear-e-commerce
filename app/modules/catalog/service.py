@@ -13,5 +13,10 @@ async def active_product_key(db, product_id: str):
     return await repository.active_product_key(db, product_id)
 
 
+async def active_products_for_promotion(db):
+    """Return only active products available for a new product promotion."""
+    return await repository.active_products_for_promotion(db)
+
+
 async def product_ids_by_keys(db, product_keys):
     return await repository.product_ids_by_keys(db, product_keys)

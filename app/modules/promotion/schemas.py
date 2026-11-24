@@ -42,3 +42,4 @@ class DiscountQuote(BaseModel):
     selected_source: Literal["ORDER", "CODE", "NONE"]
     selected_promotion_id: str | None = None
     notice: str | None = None
+    requires_reconfirm: bool | None = None

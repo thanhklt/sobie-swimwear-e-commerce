@@ -36,7 +36,7 @@ Khách hàng mở bước đặt hàng, nhập hoặc bỏ mã voucher, hoặc x
 - **E2. Voucher hết hạn hoặc chưa đến thời gian hiệu lực:** hệ thống báo lỗi tương ứng, tính tiếp như chưa nhập voucher.
 - **E3. Voucher hết lượt:** hệ thống báo "Voucher đã hết lượt sử dụng", tính tiếp như chưa nhập voucher.
 - **E4. Chưa đạt giá trị đơn tối thiểu của voucher:** hệ thống báo số tiền tối thiểu cần đạt, tính tiếp như chưa nhập voucher.
-- **E5. Khuyến mãi hoặc voucher thay đổi giữa lúc xem và lúc xác nhận:** số tiền tính lại ở bước 7 khác số tiền đã hiển thị → hệ thống không tạo đơn, hiển thị số tiền mới để khách xác nhận lại `[GD]`.
+- **E5. Khuyến mãi hoặc voucher thay đổi giữa lúc xem và lúc xác nhận:** tính lại ở bước 7 khác lần hiển thị trước về **mức giảm hoặc nguồn mức giảm** (kể cả khi số tiền giảm không đổi, ví dụ hết lượt voucher nhưng khuyến mãi hóa đơn vẫn giảm cùng số tiền) → hệ thống không tạo đơn, hiển thị kết quả mới để khách xác nhận lại.
 
 ## Postconditions
 - Đơn được tạo với tạm tính, mức giảm được chọn, nguồn mức giảm (một khuyến mãi theo hóa đơn, một voucher hoặc không có), phí vận chuyển và tổng thanh toán; mỗi dòng đơn ghi khuyến mãi theo sản phẩm nếu có.
@@ -98,15 +98,17 @@ Then: số lượt đã dùng = 11
 And: đơn lưu nguồn mức giảm là voucher "SUMMER10"
 
 ### AC-10: Hết lượt ngay lúc xác nhận
-Given: voucher "SUMMER10" còn 1 lượt, hai khách cùng xác nhận đặt hàng với voucher này
+Given: voucher "SUMMER10" còn 1 lượt; khuyến mãi theo hóa đơn đủ điều kiện cũng giảm đúng 40.000đ trên cùng tạm tính; hai khách cùng xác nhận đặt hàng với voucher này (lần hiển thị trước đều chọn nguồn voucher, mức giảm 40.000đ)
 When: hai yêu cầu được xử lý đồng thời
 Then: chỉ một đơn được áp voucher, số lượt đã dùng không vượt tổng lượt
-And: khách còn lại nhận thông báo và số tiền mới để xác nhận lại
+And: khách còn lại nhận kết quả tính lại: mức giảm vẫn 40.000đ nhưng nguồn là khuyến mãi theo hóa đơn
+And: hệ thống không tạo đơn cho khách còn lại cho tới khi khách xác nhận lại với nguồn mới (E5)
 
 ### AC-11: Hoàn lượt khi đơn bị hủy
-Given: đơn D dùng voucher "SUMMER10", số lượt đã dùng = 11
-When: đơn D chuyển sang "Đã hủy"
-Then: số lượt đã dùng = 10
+Given: đơn D1 dùng voucher "SUMMER10" (đã dùng = 11); đơn D2 dùng khuyến mãi theo hóa đơn H (đã dùng = 5)
+When: D1 và D2 chuyển sang "Đã hủy" (khách hủy, Nhân viên hủy hoặc hệ thống tự hủy)
+Then: "SUMMER10" còn 10 lượt đã dùng
+And: H còn 4 lượt đã dùng
 
 ### AC-12: Khuyến mãi theo hóa đơn hết lượt không được xét
 Given: khuyến mãi theo hóa đơn X đã dùng hết số lượng được áp dụng, tạm tính đạt giá trị đơn tối thiểu của X
@@ -126,7 +128,8 @@ And: nguồn mức giảm không phải X
 
 **Quyết định đã chốt**
 - Hai mức giảm (khuyến mãi theo hóa đơn và voucher) bằng nhau thì ưu tiên voucher (đã chốt 15/11/2026).
-- Đơn bị hủy (khách hủy, Nhân viên hủy hoặc hệ thống tự hủy) thì cộng lại tồn kho và hoàn lượt voucher (đã chốt 15/11/2026); lượt khuyến mãi theo hóa đơn cũng được hoàn theo data model v2 (`promotion_used_amount`).
+- Đơn bị hủy (khách hủy, Nhân viên hủy hoặc hệ thống tự hủy) thì cộng lại tồn kho và hoàn lượt của khuyến mãi đã áp — cả voucher lẫn khuyến mãi theo hóa đơn (`promotion_used_amount`) (đã chốt 15/11/2026; xác nhận lại 23/11/2026 theo data model v2).
+- Khi tính lại lúc xác nhận, nếu mức giảm **hoặc nguồn mức giảm** khác lần hiển thị trước thì không tạo đơn, yêu cầu khách xác nhận lại — kể cả khi số tiền giảm không đổi (đã chốt 24/11/2026).
 - Mọi loại khuyến mãi giảm theo phần trăm; không có mức giảm tối đa (đã chốt 15/11/2026, theo ERD).
 - Mỗi đơn áp tối đa một khuyến mãi theo hóa đơn hoặc voucher; khuyến mãi theo sản phẩm ghi theo từng dòng đơn (theo ERD).
 - Khuyến mãi theo hóa đơn và voucher chỉ hợp lệ khi tạm tính ≥ giá trị đơn tối thiểu và còn lượt (số lượng đã dùng < số lượng được áp dụng); voucher không giới hạn số lần mỗi khách (đã chốt 15/11/2026, theo ERD).
@@ -135,7 +138,6 @@ And: nguồn mức giảm không phải X
 **Giả định [GD]**
 - Có nhiều khuyến mãi theo hóa đơn đủ điều kiện thì lấy mức giảm lớn nhất.
 - Mức giảm theo hóa đơn hoặc voucher tính trên tạm tính (đã gồm khuyến mãi theo sản phẩm), không áp vào phí vận chuyển, và không vượt quá tạm tính.
-- Số tiền thay đổi giữa lúc xem và lúc xác nhận thì không tạo đơn, yêu cầu khách xác nhận lại.
 
 ## History
 - v1 (2026-11-15): initial
@@ -144,3 +146,4 @@ And: nguồn mức giảm không phải X
 - v4 (2026-11-15): ghi rõ dòng đơn lưu đơn giá gốc và khuyến mãi theo sản phẩm; đơn giá sau giảm ổn định vì khuyến mãi không sửa được (theo data model v1)
 - v5 (2026-11-20): đồng bộ BR-GIAIDOAN1 — bỏ "Bị từ chối"; hủy đơn gồm cả Nhân viên hủy
 - v6 (2026-11-23): xác nhận hoàn lượt khuyến mãi theo hóa đơn khi hủy đơn theo data model v2; bỏ quy tắc này khỏi mục giả định
+- v7 (2026-11-24): làm rõ E5/AC-10 khi chỉ đổi nguồn giảm (số tiền không đổi); bổ sung ca ORDER vào AC-11; chốt yêu cầu xác nhận lại khi đổi nguồn

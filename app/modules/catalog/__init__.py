@@ -11,4 +11,7 @@ Phạm vi:
 Phụ thuộc module khác (chỉ qua service công khai):
 - inventory: đọc tồn kho để hiện còn / hết hàng; tạo dòng tồn kho khi tạo biến thể.
 - promotion: đọc giá sau khuyến mãi theo sản phẩm để hiển thị.
+
+Service công khai dùng bởi promotion:
+- active_product_key, active_products_for_promotion, product_ids_by_keys.
 """

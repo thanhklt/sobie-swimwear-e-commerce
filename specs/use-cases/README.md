@@ -123,7 +123,7 @@ Chưa xử lý ──(UC-23 xác nhận)──► Đã xác nhận ──(UC-40 
 | Wishlist | Khách hàng thả tim lưu sản phẩm; mỗi sản phẩm 1 lần trong danh sách | UC-38 |
 | Khuyến mãi | Giảm theo %, không có mức tối đa; mỗi đơn tối đa 1 khuyến mãi theo hóa đơn hoặc voucher; bằng nhau ưu tiên voucher | UC-28 → UC-31 |
 | Số lượng khuyến mãi | Có số lượng được áp dụng và số đã dùng; khuyến mãi theo sản phẩm không giới hạn, hiệu lực đến khi Nhân viên kết thúc | UC-28, UC-29, UC-30 |
-| Thời gian khuyến mãi | Theo sản phẩm: chỉ có tạo rồi kết thúc, không có ngày bắt đầu / kết thúc, gắn đúng 1 sản phẩm. Theo hóa đơn và voucher: có ngày bắt đầu / kết thúc; hết hiệu lực khi tới ngày kết thúc hoặc Nhân viên ngừng trước hạn (giữ nguyên ngày kết thúc) (20/11/2026) | UC-28, UC-29, UC-30 |
+| Thời gian khuyến mãi | Theo sản phẩm: chỉ có tạo rồi kết thúc, không có ngày bắt đầu / kết thúc, gắn đúng 1 sản phẩm; không lưu thời điểm tạo / kết thúc. Theo hóa đơn và voucher: chọn ngày theo lịch `Asia/Ho_Chi_Minh`; bắt đầu từ 00:00:00 ngày bắt đầu; áp đến hết ngày kết thúc (hết hiệu lực 00:00:00 ngày kế tiếp); hoặc Nhân viên ngừng trước hạn (giữ nguyên ngày kết thúc) (20/11/2026; làm rõ mốc hết ngày 24/11/2026) | UC-28, UC-29, UC-30 |
 | Admin | Admin được tự đổi vai trò và tự khóa chính mình; hệ thống luôn có ít nhất 1 Admin đang hoạt động — chặn đổi vai trò và chặn khóa Admin đang hoạt động cuối cùng (20/11/2026) | UC-07, UC-08 |
 | Giỏ khách vãng lai | Lưu ở `localStorage`; giỏ không lưu giá, luôn hiển thị giá hiện tại (20/11/2026) | UC-18 |
 | Lý do hủy | Lưu ở `order_status_history_note` (20/11/2026) | UC-22 |
@@ -131,7 +131,7 @@ Chưa xử lý ──(UC-23 xác nhận)──► Đã xác nhận ──(UC-40 
 | Voucher (ERD) | Có giá trị đơn tối thiểu; chỉ giới hạn tổng lượt dùng | UC-30, UC-31 |
 | Nhà cung cấp | Gồm tên, SĐT, email, địa chỉ | UC-32 |
 | Tồn kho | Nhân viên xem được tồn kho theo biến thể | UC-39 |
-| Trang giả lập | Chỉ còn trang giả lập vận chuyển, không cần đăng nhập, 1 trang (cập nhật 20/11/2026) | UC-36 |
+| Trang giả lập | Chỉ còn trang giả lập vận chuyển, không cần đăng nhập, 1 trang; chỉ hiển thị mã đơn và trạng thái, không công khai PII / COD; mỗi lần bàn giao một đơn (cập nhật 20/11/2026, đồng bộ demo 24/11/2026) | UC-36, UC-40 |
 | Thanh toán chuyển khoản | Dùng chung 1 tài khoản; SePay gửi webhook, hệ thống tự đối soát; nội dung `SOBIE` + mã đơn; thừa tiền vẫn khớp, thiếu là không khớp, không cộng dồn; không khớp thì khách liên hệ cửa hàng (20/11/2026) | UC-20, UC-25 |
 | Mã đơn hàng | 8 ký tự ngẫu nhiên Crockford Base32, UNIQUE, trùng thì sinh lại (20/11/2026) | UC-20, UC-25 |
 | Phí vận chuyển | 1 biến môi trường cho mọi đơn, mặc định 12.000đ; demo bằng sản phẩm 2.000đ (20/11/2026) | UC-19, UC-20, UC-31 |
@@ -221,12 +221,10 @@ Mỗi dòng là một giả định đang có trong mục *Notes* của UC, ch�
 | UC-20 | Lượt đã dùng của khuyến mãi được chọn (voucher hoặc khuyến mãi theo hóa đơn) tăng khi tạo đơn; các dòng đã đặt được xóa khỏi giỏ. |
 | UC-20 | Khách xem lại được mã QR trong chi tiết đơn khi còn chưa thanh toán và chưa quá hạn; ẩn QR khi đơn đã thanh toán, đã hủy hoặc quá hạn. |
 | UC-21 | Danh sách đơn sắp xếp mới nhất trước, có phân trang. |
-| UC-22 | Hủy đơn cũng hoàn lượt của khuyến mãi theo hóa đơn đã áp (voucher đã chốt). |
 | UC-22 | Lý do hủy tối đa 500 ký tự. |
 | UC-23 | UC này gồm cả xem danh sách đơn, có phân trang và lọc theo trạng thái. |
 | UC-23 | Không cho xác nhận đơn QR khi chưa thanh toán. |
 | UC-24 | Tác vụ chạy mỗi 5 phút. |
-| UC-24 | Tự hủy cũng hoàn lượt của khuyến mãi theo hóa đơn đã áp (voucher đã chốt). |
 | UC-25 | Mã đơn được tìm trong nội dung chuyển khoản không phân biệt vị trí, hoa thường. |
 | UC-25 | Mọi giao dịch đều lưu ở `bank_transaction`; không có màn hình cho Nhân viên xem giao dịch không khớp. |
 | UC-25 | Webhook không khớp vẫn trả thành công cho SePay. |
@@ -236,7 +234,6 @@ Mỗi dòng là một giả định đang có trong mục *Notes* của UC, ch�
 | UC-27 | Nhân viên có trang danh sách hóa đơn, mới nhất trước, phân trang, tìm theo mã đơn hoặc mã hóa đơn. |
 | UC-28 | Phần trăm giảm hợp lệ: lớn hơn 0 và nhỏ hơn 100. |
 | UC-29 | Được phép có nhiều khuyến mãi theo hóa đơn cùng hiệu lực; UC-31 chọn cái giảm nhiều nhất trong số đủ điều kiện. |
-| UC-29 | Đơn bị hủy thì hoàn lượt khuyến mãi theo hóa đơn (giảm số lượng đã dùng 1). |
 | UC-29 | Phần trăm giảm hợp lệ: lớn hơn 0 và nhỏ hơn 100; số lượng được áp dụng ≥ 1. |
 | UC-29 | Danh sách khuyến mãi hiển thị số lượng được áp dụng và số lượng đã dùng. |
 | UC-30 | Mã voucher không phân biệt hoa thường. |
@@ -244,8 +241,6 @@ Mỗi dòng là một giả định đang có trong mục *Notes* của UC, ch�
 | UC-30 | Danh sách voucher hiển thị tổng lượt dùng và số lượt đã dùng. |
 | UC-31 | Có nhiều khuyến mãi theo hóa đơn đủ điều kiện thì lấy mức giảm lớn nhất. |
 | UC-31 | Mức giảm theo hóa đơn hoặc voucher tính trên tạm tính (đã gồm khuyến mãi theo sản phẩm), không áp vào phí vận chuyển, và không vượt quá tạm tính. |
-| UC-31 | Số tiền thay đổi giữa lúc xem và lúc xác nhận thì không tạo đơn, yêu cầu khách xác nhận lại. |
-| UC-31 | Đơn bị hủy thì hoàn cả lượt khuyến mãi theo hóa đơn. |
 | UC-32 | Tên nhà cung cấp là bắt buộc và không trùng. |
 | UC-32 | Danh sách có phân trang và tìm theo tên. |
 | UC-32 | Nhà cung cấp đã có phiếu nhập không xóa được, chỉ ngừng hợp tác; chưa có phiếu nhập thì xóa hẳn được. |
@@ -255,7 +250,6 @@ Mỗi dòng là một giả định đang có trong mục *Notes* của UC, ch�
 | UC-35 | Cộng tồn chạy trong cùng transaction với cập nhật trạng thái đơn. |
 | UC-35 | Biến thể hoặc sản phẩm đã ngừng bán vẫn được cộng lại tồn kho. |
 | UC-35 | Khi lỗi, Trang giả lập vận chuyển nhận lỗi và có thể gửi lại. |
-| UC-36 | Danh sách trên trang giả lập gồm: mã đơn, trạng thái, người nhận, số điện thoại, địa chỉ, người gửi, số tiền thu khi giao với đơn COD. |
 | UC-37 | Kỳ báo cáo mặc định là tháng hiện tại, chọn được khoảng thời gian. |
 | UC-37 | Tồn kho thấp: tồn kho ≤ ngưỡng. |
 | UC-38 | Nút tim có trên cả thẻ sản phẩm và trang chi tiết. |
@@ -267,9 +261,8 @@ Mỗi dòng là một giả định đang có trong mục *Notes* của UC, ch�
 | UC-39 | Biến thể có tồn ≤ ngưỡng tồn kho thấp được đánh dấu. |
 | UC-39 | Giá vốn có hiển thị trên màn hình tồn kho hay không: chưa chốt, hiện chưa hiển thị. |
 | UC-39 | Khách hàng và Admin không truy cập được màn hình tồn kho. |
-| UC-40 | Có thể bàn giao nhiều đơn một lúc; đơn không hợp lệ thì bỏ qua và báo lại. |
-
 ## Câu hỏi mở (từ BR-GIAIDOAN1)
 
 - Chung: phạm vi constraint cache — đã chốt 21/11/2026, cập nhật cho SSR (xem bảng quyết định, dòng "Cache"): danh sách quản trị không cache; không dùng `ETag`.
 - Chung `[GD]`: cách gom In Scope thành 7 BR; Success Metric của từng BR suy ra từ metric tổng.
+- Promotion / Ordering: `quote_order_discount` / `confirm_order_discount` / `consume_promotion` / `refund_promotion` đã sẵn trong module promotion; UC-19/20 (đặt) và UC-22/24 (hủy) cần gọi trong cùng transaction khi triển khai ordering. `/admin/promotions` chỉ có công cụ tính thử, không tạo đơn và không thay đổi lượt dùng.

@@ -13,5 +13,6 @@ Phạm vi:
 Phụ thuộc module khác (chỉ qua service công khai):
 - catalog: kiểm tra sản phẩm tồn tại khi tạo khuyến mãi theo sản phẩm.
 
-Service công khai: product_price, quote_order_discount, consume_promotion, refund_promotion.
+Service công khai: product_price, quote_order_discount, confirm_order_discount,
+consume_promotion, refund_promotion, quote_requires_reconfirm.
 """

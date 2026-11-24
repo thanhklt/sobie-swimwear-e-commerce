@@ -1,11 +1,22 @@
-"""Truy vấn promotion.*; mọi thao tác nhận session để ghép transaction với ordering."""
+"""Truy vấn promotion.* qua SQLModel; mọi thao tác nhận session để ghép transaction với ordering.
+
+Tăng / giảm lượt giữ UPDATE nguyên tử (chống race khi đặt / hủy đơn đồng thời).
+"""
 
 from __future__ import annotations
 
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import text
+from sqlalchemy import func, text
+from sqlmodel import col, select
+
+from app.modules.promotion.models import (
+    CodePromotion,
+    OrderPromotion,
+    ProductPromotion,
+    Promotion,
+)
 
 if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -26,42 +37,55 @@ async def _next_promotion_id(db: AsyncSession) -> str:
 
 async def create_promotion(db: AsyncSession, data: dict[str, Any]) -> dict[str, Any]:
     promotion_id = await _next_promotion_id(db)
-    result = await db.exec(text("""
-        INSERT INTO promotion.promotion
-            (promotion_id, promotion_type, promotion_quantity,
-             promotion_start_date, promotion_end_date)
-        VALUES (:promotion_id, :promotion_type, :quantity, :start_date, :end_date)
-        RETURNING promotion_key, promotion_id, promotion_type, promotion_status,
-                  promotion_quantity, promotion_used_amount,
-                  promotion_start_date, promotion_end_date
-    """), params={**data, "promotion_id": promotion_id})
-    row = dict(result.mappings().one())
-    row["promotion_id"] = promotion_id
+    row = Promotion(
+        promotion_id=promotion_id,
+        promotion_type=data["promotion_type"],
+        promotion_quantity=data.get("quantity"),
+        promotion_start_date=data.get("start_date"),
+        promotion_end_date=data.get("end_date"),
+        promotion_status="ENABLED",
+        promotion_used_amount=0,
+    )
+    db.add(row)
+    await db.flush()
+
     if data["promotion_type"] == "PRODUCT":
-        await db.exec(text("""
-            INSERT INTO promotion.product_promotion
-                (promotion_key, product_promotion_product_key,
-                 product_promotion_discount_percentage)
-            VALUES (:promotion_key, :product_key, :discount_percentage)
-        """), params={**data, "promotion_key": row["promotion_key"]})
+        db.add(ProductPromotion(
+            promotion_key=row.promotion_key,
+            product_promotion_product_key=data["product_key"],
+            product_promotion_discount_percentage=data["discount_percentage"],
+        ))
     elif data["promotion_type"] == "ORDER":
-        await db.exec(text("""
-            INSERT INTO promotion.order_promotion
-                (promotion_key, order_promotion_discount_percentage, order_promotion_thresh_price)
-            VALUES (:promotion_key, :discount_percentage, :threshold_price)
-        """), params={**data, "promotion_key": row["promotion_key"]})
+        db.add(OrderPromotion(
+            promotion_key=row.promotion_key,
+            order_promotion_discount_percentage=data["discount_percentage"],
+            order_promotion_thresh_price=data["threshold_price"],
+        ))
     else:
-        await db.exec(text("""
-            INSERT INTO promotion.code_promotion
-                (promotion_key, code_promotion_code, code_promotion_discount_percentage,
-                 code_promotion_thresh_price)
-            VALUES (:promotion_key, :code, :discount_percentage, :threshold_price)
-        """), params={**data, "promotion_key": row["promotion_key"]})
-    row.update(data)
-    return row
+        db.add(CodePromotion(
+            promotion_key=row.promotion_key,
+            code_promotion_code=data["code"],
+            code_promotion_discount_percentage=data["discount_percentage"],
+            code_promotion_thresh_price=data["threshold_price"],
+        ))
+    await db.flush()
+
+    created = {
+        "promotion_key": row.promotion_key,
+        "promotion_id": promotion_id,
+        "promotion_type": row.promotion_type,
+        "promotion_status": row.promotion_status,
+        "promotion_quantity": row.promotion_quantity,
+        "promotion_used_amount": row.promotion_used_amount,
+        "promotion_start_date": row.promotion_start_date,
+        "promotion_end_date": row.promotion_end_date,
+    }
+    created.update(data)
+    return created
 
 
 async def list_promotions(db: AsyncSession, promotion_type: str | None = None) -> list[dict[str, Any]]:
+    # UNION keep as SQL — three subtype joins stay clearer and match index usage.
     result = await db.exec(text("""
         SELECT p.promotion_id, p.promotion_type, p.promotion_status,
                p.promotion_quantity, p.promotion_used_amount,
@@ -89,85 +113,131 @@ async def list_promotions(db: AsyncSession, promotion_type: str | None = None) -
         FROM promotion.promotion p
         JOIN promotion.code_promotion cp USING (promotion_key)
         ORDER BY promotion_start_date NULLS FIRST, promotion_id
-    """), params={"promotion_type": promotion_type})
+    """))
     rows = [dict(row) for row in result.mappings().all()]
     return rows if promotion_type is None else [row for row in rows if row["promotion_type"] == promotion_type]
 
 
 async def product_has_active_promotion(db: AsyncSession, product_key) -> bool:
-    result = await db.exec(text("""
-        SELECT 1
-        FROM promotion.product_promotion pp
-        JOIN promotion.promotion p USING (promotion_key)
-        WHERE pp.product_promotion_product_key = :product_key AND p.promotion_status = 'ENABLED'
-        LIMIT 1
-    """), params={"product_key": product_key})
+    statement = (
+        select(ProductPromotion.promotion_key)
+        .join(Promotion, col(ProductPromotion.promotion_key) == col(Promotion.promotion_key))
+        .where(
+            ProductPromotion.product_promotion_product_key == product_key,
+            Promotion.promotion_status == "ENABLED",
+        )
+        .limit(1)
+    )
+    result = await db.exec(statement)
+    return result.first() is not None
+
+
+async def code_promotion_exists(db: AsyncSession, code: str) -> bool:
+    statement = (
+        select(CodePromotion.promotion_key)
+        .where(func.lower(CodePromotion.code_promotion_code) == code.strip().lower())
+        .limit(1)
+    )
+    result = await db.exec(statement)
     return result.first() is not None
 
 
 async def end_promotion(db: AsyncSession, promotion_id: str) -> bool:
-    result = await db.exec(text("""
-        UPDATE promotion.promotion
-        SET promotion_status = 'DISABLED'
-        WHERE promotion_id = :promotion_id AND promotion_status = 'ENABLED'
-        RETURNING promotion_key
-    """), params={"promotion_id": promotion_id})
-    return result.first() is not None
+    statement = select(Promotion).where(
+        Promotion.promotion_id == promotion_id,
+        Promotion.promotion_status == "ENABLED",
+    )
+    result = await db.exec(statement)
+    row = result.one_or_none()
+    if row is None:
+        return False
+    row.promotion_status = "DISABLED"
+    db.add(row)
+    await db.flush()
+    return True
 
 
 async def product_promotion_for_product(db: AsyncSession, product_key) -> dict[str, Any] | None:
-    result = await db.exec(text("""
-        SELECT p.promotion_key, p.promotion_id,
-               pp.product_promotion_discount_percentage AS discount_percentage
-        FROM promotion.product_promotion pp
-        JOIN promotion.promotion p USING (promotion_key)
-        WHERE pp.product_promotion_product_key = :product_key AND p.promotion_status = 'ENABLED'
-    """), params={"product_key": product_key})
-    row = result.mappings().one_or_none()
-    return dict(row) if row else None
+    statement = (
+        select(Promotion, ProductPromotion)
+        .join(ProductPromotion, col(ProductPromotion.promotion_key) == col(Promotion.promotion_key))
+        .where(
+            ProductPromotion.product_promotion_product_key == product_key,
+            Promotion.promotion_status == "ENABLED",
+        )
+    )
+    result = await db.exec(statement)
+    pair = result.first()
+    if pair is None:
+        return None
+    promotion, product = pair
+    return {
+        "promotion_key": promotion.promotion_key,
+        "promotion_id": promotion.promotion_id,
+        "discount_percentage": product.product_promotion_discount_percentage,
+    }
 
 
 async def product_promotion_discount(db: AsyncSession, promotion_key) -> Decimal | None:
-    result = await db.exec(text("""
-        SELECT product_promotion_discount_percentage
-        FROM promotion.product_promotion WHERE promotion_key = :promotion_key
-    """), params={"promotion_key": promotion_key})
-    row = result.first()
-    return Decimal(row[0]) if row else None
+    statement = select(ProductPromotion).where(ProductPromotion.promotion_key == promotion_key)
+    result = await db.exec(statement)
+    row = result.one_or_none()
+    return Decimal(row.product_promotion_discount_percentage) if row else None
 
 
 async def find_eligible_order_promotions(db: AsyncSession, subtotal: int, now: Any) -> list[dict[str, Any]]:
-    result = await db.exec(text("""
-        SELECT p.promotion_key, p.promotion_id, p.promotion_quantity, p.promotion_used_amount,
-               op.order_promotion_discount_percentage AS discount_percentage,
-               op.order_promotion_thresh_price AS threshold_price
-        FROM promotion.promotion p
-        JOIN promotion.order_promotion op USING (promotion_key)
-        WHERE p.promotion_status = 'ENABLED'
-          AND p.promotion_start_date <= :now AND p.promotion_end_date > :now
-          AND p.promotion_used_amount < p.promotion_quantity
-          AND op.order_promotion_thresh_price <= :subtotal
-    """), params={"subtotal": subtotal, "now": now})
-    return [dict(row) for row in result.mappings().all()]
+    statement = (
+        select(Promotion, OrderPromotion)
+        .join(OrderPromotion, col(OrderPromotion.promotion_key) == col(Promotion.promotion_key))
+        .where(
+            Promotion.promotion_status == "ENABLED",
+            Promotion.promotion_start_date <= now,
+            Promotion.promotion_end_date > now,
+            Promotion.promotion_used_amount < Promotion.promotion_quantity,
+            OrderPromotion.order_promotion_thresh_price <= subtotal,
+        )
+    )
+    result = await db.exec(statement)
+    rows = []
+    for promotion, order in result.all():
+        rows.append({
+            "promotion_key": promotion.promotion_key,
+            "promotion_id": promotion.promotion_id,
+            "promotion_quantity": promotion.promotion_quantity,
+            "promotion_used_amount": promotion.promotion_used_amount,
+            "discount_percentage": order.order_promotion_discount_percentage,
+            "threshold_price": int(order.order_promotion_thresh_price),
+        })
+    return rows
 
 
 async def find_code_promotion(db: AsyncSession, code: str) -> dict[str, Any] | None:
-    result = await db.exec(text("""
-        SELECT p.promotion_key, p.promotion_id, p.promotion_status,
-               p.promotion_quantity, p.promotion_used_amount,
-               p.promotion_start_date, p.promotion_end_date,
-               cp.code_promotion_discount_percentage AS discount_percentage,
-               cp.code_promotion_thresh_price AS threshold_price,
-               cp.code_promotion_code AS code
-        FROM promotion.code_promotion cp
-        JOIN promotion.promotion p USING (promotion_key)
-        WHERE lower(cp.code_promotion_code) = lower(:code)
-    """), params={"code": code.strip()})
-    row = result.mappings().one_or_none()
-    return dict(row) if row else None
+    statement = (
+        select(Promotion, CodePromotion)
+        .join(CodePromotion, col(CodePromotion.promotion_key) == col(Promotion.promotion_key))
+        .where(func.lower(CodePromotion.code_promotion_code) == code.strip().lower())
+    )
+    result = await db.exec(statement)
+    pair = result.first()
+    if pair is None:
+        return None
+    promotion, code_row = pair
+    return {
+        "promotion_key": promotion.promotion_key,
+        "promotion_id": promotion.promotion_id,
+        "promotion_status": promotion.promotion_status,
+        "promotion_quantity": promotion.promotion_quantity,
+        "promotion_used_amount": promotion.promotion_used_amount,
+        "promotion_start_date": promotion.promotion_start_date,
+        "promotion_end_date": promotion.promotion_end_date,
+        "discount_percentage": code_row.code_promotion_discount_percentage,
+        "threshold_price": int(code_row.code_promotion_thresh_price),
+        "code": code_row.code_promotion_code,
+    }
 
 
 async def increment_used(db: AsyncSession, promotion_key: Any) -> bool:
+    """Atomic consume — required for concurrent checkout (UC-31 AC-10)."""
     result = await db.exec(text("""
         UPDATE promotion.promotion
         SET promotion_used_amount = promotion_used_amount + 1
@@ -179,6 +249,7 @@ async def increment_used(db: AsyncSession, promotion_key: Any) -> bool:
 
 
 async def decrement_used(db: AsyncSession, promotion_key: Any) -> None:
+    """Atomic refund — keep used_amount non-negative on cancel."""
     await db.exec(text("""
         UPDATE promotion.promotion
         SET promotion_used_amount = GREATEST(0, promotion_used_amount - 1)

@@ -26,14 +26,14 @@ Nhân viên mở màn hình quản lý voucher để tạo hoặc ngừng một 
 
 ## Alternative Flows
 - **5a. Hủy tại popup xác nhận:** Nhân viên bấm "Hủy" → hệ thống không lưu, quay lại màn hình nhập với dữ liệu đã nhập.
-- **1a. Ngừng voucher (kết thúc trước hạn):** Nhân viên chọn một voucher chưa kết thúc và bấm "Ngừng" → voucher chuyển trạng thái tắt, hết hiệu lực ngay, khách nhập mã sẽ bị báo không hợp lệ `[GD]`; ngày kết thúc đã chọn khi tạo giữ nguyên; voucher không bật lại được; đơn đã tạo không thay đổi.
-- **1b. Xem danh sách voucher:** Nhân viên xem danh sách voucher kèm tổng lượt dùng, số lượt đã dùng `[GD]` và trạng thái: "Sắp diễn ra" (chưa tới ngày bắt đầu), "Đang hiệu lực", "Đã kết thúc" (đã tới ngày kết thúc hoặc đã bị ngừng). Danh sách không có thao tác sửa.
+- **1a. Ngừng voucher (kết thúc trước hạn):** Nhân viên chọn một voucher chưa kết thúc và bấm "Ngừng" → voucher chuyển trạng thái tắt, hết hiệu lực ngay, khách nhập mã sẽ bị báo không hợp lệ (UC-31, E1); ngày kết thúc đã chọn khi tạo giữ nguyên; voucher không bật lại được; đơn đã tạo không thay đổi.
+- **1b. Xem danh sách voucher:** Nhân viên xem danh sách voucher kèm tổng lượt dùng, số lượt đã dùng và trạng thái: "Sắp diễn ra" (chưa tới ngày bắt đầu), "Đang hiệu lực", "Đã kết thúc" (đã tới ngày kết thúc hoặc đã bị ngừng). Danh sách không có thao tác sửa.
 - **1c. Lọc theo khoảng thời gian:** Nhân viên chọn "từ ngày" và "đến ngày" → hệ thống chỉ hiển thị các voucher có thời gian hiệu lực giao với khoảng đã chọn (kể cả giao một phần).
 - **7a. Hết hạn:** tới ngày kết thúc → voucher tự hết hiệu lực, chuyển "Đã kết thúc", không cần Nhân viên thao tác.
 
 ## Exceptions
-- **E1. Trùng mã:** mã voucher đã tồn tại (không phân biệt hoa thường `[GD]`) → hệ thống báo lỗi, không lưu.
-- **E2. Thiếu hoặc sai dữ liệu:** thiếu mã, phần trăm giảm không nằm trong khoảng lớn hơn 0 và nhỏ hơn 100 `[GD]`, giá trị đơn tối thiểu âm, tổng lượt dùng ≤ 0, hoặc ngày kết thúc không sau ngày bắt đầu → hệ thống báo lỗi theo từng trường, không hiển thị popup xác nhận, không lưu.
+- **E1 [GD]. Trùng mã không phân biệt hoa thường:** mã voucher đã tồn tại (không phân biệt hoa thường) → hệ thống báo lỗi, không lưu.
+- **E2. Thiếu hoặc sai dữ liệu:** thiếu mã, phần trăm giảm không nằm trong khoảng lớn hơn 0 và nhỏ hơn 100, giá trị đơn tối thiểu âm, tổng lượt dùng ≤ 0, hoặc ngày kết thúc không sau ngày bắt đầu → hệ thống báo lỗi theo từng trường, không hiển thị popup xác nhận, không lưu.
 
 ## Postconditions
 - Voucher được lưu sau khi Nhân viên xác nhận và dùng được cho các đơn tạo trong thời gian hiệu lực, khi còn lượt và đạt giá trị đơn tối thiểu.
@@ -57,7 +57,7 @@ Given: popup xác nhận voucher "SUMMER10" đang hiển thị
 When: Nhân viên bấm "Hủy"
 Then: không có voucher "SUMMER10" nào được tạo
 
-### AC-4: Trùng mã
+### AC-4 [GD]: Trùng mã không phân biệt hoa thường
 Given: voucher "SUMMER10" đã tồn tại
 When: Nhân viên tạo voucher mới với mã "summer10"
 Then: hệ thống báo lỗi trùng mã
@@ -123,9 +123,7 @@ And: hệ thống báo "P1" chưa đến thời gian hiệu lực (UC-31 E2)
 - Lọc theo khoảng thời gian: hiển thị voucher có thời gian hiệu lực giao với khoảng đã chọn, kể cả giao một phần (đã chốt 15/11/2026).
 
 **Giả định [GD]**
-- Mã voucher không phân biệt hoa thường.
-- Phần trăm giảm hợp lệ: lớn hơn 0 và nhỏ hơn 100.
-- Danh sách voucher hiển thị tổng lượt dùng và số lượt đã dùng.
+- Mã voucher không phân biệt hoa thường (được ràng buộc bởi unique index trên `lower(code_promotion_code)`).
 
 ## History
 - v1 (2026-11-15): initial
@@ -134,3 +132,4 @@ And: hệ thống báo "P1" chưa đến thời gian hiệu lực (UC-31 E2)
 - v4 (2026-11-15): thêm lọc danh sách theo khoảng thời gian (1c, AC-9)
 - v5 (2026-11-15): chốt quy tắc lọc theo thời gian (giao khoảng)
 - v6 (2026-11-20): theo data model v2 — ngừng trước hạn giữ ngày kết thúc, không bật lại (1a, AC-7); thêm 7a hết hạn; chốt trạng thái Sắp diễn ra / Đang hiệu lực / Đã kết thúc (1b, AC-10)
+- v7 (2026-11-23): đồng bộ ràng buộc dữ liệu với data model v2; làm rõ giả định mã voucher không phân biệt hoa thường tại AC/E1; đồng bộ hành vi voucher đã ngừng với UC-31

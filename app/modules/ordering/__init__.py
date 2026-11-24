@@ -11,6 +11,7 @@ Phạm vi:
 - Theo dõi, hủy (khách / Nhân viên có lý do), xác nhận đơn; tự hủy đơn QR quá 24 giờ.
 - Ghi lịch sử mỗi lần đổi trạng thái đơn.
 - Tự xuất hóa đơn khi đơn sang Giao thành công (mã HD-<order_code>, snapshot); chỉ xem.
+- Shipping gọi service ordering để khóa đơn, cập nhật trạng thái và ghi lịch sử trong cùng transaction.
 
 Phụ thuộc module khác (chỉ qua service công khai):
 - shopping: các dòng giỏ cần đặt.

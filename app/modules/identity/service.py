@@ -42,3 +42,8 @@ async def authenticate_session(
             seen_at=seen_at,
             expires_at=seen_at + lifetime,
         )
+
+
+async def account_email(db, account_key):
+    """Lấy email người mua để chụp vào hóa đơn từ module ordering."""
+    return await repository.account_email(db, account_key)

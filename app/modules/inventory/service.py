@@ -1,10 +1,9 @@
-"""Tầng Service của module inventory: nghiệp vụ và điều phối transaction. Chưa triển khai.
+"""Nghiệp vụ tồn kho công khai cho module ordering."""
 
-Service công khai cho module khác:
-- Đọc tồn kho theo biến thể (cho catalog, shopping, reporting).
-- Trừ / cộng tồn trong transaction của bên gọi (cho ordering).
-- Đọc giá vốn hiện tại (cho ordering, reporting).
-- Tạo dòng tồn kho khi tạo biến thể (cho catalog).
+from app.modules.inventory import repository
 
-Chỉ gọi repository của chính module này; dữ liệu module khác lấy qua service của module đó.
-"""
+
+async def restore_failed_delivery_stock(db, variant_lines):
+    """Cộng lại từng dòng hàng; caller giữ transaction cùng cập nhật đơn."""
+    for variant_key, quantity in variant_lines:
+        await repository.restore_variant_stock(db, variant_key, quantity)

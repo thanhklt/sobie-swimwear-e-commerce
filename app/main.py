@@ -8,6 +8,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.error.handlers import register_error_handlers
+from app.modules.promotion.router import router as promotion_router
+from app.modules.shipping.router import router as shipping_router
 from app.shared.web.session import SessionMiddleware
 
 version = "v1"
@@ -28,6 +30,8 @@ app = FastAPI(
 )
 app.add_middleware(SessionMiddleware)
 register_error_handlers(app)
+app.include_router(promotion_router)
+app.include_router(shipping_router)
 
 
 @app.get("/")

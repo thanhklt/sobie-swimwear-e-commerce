@@ -14,26 +14,29 @@ Không truy vấn bảng của module khác.
 
 from uuid import UUID
 
-from sqlalchemy import Uuid, bindparam, text
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.modules.catalog.models import Product, ProductVariant
 from app.modules.catalog.schemas import VariantSummary
-
-_VARIANTS = text(
-    """
-    SELECT variant.variant_key, variant.variant_id, product.product_id,
-           product.product_name, variant.variant_sell_price
-    FROM catalog.variant AS variant
-    JOIN catalog.product AS product ON product.product_key = variant.variant_product_key
-    WHERE variant.variant_key IN :variant_keys
-    """
-).bindparams(bindparam("variant_keys", expanding=True, type_=Uuid()))
 
 
 async def get_variants(
     db: AsyncSession, variant_keys: set[UUID]
 ) -> dict[UUID, VariantSummary]:
-    result = await db.exec(_VARIANTS, params={"variant_keys": tuple(variant_keys)})
+    statement = (
+        select(
+            ProductVariant.variant_key,
+            ProductVariant.variant_id,
+            Product.product_id,
+            Product.product_name,
+            ProductVariant.variant_sell_price,
+        )
+        .select_from(ProductVariant)
+        .join(Product, ProductVariant.variant_product_key == Product.product_key)
+        .where(ProductVariant.variant_key.in_(tuple(variant_keys)))
+    )
+    result = await db.exec(statement)
     return {
         variant_key: VariantSummary(
             sku,

@@ -11,78 +11,94 @@ Không truy vấn bảng của module khác.
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import DateTime, bindparam, text
+from sqlalchemy import String, cast, func, literal
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.modules.ordering.models import Order, OrderDetail, OrderStatusHistory
 from app.modules.ordering.schemas import SalesStats, VariantSales
 
-_SALES_STATS = (
-    text(
-        """
-        WITH delivered AS (
-            SELECT sale.order_key, sale.order_total_price - sale.order_shipping_fee AS revenue
-            FROM ordering."order" AS sale
-            WHERE sale.order_status = 'DELIVERED'
-              AND EXISTS (
-                  SELECT 1 FROM ordering.order_status_history AS history
-                  WHERE history.order_status_history_order_key = sale.order_key
-                    AND history.order_status_history_to_value = 'DELIVERED'
-                    AND history.order_status_history_changed_time >= :starts_at
-                    AND history.order_status_history_changed_time < :ends_before
-              )
-        ), sold_variants AS (
-            SELECT detail.order_detail_variant_key AS variant_key,
-                   SUM(detail.order_detail_quantity) AS quantity,
-                   SUM(detail.order_detail_quantity * detail.order_detail_cost_price) AS cost
-            FROM delivered
-            JOIN ordering.order_detail AS detail ON detail.order_detail_order_key = delivered.order_key
-            GROUP BY detail.order_detail_variant_key
-        ), created_orders_by_status AS (
-            SELECT order_status, COUNT(*) AS quantity
-            FROM ordering."order"
-            WHERE order_created_date >= :starts_at AND order_created_date < :ends_before
-            GROUP BY order_status
-        )
-        SELECT (SELECT COALESCE(SUM(revenue), 0) FROM delivered) AS revenue,
-               COALESCE(SUM(cost), 0) AS cost_of_goods,
-               COALESCE(jsonb_object_agg(variant_key::text, quantity), '{}'::jsonb) AS units_by_variant,
-               (SELECT COALESCE(jsonb_object_agg(order_status, quantity), '{}'::jsonb)
-                FROM created_orders_by_status) AS orders_by_status
-        FROM sold_variants
-        """
-    )
-    .bindparams(
-        bindparam("starts_at", type_=DateTime(timezone=True)),
-        bindparam("ends_before", type_=DateTime(timezone=True)),
-    )
-    .columns(units_by_variant=JSONB, orders_by_status=JSONB)
-)
-
-_UNITS_SOLD = text(
-    """
-    SELECT detail.order_detail_variant_key,
-           SUM(detail.order_detail_quantity),
-           MAX(sale.order_created_date)
-    FROM ordering."order" AS sale
-    JOIN ordering.order_detail AS detail ON detail.order_detail_order_key = sale.order_key
-    WHERE sale.order_created_date >= :starts_at
-      AND sale.order_created_date <= :ends_at
-      AND sale.order_status IN ('PENDING', 'CONFIRMED', 'AWAITING_PICKUP', 'SHIPPING', 'DELIVERED')
-    GROUP BY detail.order_detail_variant_key
-    """
-).bindparams(
-    bindparam("starts_at", type_=DateTime(timezone=True)),
-    bindparam("ends_at", type_=DateTime(timezone=True)),
+_BESTSELLER_ORDER_STATUSES = (
+    "PENDING",
+    "CONFIRMED",
+    "AWAITING_PICKUP",
+    "SHIPPING",
+    "DELIVERED",
 )
 
 
 async def get_sales_stats(
     db: AsyncSession, starts_at: datetime, ends_before: datetime
 ) -> SalesStats:
-    result = await db.exec(
-        _SALES_STATS, params={"starts_at": starts_at, "ends_before": ends_before}
+    delivered_in_period = (
+        select(OrderStatusHistory.order_status_history_key)
+        .where(
+            OrderStatusHistory.order_status_history_order_key == Order.order_key,
+            OrderStatusHistory.order_status_history_to_value == "DELIVERED",
+            OrderStatusHistory.order_status_history_changed_time >= starts_at,
+            OrderStatusHistory.order_status_history_changed_time < ends_before,
+        )
+        .correlate(Order)
+        .exists()
     )
+    delivered = (
+        select(
+            Order.order_key,
+            (Order.order_total_price - Order.order_shipping_fee).label("revenue"),
+        )
+        .where(Order.order_status == "DELIVERED", delivered_in_period)
+        .cte("delivered")
+    )
+    sold_variants = (
+        select(
+            OrderDetail.order_detail_variant_key.label("variant_key"),
+            func.sum(OrderDetail.order_detail_quantity).label("quantity"),
+            func.sum(
+                OrderDetail.order_detail_quantity * OrderDetail.order_detail_cost_price
+            ).label("cost"),
+        )
+        .select_from(OrderDetail)
+        .join(delivered, OrderDetail.order_detail_order_key == delivered.c.order_key)
+        .group_by(OrderDetail.order_detail_variant_key)
+        .cte("sold_variants")
+    )
+    created_orders = (
+        select(Order.order_status, func.count().label("quantity"))
+        .where(
+            Order.order_created_date >= starts_at,
+            Order.order_created_date < ends_before,
+        )
+        .group_by(Order.order_status)
+        .cte("created_orders_by_status")
+    )
+
+    # Tổng doanh thu trên tập đơn để mỗi đơn được cộng đúng một lần.
+    revenue = select(func.coalesce(func.sum(delivered.c.revenue), 0)).scalar_subquery()
+    empty_object = literal({}, type_=JSONB())
+    units_by_variant = func.coalesce(
+        func.jsonb_object_agg(
+            cast(sold_variants.c.variant_key, String()),
+            sold_variants.c.quantity,
+            type_=JSONB(),
+        ),
+        empty_object,
+    )
+    orders_by_status = select(
+        func.coalesce(
+            func.jsonb_object_agg(
+                created_orders.c.order_status, created_orders.c.quantity, type_=JSONB()
+            ),
+            empty_object,
+        )
+    ).scalar_subquery()
+    statement = select(
+        revenue.label("revenue"),
+        func.coalesce(func.sum(sold_variants.c.cost), 0).label("cost_of_goods"),
+        units_by_variant.label("units_by_variant"),
+        orders_by_status.label("orders_by_status"),
+    ).select_from(sold_variants)
+    result = await db.exec(statement)
     row = result.mappings().one()
     return SalesStats(
         revenue=int(row["revenue"]),
@@ -98,9 +114,22 @@ async def get_sales_stats(
 async def get_units_sold(
     db: AsyncSession, starts_at: datetime, ends_at: datetime
 ) -> dict[UUID, VariantSales]:
-    result = await db.exec(
-        _UNITS_SOLD, params={"starts_at": starts_at, "ends_at": ends_at}
+    statement = (
+        select(
+            OrderDetail.order_detail_variant_key,
+            func.sum(OrderDetail.order_detail_quantity),
+            func.max(Order.order_created_date),
+        )
+        .select_from(Order)
+        .join(OrderDetail, OrderDetail.order_detail_order_key == Order.order_key)
+        .where(
+            Order.order_created_date >= starts_at,
+            Order.order_created_date <= ends_at,
+            Order.order_status.in_(_BESTSELLER_ORDER_STATUSES),
+        )
+        .group_by(OrderDetail.order_detail_variant_key)
     )
+    result = await db.exec(statement)
     return {
         variant_key: VariantSales(quantity, latest_order_at)
         for variant_key, quantity, latest_order_at in result

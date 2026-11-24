@@ -1,6 +1,6 @@
 """Cấu hình Jinja dùng chung để render HTML phía server.
 
-Thư mục template: layout chung ở app/shared/web/templates, trang lỗi ở app/error/templates.
+Thư mục template: layout chung, trang lỗi và dashboard báo cáo.
 """
 
 from pathlib import Path
@@ -13,5 +13,6 @@ templates = Jinja2Templates(
     directory=[
         _APP_DIR / "shared" / "web" / "templates",
         _APP_DIR / "error" / "templates",
+        _APP_DIR / "modules" / "reporting" / "templates",
     ]
 )

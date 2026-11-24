@@ -150,6 +150,7 @@ Chưa xử lý ──(UC-23 xác nhận)──► Đã xác nhận ──(UC-40 
 | Hóa đơn (ERD) | Lưu snapshot thông tin đơn lúc xuất | UC-26 |
 | Dashboard | Bỏ chỉ số hiệu quả khuyến mãi | UC-37 |
 | Kỳ ghi nhận trên dashboard | Doanh thu, lợi nhuận gộp và Top 10 sản phẩm bán chạy tính theo ngày đơn chuyển sang "Giao thành công" (22/11/2026). Doanh thu là tiền hàng sau giảm, không gồm phí vận chuyển. Top 10 xếp theo số lượng bán. | UC-37 |
+| Kỳ ghi nhận tiền nhập hàng | Cộng tiền các phiếu nhập đã xác nhận theo ngày lập phiếu và nhóm theo nhà cung cấp (22/11/2026) | UC-37 |
 | Bảng size | Một bảng size chung, nội dung cố định | UC-12, UC-14 |
 | Giá theo size | Giữ `variant_sell_price`; đặt giá cho size thì ghi cùng giá cho mọi màu của size đó | UC-16 |
 | Từ chối đơn | Bỏ hẳn thao tác từ chối; Nhân viên dùng "Hủy đơn" có lý do (cập nhật 20/11/2026) | UC-22, UC-23 |

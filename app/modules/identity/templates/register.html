@@ -1,7 +1,8 @@
-{% extends "account.html" %}
+{% extends "auth.html" %}
 {% block title %}Đăng ký tài khoản · Sobie{% endblock %}
 {% block account_content %}
   <header class="identity-intro">
+    <p class="identity-eyebrow">Sobie / Summer Club</p>
     <h1 id="identity-title">{{ {"email": "Đăng ký tài khoản", "otp": "Xác minh email", "password": "Tạo mật khẩu",
             "google_link": "Xác minh liên kết Google"}[result.stage] }}</h1>
     {% if result.stage in ("otp", "google_link") %}

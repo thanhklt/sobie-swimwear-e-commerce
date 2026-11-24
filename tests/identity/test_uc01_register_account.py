@@ -25,8 +25,8 @@ def verify(client, mail, email="a@example.com"):
     return post(client, page, "/register/otp", otp=mail[-1][1])
 
 
-def google(client, oidc):
-    response = client.get("/register/google", follow_redirects=False)
+def google(client, oidc, *, login_only=False):
+    response = client.get("/register/google", params={"login": "1"} if login_only else None, follow_redirects=False)
     assert response.status_code in (302, 303), response.text
     state = parse_qs(urlparse(response.headers["location"]).query)["state"][0]
     params = {"state": state, "error": "access_denied"} if oidc.failure == "cancel" else {"state": state, "code": "valid"}
@@ -38,7 +38,7 @@ def test_uc01_ac1_email_registration(world):
     client, mail = world.client, world.mail
     page = verify(client, mail)
     result = post(client, page, "/register/password", password="123456", password_confirmation="123456")
-    assert result.status_code in (302, 303) and urlparse(result.headers["location"]).path == "/login"
+    assert result.status_code in (302, 303) and urlparse(result.headers["location"]).path == "/api/v1/login"
     world.assert_new_account("a@example.com", password="123456")
     assert "thành công" in client.get(result.headers["location"]).text.lower()
 
@@ -164,8 +164,36 @@ def test_uc01_ac13_invalid_password(world, password, confirmation):
 # UC-01 AC-14: Đăng ký thành công bằng Google
 def test_uc01_ac14_new_google_account(world):
     response = google(world.client, world.oidc)
-    assert response.status_code in (302, 303) and urlparse(response.headers["location"]).path == "/login"
+    assert response.status_code in (302, 303) and urlparse(response.headers["location"]).path == "/api/v1/login"
     world.assert_new_account("google@example.com", google_sub="google-sub")
+    assert not world.client.cookies.get("storefront_session")
+    assert "Đăng ký thành công" in world.client.get(response.headers["location"]).text
+
+
+def test_uc01_ac14_registration_state_survives_another_google_attempt(world):
+    client = world.client
+    registration = client.get("/register")
+    href = re.search(r'href="([^"]+)">Đăng ký với Google</a>', registration.text)
+    assert href
+    signup = client.get(href.group(1), follow_redirects=False)
+    signin = client.get("/register/google", params={"login": "1"}, follow_redirects=False)
+    signup_state = parse_qs(urlparse(signup.headers["location"]).query)["state"][0]
+    signin_state = parse_qs(urlparse(signin.headers["location"]).query)["state"][0]
+    assert signup_state != signin_state
+
+    callback = "/register/google/callback"
+    result = client.get(callback, params={"state": signup_state, "code": "signup"}, follow_redirects=False)
+    assert result.status_code == 303 and urlparse(result.headers["location"]).path == "/api/v1/login"
+    world.assert_new_account("google@example.com", google_sub="google-sub")
+    assert not client.cookies.get("storefront_session")
+    assert "Đăng ký thành công" in client.get(result.headers["location"]).text
+
+    # Callback của lượt đăng ký chỉ được xử lý một lần.
+    replay = client.get(callback, params={"state": signup_state, "code": "signup"}, follow_redirects=False)
+    assert replay.status_code == 400 and not client.cookies.get("storefront_session")
+    signin_result = client.get(callback, params={"state": signin_state, "code": "signin"}, follow_redirects=False)
+    assert signin_result.status_code == 303 and signin_result.headers["location"] == "/"
+    assert world.counts()[:3] == (1, 1, 1)
 
 
 # UC-01 AC-15: Xác thực Google chưa thành công

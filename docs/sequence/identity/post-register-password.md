@@ -25,7 +25,7 @@ sequenceDiagram
         alt Toàn bộ thao tác thành công
             Service->>DB: Commit
             Service->>Redis: Ghi thông báo thành công cho lượt hiện tại
-            Route-->>Browser: Chuyển đến /login
+            Route-->>Browser: Chuyển đến /api/v1/login
         else Lỗi cấp mã hoặc lưu dữ liệu
             Service->>DB: Rollback bộ đếm cùng các bản ghi mới
             Route-->>Browser: Thông báo đăng ký thất bại

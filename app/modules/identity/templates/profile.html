@@ -1,0 +1,41 @@
+{% extends "account.html" %}
+{% block title %}{{ title }} · Sobie{% endblock %}
+{% block account_content %}
+  <h1 id="identity-title">{{ title }}</h1>
+  {% if saved %}<p role="status">Đã lưu thông tin tài khoản.</p>{% endif %}
+  {% if error and not error.field %}<p role="alert">{{ error }}</p>{% endif %}
+  {% if account.code %}<p>Mã tài khoản <strong>{{ account.code }}</strong></p>{% endif %}
+  <form method="post" class="identity-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    {% for field, (label, limit) in fields.items() %}
+      <label for="{{ field }}">{{ label }}</label>
+      <input id="{{ field }}" name="{{ field }}" maxlength="{{ limit }}" value="{{ values.get(field, '') }}"
+        type="{{ {'date_of_birth': 'date', 'email': 'email', 'phone_number': 'tel'}.get(field, 'text') }}"
+        {% if field in ('name','email') or creating and field == 'phone_number' %}required{% endif %}>
+      {% if error and error.field == field %}<p role="alert">{{ error }}</p>{% endif %}
+    {% endfor %}
+    {% if roles %}
+      <label for="role">Vai trò</label>
+      <select id="role" name="role" required>
+        {% for role in roles %}
+          <option value="{{ role }}" {% if values.get('role') == role %}selected{% endif %}>{{ labels[role] }}</option>
+        {% endfor %}
+      </select>
+      {% if error and error.field == "role" %}<p role="alert">{{ error }}</p>{% endif %}
+    {% endif %}
+    {% if creating %}
+      <label for="password">Mật khẩu ban đầu</label>
+      <input type="password" name="password" id="password" autocomplete="new-password" minlength="6" required>
+      {% if error and error.field == "password" %}<p role="alert">{{ error }}</p>{% endif %}
+    {% endif %}
+    <button class="identity-button" type="submit">{{ "Tạo tài khoản" if creating else "Lưu" }}</button>
+  </form>
+  {% if request.state.auth_portal.value == 'portal' %}
+    {% if not creating and not roles and error and error.field == "role" %}<p role="alert">{{ error }}</p>{% endif %}
+    {% if not creating %}{% include "_account_lock.html" %}{% endif %}
+    <a href="{{ request.url_for('admin_accounts').path }}">Danh sách tài khoản</a>
+  {% else %}
+    {% if account.has_password %}<a href="{{ request.url_for('customer_password_form').path }}">Đổi mật khẩu</a>{% endif %}
+    {% include "_logout.html" %}
+  {% endif %}
+{% endblock %}

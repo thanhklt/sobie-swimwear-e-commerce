@@ -15,7 +15,7 @@ sequenceDiagram
     participant Google as Google OIDC
     Browser->>Route: Quay lại từ Google
     Route->>Service: Xử lý callback của lượt OIDC
-    Service->>Redis: Lấy và tiêu thụ trạng thái của lượt
+    Service->>Redis: Lấy và tiêu thụ một lần theo cặp trình duyệt và state
     Service->>Google: Đổi mã và xác minh danh tính
     alt Callback lỗi hoặc xác minh không đạt
         Route-->>Browser: Báo lỗi xác thực
@@ -26,7 +26,7 @@ sequenceDiagram
             Service->>Repo: Ghi mã KH, account và sub
             Service->>Shopping: Ghi cart và wishlist cùng transaction
             Service->>DB: Commit hoặc rollback toàn bộ
-            Route-->>Browser: Chuyển /login khi thành công
+            Route-->>Browser: Chuyển /api/v1/login khi thành công
         else Sub đã liên kết, đúng vai trò và trạng thái
             Service->>Repo: Cấp phiên storefront cho tài khoản cũ
             Route-->>Browser: Đặt cookie phiên và chuyển trang

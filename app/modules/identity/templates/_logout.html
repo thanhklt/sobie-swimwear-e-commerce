@@ -1,0 +1,4 @@
+<form method="post" action="{{ request.url_for('portal_logout' if request.state.auth_portal.value == 'portal' else 'storefront_logout').path }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <button type="submit">Đăng xuất</button>
+</form>

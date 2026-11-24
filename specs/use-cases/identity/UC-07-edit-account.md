@@ -22,7 +22,7 @@ Admin mở khu vực quản lý tài khoản để xem hoặc sửa tài khoản
 3. Admin tìm theo họ tên, email hoặc số điện thoại `[GD]` và chọn một tài khoản.
 4. Admin sửa họ tên, ngày sinh, địa chỉ, email, số điện thoại. Với tài khoản Nhân viên hoặc Admin, Admin có thể đổi vai trò qua lại giữa Nhân viên và Admin. Tài khoản Khách hàng không có thao tác đổi vai trò.
 5. Hệ thống kiểm tra dữ liệu hợp lệ và email, số điện thoại không trùng tài khoản khác.
-6. Trong cùng một transaction `[GD]`, hệ thống lưu thông tin và vai trò mới, báo cập nhật thành công. Họ tên, ngày sinh, địa chỉ, email, số điện thoại, mật khẩu được giữ nguyên khi đổi vai trò.
+6. Admin bấm “Lưu” một lần để gửi cả thông tin hồ sơ và vai trò. Hệ thống lưu các thay đổi trong cùng một transaction rồi báo cập nhật thành công. Nếu Admin chỉ đổi vai trò, hồ sơ và mật khẩu hiện có được giữ nguyên.
 7. Nếu vai trò được đổi, hệ thống cấp mã tài khoản mới theo vai trò (`NV-...` → `AD-...` hoặc ngược lại; mã cũ không dùng lại) và xóa mọi phiên (`identity.session`) của tài khoản trong cùng transaction ở bước 6, nên mọi phiên đang mở của tài khoản đó kết thúc ngay; vai trò mới có hiệu lực ngay.
 
 ## Alternative Flows
@@ -36,7 +36,7 @@ Admin mở khu vực quản lý tài khoản để xem hoặc sửa tài khoản
 - **E2. Dữ liệu không hợp lệ:** thiếu trường bắt buộc hoặc sai định dạng — hệ thống báo lỗi, không lưu.
 - **E3. Đổi vai trò giữa Khách hàng và Nhân viên / Admin** (theo bất kỳ chiều nào): hệ thống từ chối. Giao diện không hiển thị thao tác này; nếu có yêu cầu gửi thẳng lên hệ thống thì vẫn bị từ chối.
 - **E4. Đổi vai trò làm hệ thống hết Admin đang hoạt động:** nếu vai trò mới làm hệ thống không còn tài khoản Admin ở trạng thái Hoạt động, hệ thống từ chối. Vai trò và các phiên đăng nhập giữ nguyên.
-- **E5. Lỗi khi lưu:** hệ thống hủy toàn bộ transaction; thông tin và vai trò giữ nguyên, phiên đăng nhập không bị kết thúc `[GD]`.
+- **E5. Lỗi khi lưu:** hệ thống hủy toàn bộ transaction; thông tin và vai trò giữ nguyên, phiên đăng nhập không bị kết thúc.
 - **E6. Nhân viên thao tác ngoài phạm vi quản lý khách hàng:** hệ thống từ chối yêu cầu xem tài khoản nội bộ, sửa thông tin tài khoản hoặc truy cập khu vực quản lý toàn bộ tài khoản của Admin.
 
 ## Postconditions
@@ -141,6 +141,7 @@ Then: hệ thống từ chối yêu cầu
 - Kết thúc phiên khi đổi vai trò bằng cách xóa các dòng `identity.session` của tài khoản (BR-GIAIDOAN1, Constraints chung — Xác thực; data model v2.15, Q35, đã chốt 21/11/2026). Sửa thông tin mà không đổi vai trò thì không xóa phiên. Lỗi khi lưu (E5) thì transaction bị hủy, các phiên giữ nguyên.
 
 ### Quyết định đã chốt
+- Dùng một nút Lưu cho hồ sơ và vai trò. Khi gửi cả hai thay đổi, chúng cùng thành công hoặc cùng được hoàn tác (đã chốt 24/11/2026).
 - Admin chỉ quản lý tài khoản và gán vai trò cho tài khoản; mọi thao tác vận hành cửa hàng do Nhân viên thực hiện (đã chốt 15/11/2026).
 - Nhân viên được xem hồ sơ và trạng thái tài khoản Khách hàng, và có quyền khóa Khách hàng theo UC-08 (đã chốt 23/11/2026).
 - Chỉ đổi vai trò qua lại giữa Nhân viên và Admin. Không đổi Khách hàng sang Nhân viên / Admin và không đổi Nhân viên / Admin sang Khách hàng; không tạo vai trò mới hoặc cấu hình quyền (đã chốt 20/11/2026, thay quyết định cho đổi sang mọi vai trò cùng ngày).
@@ -154,7 +155,6 @@ Then: hệ thống từ chối yêu cầu
 - Việc xem và tìm danh sách tài khoản gộp vào UC này.
 - Danh sách có phân trang; tìm theo họ tên, email hoặc số điện thoại.
 - Admin sửa được thông tin mọi tài khoản.
-- Đổi vai trò giữ nguyên thông tin cá nhân, email, số điện thoại, mật khẩu; lưu thông tin và vai trò trong một transaction, lỗi thì hủy toàn bộ.
 
 ## History
 - v1 (2026-11-15): initial

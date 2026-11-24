@@ -11,7 +11,7 @@ Chỉ gọi repository của chính module này; dữ liệu module khác lấy 
 import json
 import logging
 from dataclasses import asdict, dataclass, replace
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 from hashlib import sha256
 from hmac import compare_digest, digest
 from math import ceil
@@ -23,6 +23,11 @@ from sqlalchemy.exc import IntegrityError
 
 from app.config.settings import Config
 from app.database.transaction import transaction
+from app.error.exceptions import SessionAccessError
+from app.modules.identity.account_details import (
+    AccountFormError, account_code_prefix, internal_code_name, profile_values, validate_profile,
+)
+from app.modules.identity.models import IdentityAccount
 from app.modules.identity import helper, repository
 from app.modules.identity.google_oidc import GoogleIdentity, get_google_oidc
 from app.modules.identity.mail import send_registration_otp
@@ -48,6 +53,7 @@ _OTP_INVALID = "Mã xác minh không đúng hoặc đã hết hạn."
 _RESEND_EARLY = "Bạn có thể gửi lại mã sau 5 phút kể từ lần gửi gần nhất."
 _REGISTRATION_FAILED = "Đăng ký không thành công. Vui lòng thử lại."
 _GOOGLE_FAILED = "Không thể xác thực Google. Vui lòng thử lại."
+_GOOGLE_ACCOUNT_MISSING = "Email Google này chưa có tài khoản Sobie. Hãy chọn Đăng ký với Google."
 _RESTART = "Lượt xác minh đã hết hạn. Vui lòng bắt đầu lại."
 
 logger = logging.getLogger(__name__)
@@ -93,6 +99,11 @@ class _GoogleRejected(Exception):
 
 def _flow_key(browser: str) -> str:
     return "identity:registration:flow:" + sha256(browser.encode("ascii")).hexdigest()
+
+
+def _google_flow_key(browser: str, state: str) -> str:
+    value = sha256(f"{browser}:{state}".encode("utf-8")).hexdigest()
+    return f"identity:registration:google:{value}"
 
 
 def _cooldown_key(purpose: str, email: str) -> str:
@@ -243,7 +254,7 @@ class IdentityService:
 
 
         allowed_roles, lifetime = _SESSION_POLICIES[portal]
-        seen_at = datetime.now(UTC)
+        seen_at = helper.utc_now()
         token_hash = sha256(token.encode("utf-8")).hexdigest()
 
         async with self.session_factory() as db, transaction(db):
@@ -255,6 +266,220 @@ class IdentityService:
                 expires_at=seen_at + lifetime,
             )
 
+
+    async def login_with_password(
+        self, identifier: str, password: str, portal: SessionPortal, client_ip: str
+    ) -> RegistrationResult:
+        ip_key = sha256(client_ip.encode("utf-8")).hexdigest()
+        if await get_challenge_store().count_password_attempt(ip_key) > 5:
+            return RegistrationResult(message="Quá nhiều lần đăng nhập. Vui lòng thử lại sau.", status=429)
+        identifier = identifier.strip()
+        if not identifier or not password:
+            field = "identifier" if not identifier else "password"
+            return RegistrationResult(message="Vui lòng điền thông tin đăng nhập.", field=field, status=400)
+        rejected = RegistrationResult(message="Thông tin đăng nhập không đúng", status=401)
+        if len(identifier) > 255 or "\x00" in identifier:
+            return rejected
+        if "@" in identifier:
+            try:
+                lookup = {"email": helper.normalize_email(identifier)}
+            except ValueError:
+                lookup = {"email": identifier}
+        else:
+            lookup = {"phone": identifier}
+        allowed_roles, _ = _SESSION_POLICIES[portal]
+        async with self.session_factory() as db, transaction(db):
+            account = await self.repository.find_account(db, for_update=True, **lookup)
+            if not account or not await self.repository.verify_password(db, password, account.password_hash):
+                return rejected
+            if account.role not in allowed_roles:
+                return rejected
+            if account.status != "ACTIVE":
+                return RegistrationResult(message="Tài khoản đã bị khóa", status=403)
+            token = await self._issue_session(db, account, portal)
+            return RegistrationResult(stage="signed_in", session_token=token)
+
+    async def logout(self, token: str | None, portal: SessionPortal) -> None:
+        if not token:
+            return
+        roles, _ = _SESSION_POLICIES[portal]
+        async with self.session_factory() as db, transaction(db):
+            await self.repository.delete_portal_session(db, sha256(token.encode("utf-8")).hexdigest(), roles)
+
+    async def _active_actor(self, db, actor: AuthenticatedSession, roles: tuple[Role, ...]):
+        record = await self.repository.account_record(db, actor.account_key, lock=True)
+        if not record or record[1] not in roles or record[0].account_status != "ACTIVE":
+            raise SessionAccessError(status_code=403)
+        if not await self.repository.session_exists(db, actor, helper.utc_now()):
+            raise SessionAccessError(status_code=403)
+        return record
+
+    @staticmethod
+    def _public_account(account, role: Role) -> dict:
+        return profile_values(account) | {
+            "key": account.account_key, "code": account.account_id,
+            "role": role, "status": account.account_status,
+            "has_password": account.account_hash_password is not None,
+        }
+
+    async def get_account_details(self, key: UUID, *, customers_only: bool = False):
+        async with self.session_factory() as db:
+            record = await self.repository.account_record(db, key)
+            if not record or (customers_only and record[1] != Role.CUSTOMER):
+                return None
+            return self._public_account(*record)
+
+    async def search_accounts(self, *, customers_only: bool, search: str, page: int):
+        size = 20
+        async with self.session_factory() as db:
+            rows = await self.repository.list_accounts(
+                db, customers=customers_only, search=search, offset=(page - 1) * size, limit=size + 1
+            )
+            return [self._public_account(account, Role(role)) for account, role in rows[:size]], len(rows) > size
+
+    async def _check_contacts(self, db, fields: dict, key: UUID | None = None) -> None:
+        for field, lookup in (("email", "email"), ("phone_number", "phone")):
+            value = fields.get(f"account_{field}")
+            if value:
+                existing = await self.repository.find_account(db, **{lookup: value})
+                if existing and existing.account_key != key:
+                    raise AccountFormError(field, self._contact_conflict(field))
+
+    @staticmethod
+    def _contact_conflict(field: str) -> str:
+        return _EMAIL_IN_USE if field == "email" else "Số điện thoại đã được sử dụng"
+
+    def _map_account_integrity_error(self, exc: IntegrityError) -> None:
+        constraint = getattr(getattr(exc.orig, "__cause__", None), "constraint_name", "") or ""
+        for field in ("email", "phone_number"):
+            if f"account_{field}_" in constraint:
+                raise AccountFormError(field, self._contact_conflict(field)) from exc
+        raise exc
+
+    async def update_profile(self, actor: AuthenticatedSession, fields: dict[str, str]) -> None:
+        values = validate_profile(fields, Role.CUSTOMER)
+        try:
+            async with self.session_factory() as db, transaction(db):
+                account, _ = await self._active_actor(db, actor, (Role.CUSTOMER,))
+                await self._check_contacts(db, values, actor.account_key)
+                account.sqlmodel_update(values)
+                await self.repository.save_account(db, account)
+        except IntegrityError as exc:
+            self._map_account_integrity_error(exc)
+
+    async def change_password(
+        self, actor: AuthenticatedSession, portal: SessionPortal, current: str, password: str, confirmation: str
+    ) -> None:
+        roles, _ = _SESSION_POLICIES[portal]
+        async with self.session_factory() as db, transaction(db):
+            account, _ = await self._active_actor(db, actor, roles)
+            if not await self.repository.verify_password(db, current, account.account_hash_password):
+                raise AccountFormError("current_password", "Mật khẩu hiện tại không đúng")
+            message = helper.password_validation_error(password, confirmation)
+            if message:
+                field = "password_confirmation" if password and confirmation and password != confirmation else "password"
+                raise AccountFormError(field, message)
+            if password == current:
+                raise AccountFormError("password", "Mật khẩu mới phải khác mật khẩu hiện tại")
+            account.account_hash_password = await self.repository.hash_password(db, password=password)
+            await self.repository.save_account(db, account)
+            await self.repository.delete_account_sessions(db, actor.account_key)
+
+    async def _allocate_account_code(self, db, role: Role, values: dict, now) -> str:
+        prefix = account_code_prefix(role)
+        if role == Role.CUSTOMER:
+            date_part = now.astimezone(ZoneInfo("Asia/Ho_Chi_Minh")).strftime("%Y%m%d")
+            body = date_part
+        else:
+            name = internal_code_name(values["account_name"])
+            birth = values["account_date_of_birth"].strftime("%Y%m%d")
+            if not 1 <= len(name) <= 83:
+                raise AccountFormError("name", "Họ tên không hợp lệ để cấp mã tài khoản nội bộ")
+            body = f"{name}-{birth}"
+        suffix = await self.repository.next_account_suffix(db, prefix=prefix)
+        return f"{prefix}-{body}-{suffix}"
+
+    async def create_managed_account(self, actor: AuthenticatedSession, fields: dict[str, str], password: str) -> None:
+        role = self._submitted_role(fields.get("role", ""))
+        values = validate_profile(fields, role, creating=True)
+        if message := helper.password_validation_error(password, password):
+            raise AccountFormError("password", message)
+        try:
+            async with self.session_factory() as db, transaction(db):
+                await self.repository.role_key(db, Role.ADMIN, lock=True)
+                await self._active_actor(db, actor, (Role.ADMIN,))
+                await self._check_contacts(db, values)
+                now = helper.utc_now()
+                account = IdentityAccount(
+                    **values,
+                    account_role_key=await self.repository.role_key(db, role),
+                    account_id=await self._allocate_account_code(db, role, values, now),
+                    account_hash_password=await self.repository.hash_password(db, password=password),
+                    account_created_at=now,
+                )
+                key = await self.repository.save_account(db, account)
+                if role == Role.CUSTOMER:
+                    await initialize_customer_shopping(db, account_key=key)
+        except IntegrityError as exc:
+            self._map_account_integrity_error(exc)
+
+    @staticmethod
+    def _submitted_role(value: str) -> Role:
+        try:
+            return Role(value)
+        except ValueError as exc:
+            raise AccountFormError("role", "Vai trò không hợp lệ") from exc
+
+    async def _require_remaining_admin(self, db, admin_key: UUID, target: UUID) -> None:
+        if not await self.repository.another_active_admin(db, admin_key, target):
+            raise AccountFormError("", "Hệ thống phải còn ít nhất một Admin đang hoạt động")
+
+    async def edit_managed_account(self, actor: AuthenticatedSession, key: UUID, fields: dict[str, str]) -> bool:
+        try:
+            async with self.session_factory() as db, transaction(db):
+                admin_key = await self.repository.role_key(db, Role.ADMIN, lock=True)
+                await self._active_actor(db, actor, (Role.ADMIN,))
+                record = await self.repository.account_record(db, key, lock=True)
+                if record is None:
+                    raise AccountFormError("", "Không tìm thấy tài khoản")
+                account, previous_role = record
+                role = self._submitted_role(fields["role"]) if "role" in fields else previous_role
+                changed_role = previous_role != role
+                if changed_role and Role.CUSTOMER in (role, previous_role):
+                    raise AccountFormError("role", "Không thể chuyển giữa Khách hàng và vai trò nội bộ")
+                if changed_role and previous_role == Role.ADMIN and account.account_status == "ACTIVE":
+                    await self._require_remaining_admin(db, admin_key, key)
+
+                # Trường bị bỏ qua giữ giá trị hiện tại, kể cả khi chỉ gửi vai trò mới.
+                values = validate_profile(profile_values(account) | fields, role)
+                updates = {column: value for column, value in values.items()
+                           if column.removeprefix("account_") in fields}
+                await self._check_contacts(db, updates, key)
+                account.sqlmodel_update(updates)
+                if changed_role:
+                    account.account_id = await self._allocate_account_code(db, role, values, helper.utc_now())
+                    account.account_role_key = await self.repository.role_key(db, role)
+                    await self.repository.delete_account_sessions(db, key)
+                await self.repository.save_account(db, account)
+                return changed_role
+        except IntegrityError as exc:
+            self._map_account_integrity_error(exc)
+
+    async def set_account_lock(self, actor: AuthenticatedSession, key: UUID, *, locked: bool) -> None:
+        async with self.session_factory() as db, transaction(db):
+            admin_key = await self.repository.role_key(db, Role.ADMIN, lock=True)
+            roles = (Role.ADMIN, Role.EMPLOYEE) if locked else (Role.ADMIN,)
+            _, actor_role = await self._active_actor(db, actor, roles)
+            record = await self.repository.account_record(db, key, lock=True)
+            if not record or (actor_role == Role.EMPLOYEE and record[1] != Role.CUSTOMER):
+                raise SessionAccessError(status_code=403)
+            account, role = record
+            if locked and role == Role.ADMIN and account.account_status == "ACTIVE":
+                await self._require_remaining_admin(db, admin_key, key)
+            account.account_status = "LOCKED" if locked else "ACTIVE"
+            await self.repository.save_account(db, account)
+            if locked:
+                await self.repository.delete_account_sessions(db, key)
 
     async def get_registration_stage(self, browser: str) -> RegistrationResult:
         _, flow = await _read_flow(get_challenge_store(), _flow_key(browser))
@@ -393,8 +618,7 @@ class IdentityService:
     # UC-01 Đăng ký tài khoản — 1b.1; E8 (specs/use-cases/identity/UC-01-register-account.md)
     async def begin_google_registration(self, browser: str, *, allow_create: bool = True) -> RegistrationResult:
         store = get_challenge_store()
-        key = _flow_key(browser)
-        raw, previous = await _read_flow(store, key)
+        _, previous = await _read_flow(store, _flow_key(browser))
         if previous and previous.kind == "busy":
             return _flow_problem(message="Yêu cầu đang được xử lý. Vui lòng thử lại.", status=409)
         flow = _Flow.new(
@@ -408,15 +632,15 @@ class IdentityService:
         except Exception as exc:
             logger.warning("Google authorization unavailable (%s)", type(exc).__name__)
             return _flow_problem(message=_GOOGLE_FAILED, status=503)
-        if not await _write_flow(store, key, raw, flow):
+        if not await _write_flow(store, _google_flow_key(browser, flow.stamp), None, flow):
             return _flow_problem(message=_GOOGLE_FAILED)
         return RegistrationResult(location=location)
 
 
-    async def _issue_storefront_session(self, db, account: repository.Account) -> str:
+    async def _issue_session(self, db, account: repository.Account, portal: SessionPortal) -> str:
         token = token_urlsafe(32)
         created_at = helper.utc_now()
-        _, lifetime = _SESSION_POLICIES[SessionPortal.STOREFRONT]
+        _, lifetime = _SESSION_POLICIES[portal]
         await self.repository.insert_session(
             db,
             account_key=account.account_key,
@@ -433,7 +657,7 @@ class IdentityService:
             account = await self.repository.find_account(db, google_sub=identity.sub, for_update=True)
             if account is not None:
                 _check_customer(account)
-                token = await self._issue_storefront_session(db, account)
+                token = await self._issue_session(db, account, SessionPortal.STOREFRONT)
                 return RegistrationResult("signed_in", session_token=token)
 
             if identity.email_verified is not True:
@@ -457,7 +681,7 @@ class IdentityService:
                 )
 
             if not allow_create:
-                raise _GoogleRejected(_GOOGLE_FAILED)
+                raise _GoogleRejected(_GOOGLE_ACCOUNT_MISSING)
             await self._create_customer(db, email=email, google_sub=identity.sub)
             return RegistrationResult("registered")
 
@@ -468,18 +692,15 @@ class IdentityService:
         browser: str, *, state: str, code: str, provider_error: str
     ) -> RegistrationResult:
         store = get_challenge_store()
-        key = _flow_key(browser)
-        raw, flow = await _read_flow(store, key)
+        google_key = _google_flow_key(browser, state)
+        raw, flow = await _read_flow(store, google_key)
         if flow is None or flow.kind != "google" or not compare_digest(
             flow.stamp.encode("ascii"), state.encode("utf-8")
         ):
-            return _flow_problem(message=_GOOGLE_FAILED)
-
-        pending = _Flow.new("busy", _BUSY_SECONDS)
-        if not await _write_flow(store, key, raw, pending):
+            return _flow_problem(message="Lượt xác thực Google đã hết hạn hoặc không còn hiệu lực. Vui lòng bắt đầu lại.")
+        if not await _write_flow(store, google_key, raw, None):
             return _flow_problem(message=_GOOGLE_FAILED)
         if provider_error or not code:
-            await _write_flow(store, key, pending.encode(), None)
             return _flow_problem(message=_GOOGLE_FAILED)
 
         try:
@@ -488,8 +709,13 @@ class IdentityService:
             )
         except Exception as exc:
             logger.warning("Google authentication failed (%s)", type(exc).__name__)
-            await _write_flow(store, key, pending.encode(), None)
             return _flow_problem(message=_GOOGLE_FAILED)
+
+        key = _flow_key(browser)
+        raw, previous = await _read_flow(store, key)
+        pending = _Flow.new("busy", _BUSY_SECONDS)
+        if (previous and previous.kind == "busy") or not await _write_flow(store, key, raw, pending):
+            return _flow_problem(message="Yêu cầu đang được xử lý. Vui lòng thử lại.", status=409)
 
         try:
             try:
@@ -500,11 +726,11 @@ class IdentityService:
                 # The failed insert has rolled back. Resolve the winner under existing-account rules.
                 result = await self._resolve_google(identity, allow_create=False)
         except _GoogleRejected as exc:
-            await _write_flow(store, key, pending.encode(), None)
+            await _write_flow(store, key, pending.encode(), previous)
             return _flow_problem(message=str(exc))
         except Exception as exc:
             logger.warning("Google registration rolled back (%s)", type(exc).__name__)
-            await _write_flow(store, key, pending.encode(), None)
+            await _write_flow(store, key, pending.encode(), previous)
             return _flow_problem(message=_REGISTRATION_FAILED, status=500)
 
         if isinstance(result, _Flow):
@@ -548,7 +774,7 @@ class IdentityService:
                     await self.repository.link_google_account(
                         db, account_key=account.account_key, google_sub=grant.google_sub
                     )
-                token = await self._issue_storefront_session(db, account)
+                token = await self._issue_session(db, account, SessionPortal.STOREFRONT)
         except _GoogleRejected as exc:
             await _write_flow(store, key, grant.encode(), None)
             return _flow_problem(message=str(exc))

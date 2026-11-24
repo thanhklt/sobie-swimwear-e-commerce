@@ -1,0 +1,32 @@
+{% extends "account.html" %}
+{% block title %}Quản lý tài khoản · Sobie{% endblock %}
+{% block account_content %}
+  <h1 id="identity-title">{{ "Quản lý khách hàng" if customers_only else "Quản lý tài khoản" }}</h1>
+  {% if notice == 'created' %}<p role="status">Tạo tài khoản thành công.</p>{% endif %}
+  <nav>
+    {% if not customers_only %}<a href="{{ request.url_for('new_account_form').path }}">Tạo tài khoản</a>{% endif %}
+    <a href="{{ request.url_for('portal_password_form').path }}">Đổi mật khẩu</a>
+    {% include "_logout.html" %}
+  </nav>
+  <form method="get" class="identity-form">
+    <label for="q">Họ tên, email hoặc số điện thoại</label>
+    <input id="q" name="q" value="{{ q }}">
+    <button type="submit">Tìm tài khoản</button>
+  </form>
+  {% if accounts %}
+    <ul>
+      {% for account in accounts %}
+        <li>
+          <a href="{{ request.url_for('employee_customer' if customers_only else 'edit_account_form', key=account.key).path }}">
+            {{ account.name or account.email }}
+          </a>
+          <span>{{ account.email }} · {{ account.phone_number or "—" }} · {{ labels[account.role] }} · {{ "Hoạt động" if account.status == "ACTIVE" else "Bị khóa" }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>Không tìm thấy tài khoản.</p>
+  {% endif %}
+  {% if page > 1 %}<a href="?q={{ q | urlencode }}&amp;page={{ page-1 }}">Trang trước</a>{% endif %}
+  {% if has_next %}<a href="?q={{ q | urlencode }}&amp;page={{ page+1 }}">Trang sau</a>{% endif %}
+{% endblock %}

@@ -23,7 +23,7 @@ Người dùng bấm "Đăng nhập", hoặc bị yêu cầu đăng nhập khi t
 4. Hệ thống kiểm tra vai trò của tài khoản thuộc cổng đang đăng nhập: storefront chỉ nhận Khách hàng; portal chỉ nhận Nhân viên và Admin.
 5. Hệ thống kiểm tra tài khoản đang ở trạng thái Hoạt động.
 6. Hệ thống tạo phiên đăng nhập (một dòng `identity.session`; hạn 30 phút với Khách hàng, 1 giờ với Nhân viên / Admin, tính từ lần thao tác cuối) và gửi mã phiên trong cookie `HttpOnly`, `Secure`, `SameSite=Lax` của cổng đang đăng nhập. Hai cổng dùng cookie phiên khác tên để một trình duyệt có thể đăng nhập đồng thời vào cả hai cổng.
-7. Nếu khách bắt đầu đăng nhập từ bước đặt hàng, hệ thống chuyển khách về trang thanh toán theo 1a. Khi người dùng mở trang đăng nhập trực tiếp, Khách hàng được chuyển đến trang chủ storefront, Nhân viên và Admin được chuyển đến trang đầu của portal quản trị.
+7. Nếu khách bắt đầu đăng nhập từ bước đặt hàng, hệ thống chuyển khách về trang thanh toán theo 1a. Khi người dùng mở trang đăng nhập trực tiếp, Khách hàng được chuyển đến trang chủ storefront, Nhân viên được chuyển đến tab Tổng quan Nhân viên và Admin được chuyển đến tab Tổng quan Admin.
 
 ## Alternative Flows
 - **1a. Đăng nhập khi đang đặt hàng:** khách bị yêu cầu đăng nhập từ bước đặt hàng. Sau khi đăng nhập thành công bằng mật khẩu Sobie hoặc Google, khách quay lại trang thanh toán với giỏ đã gộp theo UC-19 và UC-20.
@@ -61,7 +61,7 @@ Then: hệ thống tạo phiên đăng nhập vai trò Khách hàng
 Given: Nhân viên hoặc Admin có tài khoản Hoạt động và mở trực tiếp trang đăng nhập portal quản trị
 When: người dùng đăng nhập đúng thông tin ở portal quản trị
 Then: hệ thống tạo phiên đăng nhập với đúng vai trò
-And: người dùng được chuyển đến trang đầu của portal quản trị
+And: người dùng được chuyển đến tab Tổng quan tương ứng với vai trò trong portal quản trị
 
 ### AC-4: Sai mật khẩu
 Given: tài khoản với email "a@example.com" tồn tại
@@ -171,6 +171,7 @@ Then: hệ thống báo lỗi xác minh và không lưu liên kết Google hoặ
 - Cơ chế phiên, thời hạn và rate limit theo BR-GIAIDOAN1, Constraints chung — Xác thực; bảng `identity.session` theo data model v2.15 (Q35).
 
 ### Quyết định đã chốt
+- Khi đã có phiên portal hợp lệ, mở lại trang đăng nhập đưa người dùng về tab Tổng quan của vai trò hiện tại. Tab Tổng quan Admin phục vụ quản trị tài khoản. Dashboard báo cáo UC-37 thuộc quyền Nhân viên.
 - Admin chỉ quản lý tài khoản và gán vai trò cho tài khoản; mọi thao tác vận hành cửa hàng do Nhân viên thực hiện (đã chốt 15/11/2026).
 - Email và số điện thoại dùng để đăng nhập nằm trên account (unique); không có username riêng. Vai trò và trạng thái cũng nằm trên account (theo ERD, đã chốt 15/11/2026).
 - Khách hàng có liên kết Google đăng nhập ở storefront bằng định danh Google đã liên kết, không cần nhập hoặc tạo mật khẩu Sobie (đã chốt 23/11/2026).

@@ -5,16 +5,20 @@ from collections.abc import Awaitable, Callable
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
+from starlette.types import ASGIApp
 
 from app.error.exceptions import SessionAccessError
 from app.modules.identity.session import AuthenticatedSession, Role, SessionPortal
 
-PORTAL_PREFIX = "/admin"
 STOREFRONT_SESSION_COOKIE = "storefront_session"
 PORTAL_SESSION_COOKIE = "portal_session"
 
 
 class SessionMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app: ASGIApp, *, api_prefix: str) -> None:
+        super().__init__(app)
+        self.portal_prefixes = ("/admin", f"{api_prefix}/admin")
+
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
@@ -23,7 +27,7 @@ class SessionMiddleware(BaseHTTPMiddleware):
         if root_path and (path == root_path or path.startswith(f"{root_path}/")):
             path = path[len(root_path) :] or "/"
 
-        if path == PORTAL_PREFIX or path.startswith(f"{PORTAL_PREFIX}/"):
+        if any(path == prefix or path.startswith(f"{prefix}/") for prefix in self.portal_prefixes):
             cookie_name, portal = PORTAL_SESSION_COOKIE, SessionPortal.PORTAL
         else:
             cookie_name, portal = STOREFRONT_SESSION_COOKIE, SessionPortal.STOREFRONT

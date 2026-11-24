@@ -82,8 +82,7 @@ And: trang hồ sơ của Khách hàng hiển thị thông tin đã cập nhật
 - Khách hàng tự cập nhật hồ sơ ở storefront. Admin cũng được cập nhật hồ sơ Khách hàng qua UC-07 ở portal quản trị (đã chốt 23/11/2026).
 - Trên trang thanh toán COD và QR, nút "Sử dụng thông tin hồ sơ" chỉ dùng được khi hồ sơ đã lưu đủ họ tên, ngày sinh, số điện thoại và địa chỉ nhận hàng hợp lệ. Khi khách bấm, hệ thống sao chép họ tên, số điện thoại và địa chỉ vào biểu mẫu của đơn. Ngày sinh chỉ là điều kiện sử dụng nút. Khách có thể nhập tay hoặc sửa thông tin cho riêng đơn hàng (đã chốt 23/11/2026).
 
-### Giả định [GD]
-- Đổi email hoặc số điện thoại không cần xác minh lại.
+- Đổi email hoặc số điện thoại không cần xác minh lại (đã chốt 24/11/2026).
 
 ## History
 - v1 (2026-11-15): initial

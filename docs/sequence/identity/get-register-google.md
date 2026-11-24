@@ -11,7 +11,7 @@ sequenceDiagram
     participant Google as Google OIDC
     Browser->>Route: Chọn đăng ký với Google
     Route->>Service: Khởi tạo lượt OIDC
-    Service->>Redis: Lưu state, nonce và PKCE verifier theo trình duyệt
+    Service->>Redis: Lưu chế độ đăng ký, nonce và PKCE verifier theo cặp trình duyệt và state
     Service-->>Route: URL ủy quyền Google
     Route-->>Browser: Chuyển hướng
     Browser->>Google: Xác thực với Google

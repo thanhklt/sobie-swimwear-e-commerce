@@ -23,6 +23,22 @@ return 1
 """
 
 
+_LOGIN_ATTEMPT = """
+local clock = redis.call('TIME')
+local now = tonumber(clock[1]) * 1000 + math.floor(tonumber(clock[2]) / 1000)
+while true do
+    local oldest = redis.call('LINDEX', KEYS[1], 0)
+    if not oldest or tonumber(oldest) > now - 60000 then break end
+    redis.call('LPOP', KEYS[1])
+end
+local attempts = redis.call('LLEN', KEYS[1])
+if attempts >= 5 then return 6 end
+redis.call('RPUSH', KEYS[1], tostring(now))
+redis.call('PEXPIRE', KEYS[1], 60000)
+return attempts + 1
+"""
+
+
 class ChallengeStore(Protocol):
     async def get(self, key: str) -> str | None: ...
 
@@ -37,6 +53,9 @@ class RedisChallengeStore:
 
     async def get(self, key: str) -> str | None:
         return await self.redis.get(key)
+
+    async def count_password_attempt(self, ip_key: str) -> int:
+        return await self.redis.eval(_LOGIN_ATTEMPT, 1, f'identity:password-login:{ip_key}')
 
     async def compare_and_set(
         self, key: str, expected: str | None, value: str | None, ttl: int = 0

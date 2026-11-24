@@ -45,7 +45,7 @@ def world(monkeypatch):
     sql("TRUNCATE identity.account CASCADE", fetch=False)
     sql("UPDATE identity.account_id_counter SET last_number = 0 WHERE account_prefix = 'KH'", fetch=False)
 
-    w = SimpleNamespace(mail=[], now=datetime(2026, 11, 23, 18, 0, tzinfo=UTC), failure=None)
+    w = SimpleNamespace(mail=[], now=datetime(2026, 11, 23, 18, 0, tzinfo=UTC), failure=None, sql=sql)
     w.advance = lambda seconds: setattr(w, "now", w.now + timedelta(seconds=seconds))
     monkeypatch.setattr(helper, "utc_now", lambda: w.now)
     otp_numbers = iter(range(100000, 200000))
@@ -54,6 +54,14 @@ def world(monkeypatch):
     class Store:
         def __init__(self):
             self.values = {}
+            self.attempts = {}
+
+        async def count_password_attempt(self, ip_key):
+            recent = [sent for sent in self.attempts.get(ip_key, ()) if w.now - sent < timedelta(seconds=60)]
+            if len(recent) >= 5:
+                return 6
+            self.attempts[ip_key] = recent + [w.now]
+            return len(recent) + 1
 
         async def get(self, key):
             entry = self.values.get(key)
@@ -102,7 +110,8 @@ def world(monkeypatch):
     identity_repository = app.state.identity_service.repository
     for method_name, failure_name in (
         ("next_account_suffix", "suffix"), ("insert_customer", "account"),
-        ("insert_session", "session"),
+        ("insert_session", "session"), ("delete_account_sessions", "revoke"),
+        ("save_account", "save_account"),
     ):
         original = getattr(identity_repository, method_name)
 
@@ -129,6 +138,9 @@ def world(monkeypatch):
 
     w.client = TestClient(app, base_url="https://testserver")
     w.new_client = lambda: TestClient(app, base_url="https://testserver")
+    w.client_without_server_exceptions = lambda: TestClient(
+        app, base_url="https://testserver", raise_server_exceptions=False
+    )
 
     def counts():
         tables = ("identity.account", "shopping.cart", "shopping.wishlist")
@@ -149,6 +161,27 @@ def world(monkeypatch):
         sql("INSERT INTO shopping.wishlist (wishlist_account_key) VALUES ($1)", account, fetch=False)
         return str(account)
     w.seed_account = seed
+
+    def seed_member(email, *, role="customer", phone=None, status="ACTIVE", google_sub=None, password=True):
+        prefixes = {
+            "customer": "KH-20261124", "employee": "NV-SOBIETEST-19950101", "admin": "AD-SOBIETEST-19950101",
+        }
+        seed_member.count += 1
+        return sql(
+            """INSERT INTO identity.account (
+                   account_id, account_role_key, account_email, account_phone_number,
+                   account_hash_password, account_status, account_google_sub, account_name,
+                   account_date_of_birth
+               )
+               SELECT $1, role_key, $2, $3, CASE WHEN $4 THEN crypt('123456', gen_salt('bf', 4)) END,
+                   $5, $6, 'Sobie Test', DATE '1995-01-01'
+               FROM identity.role WHERE role_code = $7 RETURNING account_key""",
+            f"{prefixes[role]}-{9000 + seed_member.count:04d}", email, phone, password,
+            status, google_sub, role,
+        )[0][0]
+
+    seed_member.count = 0
+    w.seed_member = seed_member
 
     def authenticated():
         async def auth(token, portal):

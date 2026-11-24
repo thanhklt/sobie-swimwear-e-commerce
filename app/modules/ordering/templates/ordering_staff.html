@@ -1,0 +1,72 @@
+{% extends "ordering_base.html" %}
+
+{% block ordering_content %}
+<h1>Nhân viên — ordering</h1>
+<p class="muted">Account NV: {{ demo_employee }}</p>
+
+<div class="panel">
+  <h2>Xác nhận đơn (UC-23)</h2>
+  <form method="post" action="/dev/ordering/staff/confirm" class="row-actions">
+    <input name="order_code" placeholder="ORDER CODE" required style="max-width:12rem">
+    <button type="submit">Xác nhận</button>
+  </form>
+</div>
+
+<div class="panel">
+  <h2>Giả lập thanh toán QR → PAID</h2>
+  <p class="muted">Chỉ đổi trạng thái thanh toán (UNPAID→PAID). Trạng thái đơn vẫn PENDING đến khi Xác nhận.</p>
+  <form method="post" action="/dev/ordering/staff/mark-paid" class="row-actions">
+    <input name="order_code" placeholder="ORDER CODE" required style="max-width:12rem">
+    <button type="submit">Đánh dấu PAID</button>
+  </form>
+</div>
+
+<div class="panel">
+  <h2>Hủy bởi NV (UC-22)</h2>
+  <form method="post" action="/dev/ordering/staff/cancel">
+    <div class="form-grid">
+      <div>
+        <label>Mã đơn</label>
+        <input name="order_code" required>
+      </div>
+      <div>
+        <label>Lý do (bắt buộc)</label>
+        <input name="reason" required maxlength="500" placeholder="Khách đổi ý / hết hàng…">
+      </div>
+    </div>
+    <div class="row-actions" style="margin-top:.75rem">
+      <button type="submit" class="danger">Hủy đơn</button>
+    </div>
+  </form>
+</div>
+
+<div class="panel">
+  <h2>Chuyển trạng thái giao (sim shipping)</h2>
+  <p class="muted">CONFIRMED→AWAITING_PICKUP→SHIPPING→DELIVERED (xuất HĐ). Hoặc DELIVERY_FAILED.</p>
+  <form method="post" action="/dev/ordering/staff/transition" class="row-actions">
+    <input name="order_code" placeholder="ORDER CODE" required style="max-width:12rem">
+    <select name="to_status" style="max-width:14rem">
+      <option value="AWAITING_PICKUP">AWAITING_PICKUP</option>
+      <option value="SHIPPING">SHIPPING</option>
+      <option value="DELIVERED">DELIVERED</option>
+      <option value="DELIVERY_FAILED">DELIVERY_FAILED</option>
+    </select>
+    <button type="submit">Chuyển</button>
+  </form>
+</div>
+
+<div class="panel">
+  <h2>UC-24 — tự hủy QR quá hạn</h2>
+  <form method="post" action="/dev/ordering/staff/auto-cancel">
+    <button type="submit">Chạy job ngay</button>
+  </form>
+</div>
+
+<div class="panel">
+  <h2>Xem hóa đơn (UC-27 staff)</h2>
+  <form method="post" action="/dev/ordering/staff/lookup-invoice" class="row-actions">
+    <input name="invoice_id" placeholder="HD-XXXXXXXX" required style="max-width:14rem">
+    <button type="submit">Mở</button>
+  </form>
+</div>
+{% endblock %}

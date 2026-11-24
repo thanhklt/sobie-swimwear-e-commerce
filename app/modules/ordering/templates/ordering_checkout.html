@@ -1,0 +1,85 @@
+{% extends "ordering_base.html" %}
+
+{% block ordering_content %}
+<h1>Đặt hàng (UC-19 / UC-20)</h1>
+<p class="muted">Account: {{ demo_customer }}</p>
+
+{% if quote_error %}
+<div class="banner err">{{ quote_error }}
+  {% if cart_empty %} — <a href="/dev/shopping/cart">Thêm vào giỏ</a>{% endif %}
+</div>
+{% endif %}
+
+{% if new_total %}
+<div class="banner err">
+  Tổng đã đổi. Xác nhận lại với tổng mới:
+  <strong>{{ "{:,.0f}".format(new_total|float) }}đ</strong>
+  (đã điền vào expected_total).
+</div>
+{% endif %}
+
+{% if quote %}
+<div class="panel">
+  <h2>Tạm tính</h2>
+  <table>
+    <thead>
+      <tr><th>Sản phẩm</th><th>SL</th><th>Đơn giá</th><th>Thành tiền</th></tr>
+    </thead>
+    <tbody>
+      {% for ln in quote.lines %}
+      <tr>
+        <td>{{ labels.get(ln.variant_key, ln.variant_key) }}</td>
+        <td>{{ ln.quantity }}</td>
+        <td>{{ "{:,.0f}".format(ln.unit_price) }}đ</td>
+        <td>{{ "{:,.0f}".format(ln.line_total) }}đ</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <ul class="totals" style="margin-top:1rem;max-width:20rem;margin-left:auto">
+    <li><span>Tạm tính</span><span>{{ "{:,.0f}".format(quote.subtotal) }}đ</span></li>
+    <li><span>Giảm</span><span>{{ "{:,.0f}".format(quote.discount_amount) }}đ</span></li>
+    <li><span>Ship</span><span>{{ "{:,.0f}".format(quote.shipping_fee) }}đ</span></li>
+    <li class="grand"><span>Tổng</span><span>{{ "{:,.0f}".format(quote.total_price) }}đ</span></li>
+  </ul>
+</div>
+
+<div class="panel">
+  <h2>Địa chỉ giao</h2>
+  <form method="post" id="place-form">
+    <div class="form-grid">
+      <div>
+        <label>Họ tên</label>
+        <input name="name" required value="{{ default_shipping.name }}">
+      </div>
+      <div>
+        <label>Điện thoại</label>
+        <input name="phone" required value="{{ default_shipping.phone }}">
+      </div>
+      <div>
+        <label>Số nhà / đường</label>
+        <input name="house_number" required value="{{ default_shipping.house_number }}">
+      </div>
+      <div>
+        <label>Phường / xã</label>
+        <input name="ward" required value="{{ default_shipping.ward }}">
+      </div>
+      <div>
+        <label>Tỉnh / thành</label>
+        <input name="city" required value="{{ default_shipping.city }}">
+      </div>
+      <div>
+        <label>Quốc gia</label>
+        <input name="country" required value="{{ default_shipping.country }}">
+      </div>
+    </div>
+    <input type="hidden" name="expected_total"
+           value="{% if new_total %}{{ new_total }}{% else %}{{ quote.total_price }}{% endif %}">
+    <div class="row-actions" style="margin-top:1rem">
+      <button type="submit" formaction="/dev/ordering/checkout/cod">Đặt COD</button>
+      <button type="submit" class="secondary" formaction="/dev/ordering/checkout/qr">Đặt QR</button>
+    </div>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

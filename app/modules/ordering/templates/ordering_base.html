@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} – Sobie (thử ordering){% endblock %}
+
+{% block content %}
+<style>
+  :root {
+    --ink: #1a2332;
+    --muted: #5c6b7a;
+    --line: #d7e0ea;
+    --bg: #f3f7fb;
+    --card: #fff;
+    --accent: #0b6e6e;
+    --danger: #a33b3b;
+    --ok: #1f6b3a;
+  }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: "Segoe UI", system-ui, sans-serif; }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 1.25rem; }
+  .nav { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; padding-bottom: .75rem; border-bottom: 1px solid var(--line); }
+  .nav a { color: var(--accent); text-decoration: none; font-weight: 600; }
+  .banner { padding: .75rem 1rem; border-radius: 8px; margin-bottom: 1rem; }
+  .banner.ok { background: #e7f6ec; color: var(--ok); }
+  .banner.err { background: #fdecec; color: var(--danger); }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem; margin-bottom: 1rem; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: .5rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-size: .85rem; font-weight: 600; }
+  .muted { color: var(--muted); }
+  .row-actions { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+  @media (max-width: 640px) { .form-grid { grid-template-columns: 1fr; } }
+  label { display: block; font-size: .85rem; color: var(--muted); margin-bottom: .2rem; }
+  input, select, button, textarea { font: inherit; padding: .4rem .55rem; border-radius: 6px; border: 1px solid var(--line); width: 100%; box-sizing: border-box; }
+  button, .btn { background: var(--accent); color: #fff; border: none; cursor: pointer; text-decoration: none; display: inline-block; width: auto; }
+  button.secondary { background: #fff; color: var(--ink); border: 1px solid var(--line); }
+  button.danger { background: var(--danger); }
+  .tag { display: inline-block; padding: .15rem .45rem; border-radius: 999px; background: #eef3f7; font-size: .8rem; }
+  .tag.warn { background: #fff3cd; }
+  .tag.ok { background: #e7f6ec; }
+  .qr-box { border: 2px dashed var(--line); padding: 1rem; text-align: center; border-radius: 10px; background: #fafcfe; }
+  .totals { list-style: none; padding: 0; margin: 0; }
+  .totals li { display: flex; justify-content: space-between; padding: .35rem 0; border-bottom: 1px solid var(--line); }
+  .totals li.grand { font-weight: 700; border-bottom: none; padding-top: .6rem; }
+  h1 { font-size: 1.4rem; margin: 0 0 .5rem; }
+  h2 { font-size: 1.05rem; margin: 0 0 .75rem; }
+</style>
+<div class="wrap">
+  <nav class="nav">
+    <a href="/dev/ordering">Tổng quan</a>
+    <a href="/dev/ordering/checkout">Đặt hàng</a>
+    <a href="/dev/ordering/orders">Đơn của tôi</a>
+    <a href="/dev/ordering/staff">NV</a>
+    <a href="/dev/shopping/cart">Giỏ (shopping)</a>
+  </nav>
+  {% if flash_ok %}
+  <div class="banner ok">{{ flash_ok }}</div>
+  {% endif %}
+  {% if flash_error %}
+  <div class="banner err">{{ flash_error }}</div>
+  {% endif %}
+  {% block ordering_content %}{% endblock %}
+</div>
+{% endblock %}

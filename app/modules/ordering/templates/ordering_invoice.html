@@ -1,0 +1,22 @@
+{% extends "ordering_base.html" %}
+
+{% block ordering_content %}
+<h1>Hóa đơn {{ invoice.invoice_id }}</h1>
+<p class="muted">
+  {% if staff_mode %}NV: {{ demo_employee }}{% else %}KH: {{ demo_customer }}{% endif %}
+  · đơn {{ invoice.order_code }} · {{ invoice.created_at }}
+</p>
+
+<div class="panel">
+  <h2>Snapshot</h2>
+  <pre style="white-space:pre-wrap;font-size:.9rem;margin:0">{{ invoice.snapshot | tojson(indent=2) }}</pre>
+</div>
+
+<div class="row-actions">
+  {% if staff_mode %}
+  <a class="btn secondary" href="/dev/ordering/staff">Về NV</a>
+  {% else %}
+  <a class="btn secondary" href="/dev/ordering/orders/{{ invoice.order_code }}">Về đơn</a>
+  {% endif %}
+</div>
+{% endblock %}

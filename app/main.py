@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.error.handlers import register_error_handlers
+from app.modules.ordering.router import router as ordering_router
 from app.modules.shopping.router import router as shopping_router
 from app.shared.web.session import SessionMiddleware
 
@@ -30,6 +31,7 @@ app = FastAPI(
 app.add_middleware(SessionMiddleware)
 register_error_handlers(app)
 app.include_router(shopping_router)
+app.include_router(ordering_router)
 
 
 @app.get("/")
@@ -37,4 +39,5 @@ def root():
     return {
         "message": "Welcome to the Sobie Swimwear E-commerce API",
         "shopping_ui": "/dev/shopping",
+        "ordering_ui": "/dev/ordering",
     }

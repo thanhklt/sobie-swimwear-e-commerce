@@ -1,0 +1,27 @@
+{% extends "ordering_base.html" %}
+
+{% block ordering_content %}
+<h1>UI thử module ordering</h1>
+<p class="muted">
+  Khách: <strong>{{ demo_customer }}</strong> · NV: <strong>{{ demo_employee }}</strong>
+  (chưa gắn login thật — [GD] adapter tạm).
+</p>
+
+<div class="panel">
+  <h2>Luồng thử nhanh</h2>
+  <ol>
+    <li>Thêm hàng ở <a href="/dev/shopping/cart">/dev/shopping/cart</a></li>
+    <li><a href="/dev/ordering/checkout">Đặt COD hoặc QR</a> (UC-19 / UC-20)</li>
+    <li>Xem / hủy đơn ở <a href="/dev/ordering/orders">Đơn của tôi</a> (UC-21 / UC-22)</li>
+    <li>NV xác nhận, giả lập PAID, chuyển trạng thái giao, UC-24 tại <a href="/dev/ordering/staff">NV</a></li>
+  </ol>
+</div>
+
+<div class="panel">
+  <h2>Ghi chú</h2>
+  <p class="muted">
+    Inventory/catalog/identity qua adapter tạm. Promotion = NoPromotionGateway.
+    Giả lập thanh toán QR: nút «Đánh dấu PAID» trên trang NV (thay UC-25 payment).
+  </p>
+</div>
+{% endblock %}

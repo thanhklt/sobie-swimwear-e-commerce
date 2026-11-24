@@ -14,5 +14,6 @@ templates = Jinja2Templates(
         _APP_DIR / "shared" / "web" / "templates",
         _APP_DIR / "error" / "templates",
         _APP_DIR / "modules" / "shopping" / "templates",
+        _APP_DIR / "modules" / "ordering" / "templates",
     ]
 )

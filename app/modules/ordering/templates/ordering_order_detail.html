@@ -1,0 +1,50 @@
+{% extends "ordering_base.html" %}
+
+{% block ordering_content %}
+<h1>Đơn {{ order.order_code }}</h1>
+<p class="muted">{{ demo_customer }}</p>
+
+<div class="panel">
+  <p class="row-actions">
+    <span class="tag">Đơn: {{ order.status }}</span>
+    <span class="tag {% if order.payment_status == 'PAID' %}ok{% else %}warn{% endif %}">
+      Thanh toán: {{ order.payment_name }} ·
+      {% if order.payment_status == 'PAID' %}Đã thanh toán (PAID){% else %}Chưa thanh toán (UNPAID){% endif %}
+    </span>
+  </p>
+  {% if order.payment_name == 'QR' and order.payment_status == 'PAID' and order.status == 'PENDING' %}
+  <p class="muted">Tiền đã khớp. Đơn vẫn «Chưa xử lý» — NV vào trang NV → Xác nhận.</p>
+  {% endif %}
+  <ul class="totals" style="max-width:22rem">
+    <li><span>Khách</span><span>{{ order.customer_name }} · {{ order.customer_phone }}</span></li>
+    <li><span>Giảm</span><span>{{ "{:,.0f}".format(order.discount_amount) }}đ</span></li>
+    <li><span>Ship</span><span>{{ "{:,.0f}".format(order.shipping_fee) }}đ</span></li>
+    <li class="grand"><span>Tổng</span><span>{{ "{:,.0f}".format(order.total_price) }}đ</span></li>
+    <li><span>Tạo</span><span class="muted">{{ order.created_at }}</span></li>
+    {% if order.payment_deadline %}
+    <li><span>Hạn QR</span><span class="muted">{{ order.payment_deadline }}</span></li>
+    {% endif %}
+  </ul>
+</div>
+
+{% if order.show_qr %}
+<div class="panel qr-box">
+  <h2>Thanh toán QR</h2>
+  <p>Nội dung CK: <strong>{{ order.transfer_content }}</strong></p>
+  <p class="muted">Hạn: {{ order.payment_deadline }} (UTC). Sau khi CK, NV dùng «Đánh dấu PAID».</p>
+</div>
+{% endif %}
+
+<div class="panel row-actions">
+  {% if order.status == 'PENDING' %}
+  <form method="post" action="/dev/ordering/orders/{{ order.order_code }}/cancel"
+        onsubmit="return confirm('Hủy đơn này?');">
+    <button type="submit" class="danger">Hủy đơn (KH)</button>
+  </form>
+  {% endif %}
+  {% if invoice %}
+  <a class="btn" href="/dev/ordering/orders/{{ order.order_code }}/invoice">Xem hóa đơn</a>
+  {% endif %}
+  <a class="btn secondary" href="/dev/ordering/orders">Danh sách</a>
+</div>
+{% endblock %}

@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
-from decimal import Decimal
+from datetime import datetime
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
-from sqlalchemy import and_
+from sqlalchemy import func
 from sqlmodel import col, select
 
 from app.modules.ordering.models import (
@@ -108,8 +107,6 @@ async def list_orders_for_account(
 
 
 async def count_orders_for_account(db: AsyncSession, account_key: UUID) -> int:
-    from sqlalchemy import func
-
     result = await db.exec(
         select(func.count()).select_from(Order).where(Order.order_account_key == account_key)
     )
@@ -163,12 +160,10 @@ async def list_overdue_unpaid_qr_orders(
     qr_key = await get_payment_key(db, "QR")
     result = await db.exec(
         select(Order).where(
-            and_(
-                Order.order_payment_key == qr_key,
-                Order.order_status == "PENDING",
-                Order.order_payment_status == "UNPAID",
-                col(Order.order_created_date) <= older_than,
-            )
+            Order.order_payment_key == qr_key,
+            Order.order_status == "PENDING",
+            Order.order_payment_status == "UNPAID",
+            col(Order.order_created_date) <= older_than,
         )
     )
     return list(result.all())

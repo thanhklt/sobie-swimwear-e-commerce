@@ -490,11 +490,24 @@ async def confirm_order(
 
 
 async def mark_order_paid_by_code(db: AsyncSession, order_code: str) -> Order:
-    """Service công khai cho payment (UC-25)."""
+    """Service công khai cho payment (UC-25): chỉ đơn QR PENDING + UNPAID còn hạn."""
     async with transaction(db):
         order = await repository.get_order_by_code(db, order_code)
         if order is None:
             raise OrderNotFoundError()
+        payment_name = await repository.payment_name_of(db, order.order_payment_key)
+        if payment_name != "QR":
+            raise InvalidOrderStateError("Chỉ đối soát thanh toán cho đơn chuyển khoản QR")
+        if order.order_status != "PENDING":
+            raise InvalidOrderStateError(
+                f"Đơn đang ở trạng thái {order.order_status}, không đối soát được"
+            )
+        if order.order_payment_status != "UNPAID":
+            raise InvalidOrderStateError("Đơn đã thanh toán hoặc không còn UNPAID")
+        deadline = _payment_deadline(order, payment_name)
+        now = datetime.now(UTC)
+        if deadline is not None and now >= deadline:
+            raise InvalidOrderStateError("Đơn QR đã quá hạn thanh toán")
         order.order_payment_status = "PAID"
         await repository.save_order(db, order)
         order_key = order.order_key

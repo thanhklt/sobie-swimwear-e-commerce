@@ -5,10 +5,10 @@ from __future__ import annotations
 from datetime import UTC, timedelta
 
 import pytest
-from sqlalchemy import text
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.modules.ordering import service
+from app.modules.ordering.exceptions import InvalidOrderStateError
 from tests.ordering.conftest import DemoIds, get_stock, prepare_cart, sample_shipping
 
 
@@ -70,3 +70,30 @@ async def test_uc20_ac5_hide_qr_when_paid(
     )
     assert refreshed.payment_status == "PAID"
     assert refreshed.show_qr is False
+
+
+@pytest.mark.asyncio
+async def test_uc25_e3_reject_mark_paid_on_cod(
+    db: AsyncSession, demo: DemoIds, clean_cart: None
+) -> None:
+    """UC-25 E3: đơn không phải QR → không đổi payment_status."""
+    inv, pricing = await prepare_cart(db, demo, qty=1, stock=5)
+    order = await service.place_cod_order(
+        db,
+        account_key=demo.customer_key,
+        shipping=sample_shipping(),
+        inventory=inv,
+        pricing=pricing,
+    )
+    order_code = order.order_code
+    assert order.order_payment_status == "UNPAID"
+    with pytest.raises(InvalidOrderStateError, match="QR"):
+        await service.mark_order_paid_by_code(db, order_code)
+    if db.in_transaction():
+        await db.rollback()
+    db.expire_all()
+    loaded = await service.get_customer_order(
+        db, account_key=demo.customer_key, order_code=order_code
+    )
+    assert loaded.payment_status == "UNPAID"
+    assert loaded.payment_name == "COD"

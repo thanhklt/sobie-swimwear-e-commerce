@@ -4,11 +4,10 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
-from decimal import Decimal
 from uuid import UUID
 
 import pytest_asyncio
-from sqlalchemy import text
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.modules.ordering.adapters import (
@@ -17,9 +16,12 @@ from app.modules.ordering.adapters import (
     DbCatalogPricing,
     DbInventoryGateway,
     get_account_key_by_email,
+    get_variant_key_by_id,
 )
 from app.modules.ordering.schemas import ShippingInfo
+from app.modules.shopping import repository as shopping_repository
 from app.modules.shopping import service as shopping_service
+from app.modules.shopping.models import CartItem
 from app.shared.database.engine import session_factory
 
 VARIANT_DO_M = "SP-0002-DO-M"
@@ -44,58 +46,33 @@ async def db() -> AsyncIterator[AsyncSession]:
 async def demo(db: AsyncSession) -> DemoIds:
     customer = await get_account_key_by_email(db, DEMO_CUSTOMER_EMAIL)
     employee = await get_account_key_by_email(db, DEMO_EMPLOYEE_EMAIL)
-    row = (
-        await db.exec(
-            text("SELECT variant_key FROM catalog.variant WHERE variant_id = :vid"),
-            params={"vid": VARIANT_DO_M},
-        )
-    ).one()
+    variant_do_m = await get_variant_key_by_id(db, VARIANT_DO_M)
     return DemoIds(
         customer_key=customer,
         employee_key=employee,
-        variant_do_m=UUID(str(row[0])),
+        variant_do_m=variant_do_m,
     )
 
 
 @pytest_asyncio.fixture
 async def clean_cart(db: AsyncSession, demo: DemoIds) -> None:
-    await db.exec(
-        text(
-            """
-            DELETE FROM shopping.cart_item
-            WHERE cart_item_cart_key = (
-              SELECT cart_key FROM shopping.cart WHERE cart_account_key = :ak
-            )
-            """
-        ),
-        params={"ak": demo.customer_key},
-    )
-    await db.commit()
+    cart_key = await shopping_repository.get_cart_key(db, demo.customer_key)
+    if cart_key is not None:
+        result = await db.exec(
+            select(CartItem).where(CartItem.cart_item_cart_key == cart_key)
+        )
+        for item in result.all():
+            await db.delete(item)
+        await db.commit()
 
 
 async def set_stock(db: AsyncSession, variant_key: UUID, qty: int) -> None:
-    await db.exec(
-        text(
-            """
-            UPDATE inventory.stock SET stock_quantity = :qty
-            WHERE stock_variant_key = :vk
-            """
-        ),
-        params={"qty": qty, "vk": variant_key},
-    )
+    await DbInventoryGateway(db).set_stock_quantity(variant_key, qty)
     await db.commit()
 
 
 async def get_stock(db: AsyncSession, variant_key: UUID) -> int:
-    row = (
-        await db.exec(
-            text(
-                "SELECT stock_quantity FROM inventory.stock WHERE stock_variant_key = :vk"
-            ),
-            params={"vk": variant_key},
-        )
-    ).one()
-    return int(row[0])
+    return await DbInventoryGateway(db).get_stock_quantity(variant_key)
 
 
 def sample_shipping() -> ShippingInfo:

@@ -5,10 +5,9 @@ from __future__ import annotations
 from decimal import Decimal
 
 import pytest
-from sqlalchemy import text
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.modules.ordering import service
+from app.modules.ordering import repository, service
 from app.modules.ordering.exceptions import (
     EmptyCartError,
     InsufficientStockError,
@@ -43,37 +42,14 @@ async def test_uc19_ac1_create_cod_order(
     cart = await shopping_service.list_cart_variant_quantities(db, demo.customer_key)
     assert demo.variant_do_m not in cart
 
-    hist = (
-        await db.exec(
-            text(
-                """
-                SELECT order_status_history_from_value, order_status_history_to_value,
-                       order_status_history_source
-                FROM ordering.order_status_history
-                WHERE order_status_history_order_key = :ok
-                """
-            ),
-            params={"ok": order.order_key},
-        )
-    ).all()
+    hist = await repository.list_status_history(db, order.order_key)
     assert len(hist) == 1
-    assert hist[0][0] is None
-    assert hist[0][1] == "PENDING"
-    assert hist[0][2] == "CUSTOMER"
+    assert hist[0].order_status_history_from_value is None
+    assert hist[0].order_status_history_to_value == "PENDING"
+    assert hist[0].order_status_history_source == "CUSTOMER"
 
-    pay = (
-        await db.exec(
-            text(
-                """
-                SELECT p.payment_name FROM ordering.payment p
-                JOIN ordering."order" o ON o.order_payment_key = p.payment_key
-                WHERE o.order_key = :ok
-                """
-            ),
-            params={"ok": order.order_key},
-        )
-    ).one()
-    assert pay[0] == "COD"
+    pay_name = await repository.payment_name_of(db, order.order_payment_key)
+    assert pay_name == "COD"
 
 
 @pytest.mark.asyncio

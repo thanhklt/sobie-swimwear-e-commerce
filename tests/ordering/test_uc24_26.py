@@ -5,10 +5,9 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from sqlalchemy import text
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.modules.ordering import service
+from app.modules.ordering import repository, service
 from tests.ordering.conftest import DemoIds, get_stock, prepare_cart, sample_shipping
 
 
@@ -27,19 +26,10 @@ async def test_uc24_ac1_cancel_overdue_qr(
     order_key = order.order_key
     order_code = order.order_code
     # Lùi created_date > 24h
-    await db.exec(
-        text(
-            """
-            UPDATE ordering."order"
-            SET order_created_date = :ts
-            WHERE order_key = :ok
-            """
-        ),
-        params={
-            "ok": order_key,
-            "ts": datetime.now(UTC) - timedelta(hours=25),
-        },
-    )
+    loaded = await repository.get_order_by_key(db, order_key)
+    assert loaded is not None
+    loaded.order_created_date = datetime.now(UTC) - timedelta(hours=25)
+    await repository.save_order(db, loaded)
     await db.commit()
 
     cancelled = await service.auto_cancel_overdue_qr_orders(

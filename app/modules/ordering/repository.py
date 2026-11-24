@@ -15,7 +15,7 @@ from sqlalchemy import DateTime, bindparam, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.modules.ordering.schemas import SalesStats
+from app.modules.ordering.schemas import SalesStats, VariantSales
 
 _SALES_STATS = (
     text(
@@ -59,6 +59,23 @@ _SALES_STATS = (
     .columns(units_by_variant=JSONB, orders_by_status=JSONB)
 )
 
+_UNITS_SOLD = text(
+    """
+    SELECT detail.order_detail_variant_key,
+           SUM(detail.order_detail_quantity),
+           MAX(sale.order_created_date)
+    FROM ordering."order" AS sale
+    JOIN ordering.order_detail AS detail ON detail.order_detail_order_key = sale.order_key
+    WHERE sale.order_created_date >= :starts_at
+      AND sale.order_created_date <= :ends_at
+      AND sale.order_status IN ('PENDING', 'CONFIRMED', 'AWAITING_PICKUP', 'SHIPPING', 'DELIVERED')
+    GROUP BY detail.order_detail_variant_key
+    """
+).bindparams(
+    bindparam("starts_at", type_=DateTime(timezone=True)),
+    bindparam("ends_at", type_=DateTime(timezone=True)),
+)
+
 
 async def get_sales_stats(
     db: AsyncSession, starts_at: datetime, ends_before: datetime
@@ -76,3 +93,15 @@ async def get_sales_stats(
         },
         orders_by_status=row["orders_by_status"],
     )
+
+
+async def get_units_sold(
+    db: AsyncSession, starts_at: datetime, ends_at: datetime
+) -> dict[UUID, VariantSales]:
+    result = await db.exec(
+        _UNITS_SOLD, params={"starts_at": starts_at, "ends_at": ends_at}
+    )
+    return {
+        variant_key: VariantSales(quantity, latest_order_at)
+        for variant_key, quantity, latest_order_at in result
+    }

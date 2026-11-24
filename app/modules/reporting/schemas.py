@@ -1,4 +1,4 @@
-"""Dữ liệu kỳ báo cáo và các chỉ số hiển thị trên dashboard."""
+"""Dữ liệu dashboard và bảng xếp hạng bán chạy trên trang chủ."""
 
 from calendar import monthrange
 from dataclasses import dataclass
@@ -51,3 +51,9 @@ class Dashboard:
     top_products: list[TopProduct]
     low_stock: list[LowStock]
     purchase_totals: list[PurchaseTotal]
+
+
+@dataclass(frozen=True, slots=True)
+class HomeBestseller:
+    product_id: str
+    quantity: int

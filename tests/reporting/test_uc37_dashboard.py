@@ -51,6 +51,7 @@ def employee_dashboard(dashboard_db, dashboard_path):
     return client, data, dashboard_path
 
 
+# UC-37 Xem dashboard — AC-1: Doanh thu và lợi nhuận gộp
 def test_uc37_ac1_revenue_and_gross_profit(employee_dashboard):
     client, data, path = employee_dashboard
     variant, _ = data.product("Áo bơi A")
@@ -77,6 +78,7 @@ def test_uc37_ac1_revenue_and_gross_profit(employee_dashboard):
     assert report["gross_profit"] == 160_000
 
 
+# UC-37 Xem dashboard — AC-2: Số đơn theo trạng thái
 def test_uc37_ac2_order_count_by_status(employee_dashboard):
     client, data, path = employee_dashboard
     for _ in range(3):
@@ -99,6 +101,7 @@ def test_uc37_ac2_order_count_by_status(employee_dashboard):
     }
 
 
+# UC-37 Xem dashboard — AC-3: Sản phẩm bán chạy
 @pytest.mark.parametrize(
     ("sales", "expected"),
     [
@@ -141,6 +144,7 @@ def test_uc37_ac3_bestsellers_sorted_and_limited(employee_dashboard, sales, expe
     assert report["top_products"] == expected
 
 
+# UC-37 Xem dashboard — AC-4: Tồn kho thấp
 def test_uc37_ac4_low_stock_includes_threshold(employee_dashboard):
     client, data, path = employee_dashboard
     _, sku_x = data.product("X", stock=3)
@@ -152,6 +156,7 @@ def test_uc37_ac4_low_stock_includes_threshold(employee_dashboard):
     assert dict(report["low_stock"]) == {sku_x: 3, sku_y: 5}
 
 
+# UC-37 Xem dashboard — AC-5: Tiền nhập hàng theo nhà cung cấp
 def test_uc37_ac5_purchase_totals_only_include_confirmed_receipts_created_in_period(
     employee_dashboard,
 ):
@@ -170,6 +175,7 @@ def test_uc37_ac5_purchase_totals_only_include_confirmed_receipts_created_in_per
     assert report["purchase_totals"] == [("NCC-0001", "Nhà cung cấp X", 5_000_000)]
 
 
+# UC-37 Xem dashboard — AC-6: Kỳ không có dữ liệu
 def test_uc37_ac6_empty_period_still_reports_low_stock(employee_dashboard):
     client, data, path = employee_dashboard
     _, sku_x = data.product("X", stock=3)
@@ -185,6 +191,7 @@ def test_uc37_ac6_empty_period_still_reports_low_stock(employee_dashboard):
     assert dict(report["low_stock"]) == {sku_x: 3}
 
 
+# UC-37 Xem dashboard — AC-7: Khoảng thời gian không hợp lệ
 @pytest.mark.parametrize(
     "invalid_period",
     [("2026-12-02", "2026-12-01"), ("2026-12-01", "2026-12-01")],
@@ -216,6 +223,7 @@ def test_uc37_ac7_invalid_period_preserves_report(employee_dashboard, invalid_pe
     assert _dashboard(full_page) == previous_result
 
 
+# UC-37 Xem dashboard — AC-8: Vai trò không được phép
 @pytest.mark.parametrize(
     "role, denied_statuses", [("customer", {303, 401, 403}), ("admin", {403})]
 )
@@ -231,6 +239,7 @@ def test_uc37_ac8_rejects_non_employee(
     assert "dashboard" not in getattr(response, "context", {})
 
 
+# UC-37 Xem dashboard — AC-9: Ghi nhận theo ngày giao thành công
 def test_uc37_ac9_delivery_date_sets_reporting_month(employee_dashboard):
     client, data, path = employee_dashboard
     variant, _ = data.product("A")

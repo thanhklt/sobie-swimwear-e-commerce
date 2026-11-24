@@ -1,4 +1,4 @@
-"""Dữ liệu PostgreSQL dùng riêng cho các ca nghiệm thu UC-37."""
+"""Dữ liệu PostgreSQL dùng cho các ca nghiệm thu của reporting."""
 
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
@@ -19,10 +19,16 @@ INIT_SQL = Path(__file__).resolve().parents[2] / "infra" / "postgres" / "init.sq
 
 
 @pytest.fixture
-def dashboard_app(monkeypatch):
-    database_url = environ.get("UC37_TEST_DATABASE_URL")
+def reporting_test_url():
+    return environ.get("REPORTING_TEST_DATABASE_URL") or environ.get(
+        "UC37_TEST_DATABASE_URL"
+    )
+
+
+@pytest.fixture
+def dashboard_app(monkeypatch, reporting_test_url):
     monkeypatch.setenv(
-        "DATABASE_URL", database_url or "postgresql://localhost/uc37_test"
+        "DATABASE_URL", reporting_test_url or "postgresql://localhost/uc37_test"
     )
     for setting in ("SECRET_KEY", "SEPAY_API_KEY"):
         monkeypatch.setenv(setting, token_urlsafe())
@@ -43,16 +49,16 @@ def dashboard_path(dashboard_app):
 
 
 @pytest.fixture
-def dashboard_db(dashboard_app, dashboard_path, monkeypatch):
-    database_url = environ.get("UC37_TEST_DATABASE_URL")
-    if not database_url:
+def reporting_db(dashboard_app, reporting_test_url, monkeypatch):
+    if not reporting_test_url:
         pytest.skip(
-            "Cần UC37_TEST_DATABASE_URL trỏ tới một database PostgreSQL trống dành cho test."
+            "Cần REPORTING_TEST_DATABASE_URL trỏ tới một database PostgreSQL trống dành cho test."
         )
-    url = make_url(database_url)
+    url = make_url(reporting_test_url)
     if url.drivername not in {"postgresql", "postgres", "postgresql+asyncpg"}:
         pytest.fail(
-            "UC37_TEST_DATABASE_URL phải là URL PostgreSQL dùng asyncpg.", pytrace=False
+            "URL database test của reporting phải là URL PostgreSQL dùng asyncpg.",
+            pytrace=False,
         )
 
     from app.shared.database import engine as database
@@ -113,6 +119,11 @@ def dashboard_db(dashboard_app, dashboard_path, monkeypatch):
             client.portal.call(transaction.rollback)
             client.portal.call(connection.close)
             client.portal.call(test_engine.dispose)
+
+
+@pytest.fixture
+def dashboard_db(dashboard_path, reporting_db):
+    return reporting_db
 
 
 class DashboardData:
@@ -180,7 +191,9 @@ class DashboardData:
             INSERT INTO catalog.variant (variant_id, variant_product_key, variant_size_key,
                                          variant_color_key, variant_sell_price, variant_status)
             SELECT $3, product_key, size_key, color_key, 200000, $4
-            FROM product CROSS JOIN catalog.size CROSS JOIN catalog.color RETURNING variant_key
+            FROM product CROSS JOIN catalog.size CROSS JOIN catalog.color
+            WHERE catalog.size.size_name = 'M' AND catalog.color.color_name = 'Đỏ'
+            RETURNING variant_key
             """,
             product_code,
             name,
@@ -196,6 +209,31 @@ class DashboardData:
             stock,
         )
         return variant_key, sku
+
+    def add_large_variant(self, source_variant_key):
+        return self._value(
+            """
+            WITH large_size AS (
+                INSERT INTO catalog.size (size_name) VALUES ('L')
+                ON CONFLICT (size_name) DO UPDATE SET size_name = EXCLUDED.size_name
+                RETURNING size_key
+            ), large_variant AS (
+                INSERT INTO catalog.variant (variant_id, variant_product_key, variant_size_key,
+                                             variant_color_key, variant_sell_price)
+                SELECT product.product_id || '-DO-L', source.variant_product_key,
+                       large_size.size_key, source.variant_color_key, source.variant_sell_price
+                FROM catalog.variant AS source
+                JOIN catalog.product AS product ON product.product_key = source.variant_product_key
+                CROSS JOIN large_size
+                WHERE source.variant_key = $1
+                RETURNING variant_key
+            )
+            INSERT INTO inventory.stock (stock_variant_key, stock_quantity, stock_cost_price)
+            SELECT variant_key, 20, 90000 FROM large_variant
+            RETURNING stock_variant_key
+            """,
+            source_variant_key,
+        )
 
     def order(
         self,

@@ -1,0 +1,18 @@
+﻿{% extends "catalog/layout.html" %}{% block catalog %}
+<div class="page-heading"><div><p class="eyebrow">{{'QUẢN LÝ CỬA HÀNG' if staff else 'THE SOBIE CATALOG'}}</p><h1>{{'Sản phẩm' if staff else 'Khám phá Sobie'}}</h1></div>
+{% if staff %}<a class="button" href="{{base}}/staff/products/new"><span aria-hidden="true">+</span> Thêm sản phẩm</a>{% endif %}</div>
+<form class="filters" method="get">
+{% if staff %}<label>Tìm tên hoặc mã<input name="q" value="{{filters.q}}" placeholder="Tên sản phẩm, SP-…"></label>{% elif filters.q %}<input type="hidden" name="q" value="{{filters.q}}">{% endif %}
+{% for field,kind,label in [('category','categories','Danh mục'),('gender','genders','Giới tính'),('size','sizes','Size'),('collection','collections','Bộ sưu tập')] %}
+<label>{{label}}<select name="{{field}}_key"><option value="">Tất cả</option>{% for row in taxa[kind] %}<option value="{{row.key}}" {% if filters.get(field+'_key') == row.key|string %}selected{% endif %}>{{row.name}}</option>{% endfor %}</select></label>
+{% endfor %}
+<label>Sắp xếp<select name="sort">{% for value,label in [('newest','Mới nhất'),('price_asc','Giá tăng dần'),('price_desc','Giá giảm dần')] %}<option value="{{value}}" {% if filters.sort == value %}selected{% endif %}>{{label}}</option>{% endfor %}</select></label>
+{% if staff %}<label>Trạng thái<select name="status"><option value="">Tất cả</option>{% for value in ['ACTIVE','INACTIVE'] %}<option {% if filters.get('status') == value %}selected{% endif %}>{{value}}</option>{% endfor %}</select></label>{% endif %}
+<button>Áp dụng</button><a href="{{request.url.path}}">Bỏ lọc</a></form>
+<p class="muted">{{total}} sản phẩm{% if filters.q %} · Kết quả cho “{{filters.q}}”{% endif %}</p>
+{% if staff %}<div class="table-scroll"><table><thead><tr><th>Mã</th><th>Tên</th><th>Danh mục</th><th>Giới tính</th><th>Trạng thái</th><th>Ngày tạo (VN)</th><th></th></tr></thead><tbody>
+{% for item in items %}<tr><td>{{item.product_id}}</td><td><div class="table-product">{% if item.image %}<img src="{{item.image}}" alt="" loading="lazy">{% endif %}<span>{{item.product_name}}</span></div></td><td>{{item.category_name}}</td><td>{{item.gender_name}}</td><td><span class="status-badge {{'active' if item.product_status == 'ACTIVE' else ''}}">{{'Đang bán' if item.product_status == 'ACTIVE' else 'Ngừng bán'}}</span></td><td>{{item.product_created_at|vntime}}</td><td><a href="{{base}}/staff/products/{{item.product_key}}/edit">Chỉnh sửa ↗</a></td></tr>{% endfor %}
+</tbody></table></div>{% else %}{% include "catalog/cards.html" %}{% endif %}
+{% if not items %}<p>Không có sản phẩm phù hợp.</p>{% endif %}
+{% if pages %}<nav aria-label="Phân trang">{% if page > 1 %}<a href="{{request.url.include_query_params(page=page-1)}}">Trước</a>{% endif %}<span>Trang {{page}} / {{pages}}</span>{% if page < pages %}<a href="{{request.url.include_query_params(page=page+1)}}">Sau</a>{% endif %}</nav>{% endif %}
+{% endblock %}

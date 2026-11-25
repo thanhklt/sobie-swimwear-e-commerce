@@ -16,6 +16,7 @@
 -- =====================================================================
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS unaccent;
 
 CREATE SCHEMA identity;
 CREATE SCHEMA catalog;
@@ -361,3 +362,11 @@ CREATE TABLE payment.bank_transaction (
   CONSTRAINT bank_transaction_matched_order_ck
     CHECK (bank_transaction_match_status = 'UNMATCHED' OR bank_transaction_order_key IS NOT NULL)
 );
+
+-- Catalog: tên duy nhất theo UC-14/17, không phân biệt hoa thường.
+CREATE UNIQUE INDEX IF NOT EXISTS category_normalized_name_uq ON catalog.category (lower(regexp_replace(trim(category_name), '[[:space:]]+', ' ', 'g')));
+CREATE UNIQUE INDEX IF NOT EXISTS collection_normalized_name_uq ON catalog.collection (lower(regexp_replace(trim(collection_name), '[[:space:]]+', ' ', 'g')));
+CREATE UNIQUE INDEX IF NOT EXISTS gender_normalized_name_uq ON catalog.gender (lower(regexp_replace(trim(gender_name), '[[:space:]]+', ' ', 'g')));
+CREATE UNIQUE INDEX IF NOT EXISTS color_normalized_name_uq ON catalog.color (lower(regexp_replace(trim(color_name), '[[:space:]]+', ' ', 'g')));
+CREATE UNIQUE INDEX IF NOT EXISTS size_normalized_name_uq ON catalog.size (lower(regexp_replace(trim(size_name), '[[:space:]]+', ' ', 'g')));
+CREATE UNIQUE INDEX IF NOT EXISTS product_normalized_name_uq ON catalog.product (lower(trim(product_name)));

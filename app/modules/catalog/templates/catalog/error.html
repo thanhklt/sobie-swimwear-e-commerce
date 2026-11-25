@@ -1,0 +1,4 @@
+﻿{% extends "catalog/layout.html" %}{% block catalog %}<h1>Không thể hoàn tất yêu cầu</h1>
+<p><a href="{{base}}/home">Trang chủ</a> · <a href="{{base}}/staff/products">Quản lý sản phẩm</a></p>
+{% if submitted %}<details open><summary>Dữ liệu vừa gửi (chưa lưu)</summary><dl>{% for field,value in submitted %}<dt>{{field}}</dt><dd>{{value}}</dd>{% endfor %}</dl></details>{% endif %}
+<p>Quay lại bằng nút Back của trình duyệt để chỉnh sửa form.</p>{% endblock %}

@@ -1,0 +1,57 @@
+﻿{% extends "catalog/layout.html" %}{% block catalog %}
+{% set editbase = base+'/staff/products/'+product.product_key|string if product else base+'/staff/products/new' %}
+{% set form = form if form is defined else {} %}
+<h1>{{'Sửa '+product.product_id if product else 'Thêm sản phẩm'}}</h1>
+{% if locked %}<p class="notice">Chỉ có thể sửa mô tả. Các thay đổi còn lại cần service inventory xác nhận điều kiện chỉnh sửa.</p>{% endif %}
+<form method="post" action="{{editbase+'/edit' if product else editbase}}">
+<label>Tên <input name="name" required maxlength="255" value="{{form.get('name', product.product_name if product else '')}}" {% if locked %}readonly{% endif %}></label>
+<label>Mô tả <textarea name="description">{{form.get('description', product.product_description or '' if product else '')}}</textarea></label>
+{% for field,kind,label in [('category','categories','Danh mục'),('gender','genders','Giới tính')] %}
+{% set value = form.get(field+'_key', product['product_'+field+'_key']|string if product else '') %}
+<label>{{label}}<select name="{{field}}_key" required {% if locked %}disabled{% endif %}><option value="">Chọn</option>
+{% for row in taxa[kind] %}<option value="{{row.key}}" {% if value == row.key|string %}selected{% endif %}>{{row.name}}</option>{% endfor %}</select></label>
+{% if locked %}<input type="hidden" name="{{field}}_key" value="{{value}}">{% endif %}
+{% endfor %}
+<fieldset {% if locked %}disabled{% endif %}><legend>Bộ sưu tập</legend>
+{% for row in taxa.collections %}<label><input type="checkbox" name="collection_key" value="{{row.key}}" {% if row.key|string in (form.getlist('collection_key') if form.getlist is defined else collection_keys) %}checked{% endif %}>{{row.name}}</label>{% endfor %}</fieldset>
+{% if locked %}{% for value in collection_keys %}<input type="hidden" name="collection_key" value="{{value}}">{% endfor %}{% endif %}
+{% if not product %}<label>Ảnh ban đầu (URL) <input name="image_url" value="{{form.get('image_url','')}}" placeholder="/static/images/products/sp-0001-1.jpg"></label>{% endif %}
+<button>Lưu sản phẩm</button>
+</form>
+{% if product %}
+<section><h2>Trạng thái</h2><p>{{product.product_status}}</p>
+<form method="post" action="{{editbase}}/status"><label>Trạng thái<select name="status"><option value="INACTIVE">Ngừng bán</option><option value="ACTIVE">Đang bán</option></select></label><button {% if locked %}disabled{% endif %}>Cập nhật trạng thái</button></form>
+<a href="{{base}}/products/{{product.product_key}}">Xem trên storefront</a>
+</section>
+<section><h2>Gallery</h2><p>Xóa URL để bỏ ảnh. Thứ tự liên tiếp từ 1; ảnh số 1 là ảnh đại diện.</p>
+<form method="post" action="{{editbase}}/gallery"><fieldset {% if locked %}disabled{% endif %}><legend>Ảnh sản phẩm</legend>
+<div id="gallery-rows">
+{% for image in gallery %}<div class="actions"><img width="60" src="{{image.gallery_url}}" alt="Ảnh {{image.gallery_order_no}}"><label>URL<input name="image_url" value="{{image.gallery_url}}" maxlength="500"></label><label>Thứ tự<input name="order_no" type="number" min="1" value="{{image.gallery_order_no}}"></label></div>{% endfor %}
+<div class="actions"><label>URL mới<input name="image_url" maxlength="500"></label><label>Thứ tự<input name="order_no" type="number" min="1" value="{{gallery|length+1}}"></label></div>
+</div><button type="button" id="add-image">Thêm dòng ảnh</button><button>Lưu gallery</button></fieldset></form></section>
+<section><h2>Biến thể màu × size</h2><p>Tạo biến thể cần inventory khởi tạo tồn kho. Chức năng này chưa tích hợp.</p>
+<form method="post" action="{{editbase}}/variants">
+{% for field,kind,label in [('color','colors','Màu'),('size','sizes','Size')] %}<fieldset><legend>{{label}}</legend>{% for row in taxa[kind] %}<label><input type="checkbox" name="{{field}}_key" value="{{row.key}}">{{row.name}}</label>{% endfor %}</fieldset>{% endfor %}
+<button>Tạo tổ hợp</button></form>
+<div class="table-scroll"><table><thead><tr><th>SKU</th><th>Màu</th><th>Size</th><th>Giá VND</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>
+{% for variant in variants %}<tr><td>{{variant.variant_id}}</td><td>{{variant.color_name}}</td><td>{{variant.size_name}}</td><td>{{variant.variant_sell_price or 'Chưa đặt'}}</td><td>{{variant.variant_status}}</td><td>
+<form method="post" action="{{editbase}}/variants/{{variant.variant_key}}/status"><input type="hidden" name="status" value="{{'INACTIVE' if variant.variant_status == 'ACTIVE' else 'ACTIVE'}}"><button>Đổi trạng thái</button></form>
+<form method="post" action="{{editbase}}/variants/{{variant.variant_key}}/delete" onsubmit="return confirm('Xác nhận xóa biến thể?')"><input type="hidden" name="confirm" value="yes"><button>Xóa</button></form>
+</td></tr>{% endfor %}</tbody></table></div>
+<p>Tồn kho chỉ xem: chưa tích hợp inventory.</p></section>
+<section><h2>Giá theo size</h2><p>Thay đổi giá cần inventory xác nhận chưa nhập kho; hiện chưa hỗ trợ.</p>
+<form method="post" action="{{editbase}}/size-prices">
+{% for group in variants|groupby('size_name') %}<label>{{group.grouper}}<input type="hidden" name="size_key" value="{{group.list[0].variant_size_key}}"><input name="sell_price" inputmode="numeric" pattern="[0-9]{1,12}" value="{{group.list[0].variant_sell_price or ''}}"></label>{% endfor %}<button {% if not variants %}disabled{% endif %}>Lưu giá</button></form></section>
+<section><h2>Xóa sản phẩm</h2><p>Cần kiểm tra lịch sử nhập kho, đơn hàng và khuyến mãi; hiện chưa hỗ trợ.</p>
+<form method="post" action="{{editbase}}/delete" onsubmit="return confirm('Xác nhận xóa sản phẩm?')"><input type="hidden" name="confirm" value="yes"><button>Xóa sản phẩm</button></form></section>
+<script>
+document.getElementById('add-image').addEventListener('click', () => {
+ const rows = document.getElementById('gallery-rows');
+ const row = rows.lastElementChild.cloneNode(true);
+ row.querySelector('[name=image_url]').value = '';
+ row.querySelector('[name=order_no]').value = rows.children.length + 1;
+ rows.appendChild(row);
+});
+</script>
+{% endif %}
+{% endblock %}

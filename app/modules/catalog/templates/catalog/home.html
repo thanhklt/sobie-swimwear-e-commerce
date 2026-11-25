@@ -1,0 +1,12 @@
+﻿{% extends "catalog/layout.html" %}{% block catalog %}
+<section class="hero">
+  <div class="hero-copy"><p class="eyebrow">THE SUNNY EDIT</p><h1>Mang theo nắng.<br>Chạm vào hè.</h1><p>Khám phá đồ bơi Sobie và tìm một thiết kế<br class="desktop-break"> cho những ngày bạn muốn gần biển hơn.</p><a class="button" href="#new-arrivals">Khám phá ngay <span aria-hidden="true">↗</span></a><span class="hero-footnote">SOBIE / SWIM &amp; SUN</span></div>
+  <div class="hero-visual"><img src="/static/images/products/sp-0001-1.jpg" alt="Thiết kế đồ bơi một mảnh màu đen của Sobie" fetchpriority="high"><span class="hero-caption">Simple shapes. Sunny days.</span></div>
+</section>
+<div id="categories" class="category-strip"><span class="eyebrow">BẠN ĐANG TÌM</span><nav aria-label="Danh mục sản phẩm">{% for category in taxa.categories %}<a href="{{base}}/categories/{{category.key}}/products">{{category.name}} <span aria-hidden="true">↗</span></a>{% else %}<span>Danh mục đang được cập nhật</span>{% endfor %}</nav></div>
+<div class="section-heading" id="new-arrivals"><div><p class="eyebrow">FRESH FROM SOBIE</p><h2>Mới tại Sobie</h2></div><span class="muted">Những thiết kế mới nhất trong cửa hàng</span></div>
+{% if items %}{% include "catalog/cards.html" %}{% else %}<div class="empty-state"><h3>Hẹn bạn một chút nắng mới.</h3><p>Chưa có sản phẩm đang bán. Hãy quay lại sau nhé.</p></div>{% endif %}
+<div id="collections">
+{% for group in groups %}<div class="section-heading"><div><p class="eyebrow">THE COLLECTION</p><h2>{{group.name}}</h2></div></div>{% with items=group['items'] %}{% include "catalog/cards.html" %}{% endwith %}{% endfor %}
+</div>
+{% endblock %}

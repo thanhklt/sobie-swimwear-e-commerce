@@ -1,0 +1,25 @@
+{% extends "catalog/layout.html" %}{% block catalog %}
+<p class="breadcrumbs"><a href="{{base}}/home">Trang chủ</a> / <a href="{{base}}/categories/{{product.product_category_key}}/products">Sản phẩm</a> / {{product.product_name}}</p>
+<div class="product-detail"><div>
+<div class="gallery">{% for image in gallery %}<a href="{{image.gallery_url}}"><img src="{{image.gallery_url}}" alt="{{product.product_name}} — ảnh {{image.gallery_order_no}}"></a>{% else %}<div class="placeholder">Chưa có ảnh</div>{% endfor %}</div>
+</div><div class="product-info"><p class="eyebrow">SOBIE SWIMWEAR · {{product.product_id}}</p><h1>{{product.product_name}}</h1><p class="product-description">{{product.product_description or ''}}</p>
+{% if min_price %}<h2>{{"{:,.0f}".format(min_price).replace(',','.')}}đ{% if max_price != min_price %} – {{"{:,.0f}".format(max_price).replace(',','.')}}đ{% endif %}</h2>{% else %}<p>Sản phẩm tạm ngừng kinh doanh</p>{% endif %}
+{% for field,kind,label in [('color','colors','Màu'),('size','sizes','Size')] %}
+{% set other = 'size' if field == 'color' else 'color' %}<fieldset><legend>{{label}}</legend>
+{% for row in taxa[kind] %}
+{% set matches = namespace(available=false, belongs=false) %}
+{% for variant in variants %}{% if variant['variant_'+field+'_key']|string == row.key|string %}{% set matches.belongs=true %}{% endif %}{% endfor %}
+{% for variant in eligible %}
+{% set other = 'size' if field == 'color' else 'color' %}
+{% if variant['variant_'+field+'_key']|string == row.key|string and (not selected.get(other+'_key') or selected[other+'_key'] == variant['variant_'+other+'_key']|string) %}{% set matches.available=true %}{% endif %}
+{% endfor %}
+{% if matches.belongs %}
+<form method="get" style="display:inline">
+{% if selected.get(other+'_key') %}<input type="hidden" name="{{other}}_key" value="{{selected[other+'_key']}}">{% endif %}
+<button name="{{field}}_key" value="{{'' if selected.get(field+'_key') == row.key|string else row.key}}" {% if not matches.available %}disabled{% endif %} class="{{'selected' if selected.get(field+'_key') == row.key|string else ''}}" aria-pressed="{{'true' if selected.get(field+'_key') == row.key|string else 'false'}}">{{row.name}}</button></form>
+{% endif %}{% endfor %}</fieldset>{% endfor %}
+<label>Số lượng <input type="number" value="1" min="1" disabled></label>
+<button disabled>Thêm vào giỏ — chưa tích hợp</button> <button disabled>Yêu thích — chưa tích hợp</button>
+<p>Chưa xác định tồn kho. Bảng size chính thức chưa được cung cấp.</p>
+</div></div>
+{% endblock %}

@@ -24,7 +24,7 @@ class SessionMiddleware(BaseHTTPMiddleware):
         if root_path and (path == root_path or path.startswith(f"{root_path}/")):
             path = path[len(root_path) :] or "/"
 
-        if path == PORTAL_PREFIX or path.startswith(f"{PORTAL_PREFIX}/"):
+        if path == PORTAL_PREFIX or path.startswith(f"{PORTAL_PREFIX}/") or path.startswith("/api/v1/catalog/staff/"):
             cookie_name, portal = PORTAL_SESSION_COOKIE, SessionPortal.PORTAL
         else:
             cookie_name, portal = STOREFRONT_SESSION_COOKIE, SessionPortal.STOREFRONT

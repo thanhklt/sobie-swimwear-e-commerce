@@ -7,6 +7,7 @@ ngưỡng tồn kho thấp) đặt ở đây hoặc trong module dùng nó, khô
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
+    CATALOG_DEMO: bool = False
     DATABASE_URL: str
     SECRET_KEY: str
     SHIPPING_FEE: str

@@ -1,0 +1,10 @@
+﻿{% extends "catalog/layout.html" %}{% block catalog %}
+<h1>Quản lý {{kind}}</h1>
+<form method="post" action="{{base}}/staff/taxonomy/{{kind}}">
+<label>Tên mới <input name="name" required maxlength="{{255 if kind in ['categories','collections'] else 50}}"></label><button>Thêm</button></form>
+{% for item in items %}<section>
+<form method="post" action="{{base}}/staff/taxonomy/{{kind}}/{{item.key}}/edit" class="actions">
+<label>Tên <input name="name" value="{{item.name}}" required maxlength="{{255 if kind in ['categories','collections'] else 50}}"></label><button>Lưu tên</button></form>
+<form method="post" action="{{base}}/staff/taxonomy/{{kind}}/{{item.key}}/delete" onsubmit="return confirm('Xác nhận xóa mục này?')"><input type="hidden" name="confirm" value="yes"><button>Xóa</button></form>
+</section>{% else %}<p>Chưa có dữ liệu.</p>{% endfor %}
+{% endblock %}

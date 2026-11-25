@@ -1,0 +1,8 @@
+﻿<div class="grid">
+{% for item in items %}<article class="card">
+<a class="product-image" href="{{base}}/products/{{item.product_key}}">
+{% if item.image %}<img src="{{item.image}}" alt="{{item.product_name}}" loading="lazy">{% else %}<div class="placeholder" role="img" aria-label="Chưa có ảnh"><span class="brand">sobie</span><small>Ảnh đang cập nhật</small></div>{% endif %}
+<span class="product-arrow" aria-hidden="true">↗</span></a>
+<div class="product-copy"><span class="product-category">{{item.category_name}}</span><h3><a href="{{base}}/products/{{item.product_key}}">{{item.product_name}}</a></h3>
+<p class="price">{% if item.min_price %}{% if item.min_price != item.max_price %}<span>Từ </span>{% endif %}{{"{:,.0f}".format(item.min_price).replace(',','.')}}đ{% else %}Chưa có giá{% endif %}</p></div>
+</article>{% endfor %}</div>

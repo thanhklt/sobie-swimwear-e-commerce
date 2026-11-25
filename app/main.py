@@ -6,6 +6,10 @@ Module: identity, catalog, shopping, ordering, payment, promotion, inventory, sh
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
+
+from app.modules.catalog.router import router as catalog_router
 
 from app.error.handlers import register_error_handlers
 from app.shared.web.session import SessionMiddleware
@@ -28,6 +32,8 @@ app = FastAPI(
 )
 app.add_middleware(SessionMiddleware)
 register_error_handlers(app)
+app.include_router(catalog_router)
+app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
 
 
 @app.get("/")

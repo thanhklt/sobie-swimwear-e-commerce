@@ -16,6 +16,10 @@ Khách chọn phương thức "Chuyển khoản qua mã QR" trên trang thanh to
 - Khách đã đăng nhập.
 - Giỏ hàng có ít nhất 1 dòng còn hàng.
 
+## Hiện trạng triển khai
+
+`GET /api/v1/ordering/checkout` hiện hiển thị giỏ và hỗ trợ gộp giỏ sau đăng nhập. Biểu mẫu thông tin nhận hàng và nút “Sử dụng thông tin hồ sơ” cho đơn QR còn chờ triển khai, theo cùng quy tắc hồ sơ của UC-19.
+
 ## Main Flow
 1. Khách thực hiện bước 1–4 như UC-19, gồm nhập tay hoặc dùng nút "Sử dụng thông tin hồ sơ" để điền thông tin nhận hàng, và chọn phương thức "Chuyển khoản qua mã QR".
 2. Khách bấm "Xác nhận đặt hàng".

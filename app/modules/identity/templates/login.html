@@ -21,7 +21,6 @@
   {% endif %}
 
   <form class="identity-form" method="post" action="{{ form_action }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     {{ credentials(identifier, result) }}
     {% block login_options %}
       <div class="identity-login-options">
@@ -35,7 +34,7 @@
   {% block login_alternatives %}
     <div class="identity-divider">hoặc</div>
     <a class="identity-button identity-button--secondary"
-       href="{{ request.url_for('start_google_registration').path }}?login=1">{{ google() }} Đăng nhập với Google</a>
+       href="{{ request.url_for('start_google_registration').path }}?{{ google_query }}">{{ google() }} Đăng nhập với Google</a>
     <p class="identity-alternative">Chưa có tài khoản?
       <a href="{{ request.url_for('registration_form').path }}">Đăng ký ngay</a>
     </p>

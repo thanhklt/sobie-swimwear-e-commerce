@@ -1,4 +1,4 @@
-# POST /register/otp/resend
+# POST /api/v1/identity/register/otp/resend
 
 UC-01 4a, E5.
 
@@ -9,7 +9,10 @@ sequenceDiagram
     participant Service as IdentityService
     participant Redis as Trạng thái đăng ký (Redis)
     participant Mail as Dịch vụ email
-    Browser->>Route: Yêu cầu gửi lại OTP
+    Browser->>Route: Yêu cầu gửi lại OTP kèm Origin
+    break Origin thiếu, null hoặc không được phép
+        Route-->>Browser: HTTP 403 trước khi xác thực phiên hoặc gọi dịch vụ
+    end
     Route->>Service: Gửi lại cho lượt đăng ký hiện tại
     Service->>Redis: Đọc email và kiểm tra khoảng cách giữa hai lần gửi
     alt Chưa đủ 300 giây

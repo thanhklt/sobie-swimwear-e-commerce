@@ -112,7 +112,7 @@ Chưa xử lý ──(UC-23 xác nhận)──► Đã xác nhận ──(UC-40 
 | Mã khách hàng | Ngày đăng ký trong mã `KH-` lấy theo giờ `Asia/Ho_Chi_Minh` (21/11/2026) | UC-01, UC-06 |
 | Giỏ hàng, danh sách yêu thích | Mỗi Khách hàng có 1 giỏ và 1 danh sách yêu thích, tạo cùng transaction tạo tài khoản Khách hàng; identity gọi service công khai của shopping (21/11/2026, Q39) | UC-01, UC-06, UC-18, UC-38 |
 | Thông tin nhận hàng | Khách nhập tên người nhận, số điện thoại và địa chỉ, hoặc bấm "Sử dụng thông tin hồ sơ" nếu hồ sơ có đủ họ tên, ngày sinh, số điện thoại và địa chỉ nhận hàng hợp lệ. Khách sửa được thông tin cho riêng đơn (23/11/2026). | UC-04, UC-19, UC-20 |
-| Đăng ký / đăng nhập | Đăng ký nhập đủ email và SĐT; đăng nhập bằng một trong hai | UC-01, UC-02 |
+| Đăng ký / đăng nhập | Đăng ký bằng email đã xác minh OTP và mật khẩu, hoặc qua Google. Khách bổ sung số điện thoại ở UC-04. Đăng nhập bằng email hoặc số điện thoại đã lưu kèm mật khẩu, hoặc qua Google khi tài khoản đã liên kết. | UC-01, UC-02, UC-04 |
 | Cổng đăng nhập | Storefront chỉ cho Khách hàng; Nhân viên / Admin đăng nhập ở storefront bị báo "Thông tin đăng nhập không đúng"; Nhân viên và Admin dùng portal quản trị riêng (21/11/2026) | UC-02 |
 | Quên mật khẩu | Làm ở giai đoạn 2; giai đoạn 1 storefront có nút "Quên mật khẩu" nhưng không có hành động (21/11/2026) | UC-02 |
 | Xác thực | Website SSR nên dùng phiên phía server lưu ở `identity.session`, không dùng JWT; cookie `HttpOnly`, `Secure`, `SameSite=Lax`, kiểm tra header `Origin` ở mọi request ghi; hạn phiên Khách hàng 30 phút, Nhân viên / Admin 1 giờ, tính từ lần thao tác cuối; rate limit theo IP: đăng nhập 5 lần/phút (21/11/2026) | UC-02, UC-03 |
@@ -183,8 +183,6 @@ Mỗi dòng là một giả định đang có trong mục *Notes* của UC, ch�
 | UC-02 | Vượt rate limit trả HTTP 429. |
 | UC-02 | Storefront và portal quản trị dùng 2 cookie phiên khác tên; một trình duyệt có thể đăng nhập cùng lúc vào cả hai cổng. |
 | UC-03 | Toàn bộ UC này là giả định: BR-001 chỉ nêu đăng ký và đăng nhập, không nêu đăng xuất. |
-| UC-03 | Đăng xuất chỉ kết thúc phiên trên thiết bị hiện tại. |
-| UC-03 | Sau đăng xuất chuyển về trang chủ. |
 | UC-04 | Đổi email hoặc số điện thoại không cần xác minh lại. |
 | UC-07 | Việc xem và tìm danh sách tài khoản gộp vào UC này. |
 | UC-07 | Danh sách có phân trang; tìm theo họ tên, email hoặc số điện thoại. |

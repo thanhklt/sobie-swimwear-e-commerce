@@ -16,6 +16,10 @@ Khách bấm "Đặt hàng" trên trang giỏ hàng.
 - Khách đã đăng nhập.
 - Giỏ hàng có ít nhất 1 dòng còn hàng.
 
+## Hiện trạng triển khai
+
+`GET /api/v1/ordering/checkout` hiện hiển thị giỏ và hỗ trợ gộp giỏ sau đăng nhập. Biểu mẫu thông tin nhận hàng và nút “Sử dụng thông tin hồ sơ” cho đơn COD còn chờ triển khai.
+
 ## Main Flow
 1. Hệ thống mở trang thanh toán với các trường tên người nhận, địa chỉ nhận hàng (số nhà, đường; phường/xã; tỉnh/thành phố; quốc gia) và số điện thoại nhận hàng. Nút "Sử dụng thông tin hồ sơ" chỉ dùng được khi hồ sơ đã lưu đủ họ tên, ngày sinh, số điện thoại và địa chỉ nhận hàng hợp lệ. Hệ thống chỉ sao chép dữ liệu hồ sơ khi khách bấm nút.
 2. Khách nhập thông tin nhận hàng hoặc bấm "Sử dụng thông tin hồ sơ" để sao chép họ tên, địa chỉ và số điện thoại từ hồ sơ vào các trường tương ứng. Khách vẫn có thể sửa từng trường sau khi sao chép. Thông tin cuối cùng trên biểu mẫu được dùng cho riêng đơn hàng.

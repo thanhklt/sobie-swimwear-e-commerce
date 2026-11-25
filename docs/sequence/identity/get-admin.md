@@ -1,4 +1,4 @@
-# GET /admin
+# GET /api/v1/identity/portal
 
 UC-02 · Trang đích portal.
 
@@ -17,6 +17,6 @@ sequenceDiagram
     else Phiên Nhân viên hợp lệ
         Route-->>Browser: 200 Tổng quan Nhân viên với liên kết quản lý khách hàng
     else Chưa đăng nhập
-        Route-->>Browser: 303 /api/v1/admin/login
+        Route-->>Browser: 303 /api/v1/identity/portal/login
     end
 ```

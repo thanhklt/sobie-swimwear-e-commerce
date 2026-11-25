@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Thanh toán · Sobie{% endblock %}
+{% block content %}
+    <h1>Thanh toán</h1>
+    <p id="cart-merge-status" role="status" hidden></p>
+    <button id="cart-merge-retry" type="button" hidden>Thử lại</button>
+    <section id="checkout-cart" aria-label="Giỏ hàng">
+      {% if items %}
+        <ul>
+          {% for item in items %}
+            <li>{{ item.name }} ({{ item.sku }}) × {{ item.quantity }}</li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p>Giỏ hàng trống.</p>
+      {% endif %}
+    </section>
+  <script>
+    (() => {
+      const key = "sobie.guest-cart";
+      const status = document.getElementById("cart-merge-status");
+      const retry = document.getElementById("cart-merge-retry");
+      const cart = document.getElementById("checkout-cart");
+      const mergeUrl = {{ request.url_for('cart_merge').path | tojson }};
+
+      async function merge() {
+        const raw = localStorage.getItem(key);
+        if (!raw) {
+          cart.hidden = false;
+          status.hidden = true;
+          return;
+        }
+        const snapshot = JSON.parse(raw);
+        if (!Array.isArray(snapshot.items)) throw new Error("Invalid cart");
+        if (!snapshot.items.length) {
+          localStorage.removeItem(key);
+          return;
+        }
+        cart.hidden = true;
+        status.hidden = false;
+        status.textContent = "Đang gộp giỏ hàng…";
+        let submitted = raw;
+        if (!snapshot.merge_key) {
+          snapshot.merge_key = crypto.randomUUID();
+          submitted = JSON.stringify(snapshot);
+          localStorage.setItem(key, submitted);
+        }
+        const form = new URLSearchParams({merge_key: snapshot.merge_key});
+        for (const {variant_key, quantity} of snapshot.items) {
+          form.append("variant_key", variant_key);
+          form.append("quantity", quantity);
+        }
+        const response = await fetch(mergeUrl, {method: "POST", body: form});
+        if (response.status === 401) {
+          location.reload();
+          return;
+        }
+        if (!response.ok) throw new Error("Cart merge failed");
+        const {items} = await response.json();
+        if (localStorage.getItem(key) === submitted) localStorage.removeItem(key);
+        const checkout = await fetch(location.pathname);
+        if (!checkout.ok || checkout.redirected) {
+          location.reload();
+          return;
+        }
+        const page = new DOMParser().parseFromString(await checkout.text(), "text/html");
+        cart.replaceChildren(...page.getElementById("checkout-cart").childNodes);
+        const adjusted = items.filter(item => item.status !== "merged");
+        status.textContent = adjusted.length
+          ? "Giỏ hàng đã gộp. Một số số lượng đã được điều chỉnh theo tồn kho."
+          : "Đã gộp giỏ hàng.";
+        cart.hidden = false;
+      }
+
+      async function run() {
+        retry.hidden = true;
+        try {
+          if (navigator.locks) await navigator.locks.request(key, merge);
+          else await merge();
+        } catch {
+          status.hidden = false;
+          status.textContent = "Chưa thể cập nhật giỏ hàng. Vui lòng thử lại.";
+          retry.hidden = false;
+        }
+      }
+      retry.addEventListener("click", run);
+      run();
+    })();
+  </script>
+{% endblock %}

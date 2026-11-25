@@ -79,6 +79,15 @@ def world(monkeypatch):
                 self.values[key] = (value, w.now + timedelta(seconds=ttl))
             return True
 
+        async def exhaust_otp(self, key, expected, value, ttl, *, cooldown_key, cooldown_seconds):
+            if not await self.compare_and_set(key, expected, value, ttl):
+                return False
+            deadline = w.now + timedelta(seconds=cooldown_seconds)
+            current = self.values.get(cooldown_key)
+            if current is None or current[1] < deadline:
+                self.values[cooldown_key] = ((current[0] if current else "locked"), deadline)
+            return True
+
     store = Store()
     monkeypatch.setattr(service, "get_challenge_store", lambda: store)
 

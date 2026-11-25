@@ -8,8 +8,8 @@ def test_uc05_ac1_ac5_ac6_all_sessions_revoked_on_password_change(world, portal)
     world.seed_member("user@example.com", role="employee" if portal else "customer", phone="0981234567")
     client = signed_in(world, "user@example.com", portal=portal)
     other = signed_in(world, "user@example.com", portal=portal)
-    form = "/admin/password" if portal else "/account/password"
-    login_path = "/api/v1/admin/login" if portal else "/api/v1/login"
+    form = "/api/v1/identity/portal/password" if portal else "/api/v1/identity/account/password"
+    login_path = "/api/v1/identity/portal/login" if portal else "/api/v1/identity/login"
     result = submit(client, form, current_password="123456", password="password2", password_confirmation="password2")
     assert result.status_code == 303 and result.headers["location"].startswith(login_path)
     assert "Đổi mật khẩu thành công" in client.get(result.headers["location"]).text
@@ -18,18 +18,30 @@ def test_uc05_ac1_ac5_ac6_all_sessions_revoked_on_password_change(world, portal)
     assert login(world.new_client(), "user@example.com", portal=portal).status_code == 401
 
 
-@pytest.mark.parametrize("current,password,confirm,message", [
-    ("bad", "password2", "password2", "Mật khẩu hiện tại không đúng"),
-    ("123456", "bad", "bad", "Mật khẩu phải có ít nhất 6 ký tự"),
-    ("123456", "123456", "123456", "Mật khẩu mới phải khác mật khẩu hiện tại"),
-    ("123456", "password2", "password3", "Mật khẩu xác nhận không khớp"),
+@pytest.mark.parametrize("current,password,confirm,field,message", [
+    ("bad", "password2", "password2", "current_password", "Mật khẩu hiện tại không đúng"),
+    ("123456", "bad", "bad", "password", "Mật khẩu phải có ít nhất 6 ký tự."),
+    ("123456", "bad", "password3", "password", "Mật khẩu phải có ít nhất 6 ký tự."),
+    ("123456", "123456", "123456", "password", "Mật khẩu mới phải khác mật khẩu hiện tại"),
+    ("123456", "123456", "password3", "password", "Mật khẩu mới phải khác mật khẩu hiện tại"),
+    ("123456", "password2", "password3", "password_confirmation", "Mật khẩu nhập lại không khớp"),
 ])
-def test_uc05_ac2_ac3_ac4_ac7_rejected_change_preserves_sessions(world, current, password, confirm, message):
-    world.seed_member("user@example.com")
+def test_uc05_ac2_ac3_ac4_ac7_rejected_change_preserves_sessions(world, current, password, confirm, field, message):
+    key = world.seed_member("user@example.com")
+    password_query = "SELECT account_hash_password FROM identity.account WHERE account_key=$1"
+    original_hash = world.sql(password_query, key)
     client = signed_in(world, "user@example.com")
-    response = submit(client, "/account/password", current_password=current, password=password, password_confirmation=confirm)
-    assert response.status_code == 400 and message in response.text
-    assert client.get("/account/profile").status_code == 200
+    response = submit(
+        client, "/api/v1/identity/account/password",
+        current_password=current, password=password, password_confirmation=confirm,
+    )
+    assert response.status_code == 400
+    _, separator, after_input = response.text.partition(f'id="{field}"')
+    assert separator
+    field_markup = after_input.split("<label", 1)[0].split("</form>", 1)[0]
+    assert f'<p role="alert">{message}</p>' in field_markup
+    assert world.sql(password_query, key) == original_hash
+    assert client.get("/api/v1/identity/account/profile").status_code == 200
 
 
 def test_uc05_ac7_revoke_failure_rolls_back_hash_and_sessions(world):
@@ -37,8 +49,8 @@ def test_uc05_ac7_revoke_failure_rolls_back_hash_and_sessions(world):
     client = signed_in(world, "user@example.com", client=world.client_without_server_exceptions())
     other = signed_in(world, "user@example.com")
     with world.fail_at("revoke"):
-        response = submit(client, "/account/password", current_password="123456", password="password2",
+        response = submit(client, "/api/v1/identity/account/password", current_password="123456", password="password2",
                           password_confirmation="password2")
     assert response.status_code == 500
-    assert other.get("/account/profile").status_code == 200
+    assert other.get("/api/v1/identity/account/profile").status_code == 200
     assert login(world.new_client(), "user@example.com").status_code == 303

@@ -3,6 +3,9 @@
 {% block account_content %}
   <h1 id="identity-title">{{ "Quản lý khách hàng" if customers_only else "Quản lý tài khoản" }}</h1>
   {% if notice == 'created' %}<p role="status">Tạo tài khoản thành công.</p>{% endif %}
+  {% if error %}<p role="alert">{{ error }}</p>{% endif %}
+  {% if not customers_only and request.query_params.get('lock') == 'locked' %}<p role="status">Đã khóa tài khoản.</p>{% endif %}
+  {% if not customers_only and request.query_params.get('lock') == 'unlocked' %}<p role="status">Đã mở khóa tài khoản.</p>{% endif %}
   <nav>
     {% if not customers_only %}<a href="{{ request.url_for('new_account_form').path }}">Tạo tài khoản</a>{% endif %}
     <a href="{{ request.url_for('portal_password_form').path }}">Đổi mật khẩu</a>
@@ -17,10 +20,15 @@
     <ul>
       {% for account in accounts %}
         <li>
-          <a href="{{ request.url_for('employee_customer' if customers_only else 'edit_account_form', key=account.key).path }}">
+          <a href="{{ request.url_for('employee_customer' if customers_only else 'edit_account_form', account_key=account.key).path }}">
             {{ account.name or account.email }}
           </a>
           <span>{{ account.email }} · {{ account.phone_number or "—" }} · {{ labels[account.role] }} · {{ "Hoạt động" if account.status == "ACTIVE" else "Bị khóa" }}</span>
+          {% if not customers_only %}
+            {% with from_account_list = true %}
+              {% include "_account_lock.html" %}
+            {% endwith %}
+          {% endif %}
         </li>
       {% endfor %}
     </ul>

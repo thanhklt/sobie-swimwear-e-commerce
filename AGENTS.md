@@ -2,7 +2,7 @@
 
 ## 1. Nguyên tắc cốt lõi (Core Rules)
 - **Không tự ý git commit hoặc git push**: Tuyệt đối không tự ý push hay commit code trừ khi có yêu cầu rõ ràng từ developer.
-- **Source of Truth**: Luôn đọc từ `source_of_true` mỗi khi bắt đầu phiên mới: là specs/
+- **Source of Truth**: Luôn đọc từ `source_of_true` mỗi khi bắt đầu phiên mới: là specs/ và drive: https://drive.google.com/drive/folders/1BuL3ev8ow3pxkLeJFljE3wbwOz4VO-Aa?usp=sharing. Nếu có xung đột về nội dung cần báo ngay cho dev.
 - **Xử lý lệch thông tin**: Khi quyết định hiện tại lệch với thông tin từ `source_of_true`, hãy báo cho developer biết để quyết định.
 - **Xử lý vấn đề mơ hồ**: Khi gặp vấn đề mơ hồ, không tự ý giả định mà hãy báo cho developer biết để chờ developer quyết định.
 - **Quy định gắn tag giả định [GD]**: Mọi thông tin, luồng xử lý hoặc quyết định mà agent giả định bắt buộc phải được gắn tag `[GD]` và tổng hợp đưa vào danh sách **câu hỏi mở** để chờ developer quyết định.
@@ -23,4 +23,4 @@
 ## 5. Bảo mật & Quản lý Source Code
 - **Bảo vệ Secret & Cấu hình**: Không bao giờ hardcode credentials, tokens, secrets vào mã nguồn. Luôn nạp qua biến môi trường (`.env`, `pydantic-settings`).
 - **Phạm vi tác động tối thiểu**: Chỉ chỉnh sửa đúng phạm vi task được yêu cầu; bảo toàn comments, docstrings và cấu trúc code có sẵn không liên quan.
-- Mỗi 1 endpoint phải gắn liền với 1 sơ đồ sequence. Vị trí của lược đồ sequence tại /docs/sequence/..... .md
+- Mỗi 1 endpoint phải gắn liền với 1 sơ đồ sequence. Vị trí của lược đồ sequence tại /docs/sequence/..... .md, nếu logic của endpoint bị thay đổi, phải cập nhật lại lược đồ sequence.

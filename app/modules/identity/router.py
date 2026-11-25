@@ -7,6 +7,7 @@ import logging
 import re
 from secrets import token_urlsafe
 from typing import Annotated
+from urllib.parse import urlencode
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
@@ -18,17 +19,18 @@ from app.error.exceptions import SessionAccessError
 from app.modules.identity.service import RegistrationResult
 from app.modules.identity.account_details import AccountFormError, PROFILE_FIELDS
 from app.modules.identity.session import AuthenticatedSession, Role, SessionPortal
+from app.security.origin import has_allowed_origin, origin_rejected
 from app.security.session import PORTAL_SESSION_COOKIE, STOREFRONT_SESSION_COOKIE, require_roles
 from app.shared.web.rendering import templates
 
-router = APIRouter()
-login_router = APIRouter()
+router = APIRouter(prefix="/api/v1/identity")
 logger = logging.getLogger(__name__)
 
 _BROWSER_COOKIE = "__Host-sobie-registration"
 _BROWSER_TOKEN = re.compile(r"[A-Za-z0-9_-]{43}")
 _BROWSER_SECONDS = 3600
 _NO_STORE = {"Cache-Control": "no-store", "Referrer-Policy": "no-referrer"}
+_ORIGIN_FORM_HEADERS = _NO_STORE | {"Referrer-Policy": "strict-origin"}
 
 
 def _redirect(location: str) -> RedirectResponse:
@@ -37,6 +39,14 @@ def _redirect(location: str) -> RedirectResponse:
 
 def _home(request: Request) -> RedirectResponse:
     return _redirect(request.url_for("root").path)
+
+
+def _checkout_requested(request: Request) -> bool:
+    return request.query_params.getlist("return_to") == [request.url_for("checkout").path]
+
+
+def _storefront_destination(request: Request, checkout: bool) -> str:
+    return request.url_for("checkout" if checkout else "root").path
 
 
 def _browser_cookie(request: Request) -> str | None:
@@ -67,7 +77,7 @@ def _render_registration(
     elif result.stage == "registered":
         response = _redirect(request.url_for("storefront_login").path)
     elif result.stage == "signed_in":
-        response = _home(request)
+        response = _redirect(_storefront_destination(request, result.checkout))
         _set_session_cookie(response, SessionPortal.STOREFRONT, result.session_token)
         response.delete_cookie(_BROWSER_COOKIE, secure=True, httponly=True, samesite="lax")
         return response
@@ -76,9 +86,13 @@ def _render_registration(
         response = templates.TemplateResponse(
             request,
             "register.html",
-            {"result": result, "csrf_token": _csrf_token(browser)},
+            {"result": result, "google_retry_query": urlencode(
+                {"login": "1", "return_to": request.url_for("checkout").path}
+                if result.checkout else {"login": "1"}
+            )},
             status_code=result.status,
-            headers=_NO_STORE,
+            # A native form POST from a no-referrer page would send Origin: null.
+            headers=_ORIGIN_FORM_HEADERS,
         )
     if browser:
         _set_browser_cookie(response, browser)
@@ -90,20 +104,13 @@ async def _run_registration(
     browser: str | None,
     action: Callable[[str], Awaitable[RegistrationResult]],
     *,
-    csrf_token: str | None = None,
     create_browser: bool = False,
 ) -> Response:
+    if request.method == "POST" and not has_allowed_origin(request):
+        return origin_rejected()
+
     if request.state.auth_session is not None:
         return _home(request)
-
-    if csrf_token is not None and (
-        browser is None
-        or not compare_digest(_csrf_token(browser).encode("ascii"), csrf_token.encode("utf-8"))
-    ):
-        result = RegistrationResult(
-            message="Biểu mẫu đã hết hạn. Vui lòng bắt đầu lại.", status=403
-        )
-        return _render_registration(request, browser, result)
 
     if create_browser:
         browser = browser or token_urlsafe(32)
@@ -137,32 +144,30 @@ async def registration_form(request: Request, restart: str = "") -> Response:
 @router.post("/register/email", response_class=HTMLResponse)
 # UC-01 Đăng ký tài khoản — Main 2–3; E1, E3 (specs/use-cases/identity/UC-01-register-account.md)
 async def request_registration_otp(
-    request: Request, email: Annotated[str, Form()] = "", csrf_token: Annotated[str, Form()] = ""
+    request: Request, email: Annotated[str, Form()] = ""
 ) -> Response:
     return await _run_registration(
         request, _browser_cookie(request),
         lambda browser: request.app.state.identity_service.start_email_registration(browser, email),
-        csrf_token=csrf_token,
     )
 
 
 @router.post("/register/otp/resend", response_class=HTMLResponse)
 # UC-01 Đăng ký tài khoản — 4a; E5 (specs/use-cases/identity/UC-01-register-account.md)
-async def resend_registration_otp(request: Request, csrf_token: Annotated[str, Form()] = "") -> Response:
+async def resend_registration_otp(request: Request) -> Response:
     return await _run_registration(
-        request, _browser_cookie(request), request.app.state.identity_service.resend_email_challenge, csrf_token=csrf_token
+        request, _browser_cookie(request), request.app.state.identity_service.resend_email_challenge
     )
 
 
 @router.post("/register/otp", response_class=HTMLResponse)
 # UC-01 Đăng ký tài khoản — Main 4–5; E4 (specs/use-cases/identity/UC-01-register-account.md)
 async def verify_registration_otp(
-    request: Request, otp: Annotated[str, Form()] = "", csrf_token: Annotated[str, Form()] = ""
+    request: Request, otp: Annotated[str, Form()] = ""
 ) -> Response:
     return await _run_registration(
         request, _browser_cookie(request),
         lambda browser: request.app.state.identity_service.verify_registration_email(browser, otp),
-        csrf_token=csrf_token,
     )
 
 
@@ -172,21 +177,24 @@ async def create_registration_password(
     request: Request,
     password: Annotated[str, Form()] = "",
     password_confirmation: Annotated[str, Form()] = "",
-    csrf_token: Annotated[str, Form()] = "",
 ) -> Response:
     return await _run_registration(
         request, _browser_cookie(request),
         lambda browser: request.app.state.identity_service.complete_email_registration(browser, password, password_confirmation),
-        csrf_token=csrf_token,
     )
 
 
 @router.get("/register/google", response_class=HTMLResponse)
 # UC-01 Đăng ký tài khoản — 1b.1; E8 (specs/use-cases/identity/UC-01-register-account.md)
 async def start_google_registration(request: Request, login: str = "") -> Response:
+    checkout = login == "1" and _checkout_requested(request)
+    if checkout and request.state.auth_session is not None:
+        return _redirect(_storefront_destination(request, checkout))
     return await _run_registration(
         request, _browser_cookie(request),
-        lambda browser: request.app.state.identity_service.begin_google_registration(browser, allow_create=login != "1"),
+        lambda browser: request.app.state.identity_service.begin_google_registration(
+            browser, allow_create=login != "1", checkout=checkout
+        ),
         create_browser=True,
     )
 
@@ -213,21 +221,25 @@ async def google_registration_callback(
 @router.post("/register/google/link/otp", response_class=HTMLResponse)
 # UC-01 Đăng ký tài khoản — E1; UC-02 1d (specs/use-cases/identity/UC-01-register-account.md)
 async def confirm_google_link(
-    request: Request, otp: Annotated[str, Form()] = "", csrf_token: Annotated[str, Form()] = ""
+    request: Request, otp: Annotated[str, Form()] = ""
 ) -> Response:
     return await _run_registration(
         request, _browser_cookie(request),
         lambda browser: request.app.state.identity_service.verify_link_and_issue_session(browser, otp),
-        csrf_token=csrf_token,
     )
 
 
-@router.get("/login", response_class=HTMLResponse, name="legacy_storefront_login", include_in_schema=False)
-@login_router.get("/login", response_class=HTMLResponse, name="storefront_login")
+# Capture the registration POST routes before adding other Identity endpoints.
+registration_post_paths = frozenset(
+    route.path for route in router.routes if "POST" in route.methods
+)
+
+
+@router.get("/login", response_class=HTMLResponse, name="storefront_login")
 # UC-01 Đăng ký tài khoản — Main 8; 1b.5 (specs/use-cases/identity/UC-01-register-account.md)
 async def storefront_login_form(request: Request) -> Response:
     if request.state.auth_session is not None:
-        return _home(request)
+        return _redirect(_storefront_destination(request, _checkout_requested(request)))
 
     browser = _browser_cookie(request)
     registered = False
@@ -250,18 +262,20 @@ def _set_session_cookie(response: Response, portal: SessionPortal, token: str) -
     response.set_cookie(_SESSION_COOKIES[portal], token, **_COOKIE_FLAGS)
 
 
-def _protected_page(request: Request, template: str, context: dict, status: int = 200) -> Response:
+def _protected_page(
+    request: Request, template: str, context: dict, status: int = 200, *, logout_form: bool = False
+) -> Response:
     browser = _browser_cookie(request) or token_urlsafe(32)
     response = templates.TemplateResponse(
         request, template, context | {"csrf_token": _csrf_token(browser)}, status_code=status,
-        headers=_NO_STORE,
+        headers=_ORIGIN_FORM_HEADERS if logout_form else _NO_STORE,
     )
     _set_browser_cookie(response, browser)
     return response
 
 
 def storefront_identity_home(request: Request) -> Response:
-    response = _protected_page(request, "identity_home.html", {})
+    response = _protected_page(request, "identity_home.html", {}, logout_form=True)
     response.headers["Vary"] = "Accept"
     return response
 
@@ -278,36 +292,40 @@ def _login_page(request: Request, *, registered: bool = False, result: Registrat
     portal = request.state.auth_portal == SessionPortal.PORTAL
     template = "portal_login.html" if portal else "login.html"
     submit_route = "portal_password_login" if portal else "storefront_password_login"
-    return _protected_page(request, template, {
+    checkout = not portal and _checkout_requested(request)
+    query = {"return_to": request.url_for("checkout").path} if checkout else {}
+    form_action = request.url_for(submit_route).path
+    if query:
+        form_action += "?" + urlencode(query)
+    return templates.TemplateResponse(request, template, {
         "registered": registered, "result": result, "identifier": identifier,
-        "portal": portal, "form_action": request.url_for(submit_route).path,
+        "portal": portal, "form_action": form_action,
+        "google_query": urlencode({"login": "1", **query}),
         "password_changed": request.query_params.get("password_changed") == "1",
         "self_locked": request.query_params.get("locked") == "1",
         "role_changed": request.query_params.get("role_changed") == "1",
-    }, result.status)
+    }, status_code=result.status, headers=_ORIGIN_FORM_HEADERS)
 
 
-@router.get("/admin/login", response_class=HTMLResponse, name="legacy_portal_login", include_in_schema=False)
-@login_router.get("/admin/login", response_class=HTMLResponse)
+@router.get("/portal/login", response_class=HTMLResponse)
 async def portal_login(request: Request) -> Response:
     if request.state.auth_session:
         return _redirect(request.url_for("portal_home").path)
     return _login_page(request)
 
 
-@router.post("/login", response_class=HTMLResponse, include_in_schema=False)
-@router.post("/admin/login", response_class=HTMLResponse, include_in_schema=False)
-@login_router.post("/login", response_class=HTMLResponse, name="storefront_password_login")
-@login_router.post("/admin/login", response_class=HTMLResponse, name="portal_password_login")
+@router.post("/login", response_class=HTMLResponse, name="storefront_password_login")
+@router.post("/portal/login", response_class=HTMLResponse, name="portal_password_login")
 async def password_login(
     request: Request,
     identifier: Annotated[str, Form()] = "",
     password: Annotated[str, Form()] = "",
-    csrf_token: Annotated[str, Form()] = "",
 ) -> Response:
-    _check_csrf(request, csrf_token)
     portal = request.state.auth_portal
-    home = request.url_for("portal_home").path if portal == SessionPortal.PORTAL else request.url_for("root").path
+    home = (
+        request.url_for("portal_home").path if portal == SessionPortal.PORTAL
+        else _storefront_destination(request, _checkout_requested(request))
+    )
     if request.state.auth_session:
         return _redirect(home)
     try:
@@ -323,16 +341,26 @@ async def password_login(
     return response
 
 
+login_post_paths = frozenset(
+    route.path for route in router.routes
+    if route.name in {"storefront_password_login", "portal_password_login"}
+)
+
+
 @router.post("/logout", name="storefront_logout")
-@router.post("/admin/logout", name="portal_logout")
-async def logout(request: Request, csrf_token: Annotated[str, Form()] = "") -> Response:
-    _check_csrf(request, csrf_token)
+@router.post("/portal/logout", name="portal_logout")
+async def logout(request: Request) -> Response:
     portal = request.state.auth_portal
     name = _SESSION_COOKIES[portal]
     await request.app.state.identity_service.logout(request.cookies.get(name), portal)
     response = _home(request)
     response.delete_cookie(name, **_COOKIE_FLAGS)
     return response
+
+
+logout_post_paths = frozenset(
+    route.path for route in router.routes if route.name in {"storefront_logout", "portal_logout"}
+)
 
 
 Customer = Annotated[AuthenticatedSession, Depends(require_roles(Role.CUSTOMER, login_route="storefront_login"))]
@@ -366,18 +394,19 @@ def _account_form(request: Request, *, title: str, account: dict, values: dict, 
     return _protected_page(request, "profile.html", {
         "title": title, "account": account, "values": values, "fields": PROFILE_FIELDS,
         "roles": roles, "labels": _ROLE_LABELS, "creating": creating,
-        "saved": request.query_params.get("saved") == "1", "error": error,
-    }, 400 if error else 200)
+        "saved": request.method == "GET" and error is None and request.query_params.get("saved") == "1",
+        "error": error,
+    }, 400 if error else 200, logout_form=request.state.auth_portal == SessionPortal.STOREFRONT)
 
 
-@router.get("/admin", response_class=HTMLResponse)
+@router.get("/portal", response_class=HTMLResponse)
 async def portal_home(request: Request, actor: Internal) -> Response:
     is_admin = actor.role == Role.ADMIN
     return _protected_page(request, "portal_overview.html", {
         "role_label": _ROLE_LABELS[actor.role],
         "management_route": "admin_accounts" if is_admin else "employee_customers",
         "management_label": "Quản lý tài khoản" if is_admin else "Quản lý khách hàng",
-    })
+    }, logout_form=True)
 
 
 @router.get("/account/profile", response_class=HTMLResponse)
@@ -406,7 +435,7 @@ async def customer_password_form(request: Request, actor: Customer) -> Response:
     return await _password_form(request, actor)
 
 
-@router.get("/admin/password", response_class=HTMLResponse)
+@router.get("/portal/password", response_class=HTMLResponse)
 async def portal_password_form(request: Request, actor: Internal) -> Response:
     return await _password_form(request, actor)
 
@@ -440,44 +469,46 @@ async def customer_password_save(request: Request, actor: Customer) -> Response:
     return await _save_password(request, actor)
 
 
-@router.post("/admin/password", response_class=HTMLResponse)
+@router.post("/portal/password", response_class=HTMLResponse)
 async def portal_password_save(request: Request, actor: Internal) -> Response:
     return await _save_password(request, actor)
 
 
-async def _account_list(request: Request, *, customers_only: bool, q: str, page: int) -> Response:
+async def _account_list(
+    request: Request, *, customers_only: bool, q: str, page: int, error: AccountFormError | None = None,
+) -> Response:
     accounts, has_next = await request.app.state.identity_service.search_accounts(
         customers_only=customers_only, search=q.replace('\x00', '').strip()[:255], page=page
     )
     return _protected_page(request, "accounts.html", {
         "accounts": accounts, "has_next": has_next, "page": page, "q": q,
         "customers_only": customers_only, "labels": _ROLE_LABELS,
-        "notice": request.query_params.get("notice", ""),
-    })
+        "notice": request.query_params.get("notice", ""), "error": error,
+    }, 400 if error else 200, logout_form=True)
 
 
-@router.get("/admin/accounts", response_class=HTMLResponse)
+@router.get("/portal/accounts", response_class=HTMLResponse)
 async def admin_accounts(request: Request, actor: Admin, q: str = "", page: int = 1) -> Response:
     return await _account_list(request, customers_only=False, q=q, page=max(1, min(page, 1000000)))
 
 
-@router.get("/admin/customers", response_class=HTMLResponse)
+@router.get("/portal/customers", response_class=HTMLResponse)
 async def employee_customers(request: Request, actor: Employee, q: str = "", page: int = 1) -> Response:
     return await _account_list(request, customers_only=True, q=q, page=max(1, min(page, 1000000)))
 
 
-@router.get("/admin/customers/{key}", response_class=HTMLResponse)
-async def employee_customer(request: Request, key: UUID, actor: Employee) -> Response:
-    account = await _get_account(request, key, customers_only=True)
+@router.get("/portal/customers/{account_key}", response_class=HTMLResponse)
+async def employee_customer(request: Request, account_key: UUID, actor: Employee) -> Response:
+    account = await _get_account(request, account_key, customers_only=True)
     return _protected_page(request, "customer.html", {"account": account, "fields": PROFILE_FIELDS})
 
 
-@router.get("/admin/accounts/new", response_class=HTMLResponse)
+@router.get("/portal/accounts/new", response_class=HTMLResponse)
 async def new_account_form(request: Request, actor: Admin) -> Response:
     return _account_form(request, title="Tạo tài khoản", account={}, values={}, roles=list(Role), creating=True)
 
 
-@router.post("/admin/accounts/new", response_class=HTMLResponse)
+@router.post("/portal/accounts/new", response_class=HTMLResponse)
 async def create_account(request: Request, actor: Admin) -> Response:
     fields, password = await _profile_submission(request, include_role=True)
     try:
@@ -493,51 +524,83 @@ def _edit_account_page(request: Request, account: dict, values: dict, error: Acc
     return _account_form(request, title="Sửa tài khoản", account=account, values=values, roles=roles, error=error)
 
 
-@router.get("/admin/accounts/{key}/edit", response_class=HTMLResponse)
-async def edit_account_form(request: Request, key: UUID, actor: Admin) -> Response:
-    account = await _get_account(request, key)
+@router.get("/portal/accounts/{account_key}/edit", response_class=HTMLResponse)
+async def edit_account_form(request: Request, account_key: UUID, actor: Admin) -> Response:
+    account = await _get_account(request, account_key)
     return _edit_account_page(request, account, account)
 
 
-@router.post("/admin/accounts/{key}/edit", response_class=HTMLResponse)
-async def save_account_edit(request: Request, key: UUID, actor: Admin) -> Response:
+@router.post("/portal/accounts/{account_key}/edit", response_class=HTMLResponse)
+async def save_account_edit(request: Request, account_key: UUID, actor: Admin) -> Response:
     fields, _ = await _profile_submission(request, include_role=True)
     try:
-        changed_role = await request.app.state.identity_service.edit_managed_account(actor, key, fields)
+        changed_role = await request.app.state.identity_service.edit_managed_account(actor, account_key, fields)
     except AccountFormError as error:
-        account = await _get_account(request, key)
+        account = await _get_account(request, account_key)
         return _edit_account_page(request, account, account | fields, error)
-    if changed_role and key == actor.account_key:
+    except SessionAccessError:
+        raise
+    except Exception as error:
+        logger.warning("Managed account update failed (%s)", type(error).__name__)
+        return templates.TemplateResponse(
+            request,
+            "error.html",
+            {
+                "title": "Cập nhật không thành công.",
+                "message": "Vui lòng thử lại.",
+                "link_path": request.url_for("edit_account_form", account_key=account_key).path,
+                "link_label": "Quay lại trang sửa tài khoản",
+            },
+            status_code=500,
+            headers=_NO_STORE,
+        )
+    if changed_role and account_key == actor.account_key:
         response = _redirect(request.url_for("portal_login").path + "?role_changed=1")
         response.delete_cookie(PORTAL_SESSION_COOKIE, **_COOKIE_FLAGS)
         return response
-    return _redirect(request.url_for("edit_account_form", key=key).path + "?saved=1")
+    return _redirect(request.url_for("edit_account_form", account_key=account_key).path + "?saved=1")
 
 
-async def _lock_action(request: Request, key: UUID, actor: AuthenticatedSession, *, locked: bool) -> Response:
+async def _lock_action(request: Request, account_key: UUID, actor: AuthenticatedSession, *, locked: bool) -> Response:
     form = await request.form()
     _check_csrf(request, str(form.get("csrf_token", "")))
     is_admin = actor.role == Role.ADMIN
-    detail = request.url_for("edit_account_form" if is_admin else "employee_customer", key=key).path
+    from_accounts = is_admin and form.get("source") == "accounts"
+    query: dict[str, str | int] = {}
+    if from_accounts:
+        q = str(form.get("q", "")).replace('\x00', '').strip()[:255]
+        try:
+            page = max(1, min(int(str(form.get("page", "1"))), 1000000))
+        except ValueError:
+            page = 1
+        destination = request.url_for("admin_accounts").path
+        query = {"q": q, "page": page}
+    else:
+        route = "edit_account_form" if is_admin else "employee_customer"
+        destination = request.url_for(route, account_key=account_key).path
+
     if form.get("confirm") != "yes":
-        return _redirect(detail)
+        return _redirect(f"{destination}?{urlencode(query)}" if query else destination)
     try:
-        await request.app.state.identity_service.set_account_lock(actor, key, locked=locked)
+        await request.app.state.identity_service.set_account_lock(actor, account_key, locked=locked)
     except AccountFormError as error:
-        account = await _get_account(request, key)
+        if from_accounts:
+            return await _account_list(request, customers_only=False, q=q, page=page, error=error)
+        account = await _get_account(request, account_key)
         return _edit_account_page(request, account, account, error)
-    if locked and actor.account_key == key:
+    if locked and actor.account_key == account_key:
         response = _redirect(request.url_for("portal_login").path + "?locked=1")
         response.delete_cookie(PORTAL_SESSION_COOKIE, **_COOKIE_FLAGS)
         return response
-    return _redirect(detail + ("?lock=locked" if locked else "?lock=unlocked"))
+    query["lock"] = "locked" if locked else "unlocked"
+    return _redirect(f"{destination}?{urlencode(query)}")
 
 
-@router.post("/admin/accounts/{key}/lock")
-async def lock_account(request: Request, key: UUID, actor: Internal) -> Response:
-    return await _lock_action(request, key, actor, locked=True)
+@router.post("/portal/accounts/{account_key}/lock")
+async def lock_account(request: Request, account_key: UUID, actor: Internal) -> Response:
+    return await _lock_action(request, account_key, actor, locked=True)
 
 
-@router.post("/admin/accounts/{key}/unlock")
-async def unlock_account(request: Request, key: UUID, actor: Admin) -> Response:
-    return await _lock_action(request, key, actor, locked=False)
+@router.post("/portal/accounts/{account_key}/unlock")
+async def unlock_account(request: Request, account_key: UUID, actor: Admin) -> Response:
+    return await _lock_action(request, account_key, actor, locked=False)

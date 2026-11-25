@@ -1,4 +1,4 @@
-# GET /register
+# GET /api/v1/identity/register
 
 UC-01 Main 1, 1a.
 

@@ -7,3 +7,10 @@ Service công khai cho module khác:
 
 Chỉ gọi repository của chính module này; dữ liệu module khác lấy qua service của module đó.
 """
+
+from app.modules.shopping.service import get_checkout_items
+
+
+async def preview_checkout(session_factory, account_key):
+    async with session_factory() as db:
+        return await get_checkout_items(db, account_key)

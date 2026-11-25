@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = Field(default="", repr=False)
     GOOGLE_REDIRECT_URI: str = ""
+    ALLOWED_ORIGINS: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",

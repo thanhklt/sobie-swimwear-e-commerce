@@ -1,4 +1,4 @@
-# POST /register/otp
+# POST /api/v1/identity/register/otp
 
 UC-01 Main 4–5, E4.
 
@@ -8,7 +8,10 @@ sequenceDiagram
     participant Route as Router storefront
     participant Service as IdentityService
     participant Redis as Trạng thái đăng ký (Redis)
-    Browser->>Route: Nộp OTP
+    Browser->>Route: Nộp OTP kèm Origin
+    break Origin thiếu, null hoặc không được phép
+        Route-->>Browser: HTTP 403 trước khi xác thực phiên hoặc gọi dịch vụ
+    end
     Route->>Service: Xác minh OTP của lượt hiện tại
     Service->>Redis: Đối chiếu lượt, email, mã và thời hạn
     alt Sai mã, khác lượt hoặc đã hết hạn

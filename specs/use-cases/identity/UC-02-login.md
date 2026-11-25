@@ -26,7 +26,7 @@ Người dùng bấm "Đăng nhập", hoặc bị yêu cầu đăng nhập khi t
 7. Nếu khách bắt đầu đăng nhập từ bước đặt hàng, hệ thống chuyển khách về trang thanh toán theo 1a. Khi người dùng mở trang đăng nhập trực tiếp, Khách hàng được chuyển đến trang chủ storefront, Nhân viên được chuyển đến tab Tổng quan Nhân viên và Admin được chuyển đến tab Tổng quan Admin.
 
 ## Alternative Flows
-- **1a. Đăng nhập khi đang đặt hàng:** khách bị yêu cầu đăng nhập từ bước đặt hàng. Sau khi đăng nhập thành công bằng mật khẩu Sobie hoặc Google, khách quay lại trang thanh toán với giỏ đã gộp theo UC-19 và UC-20.
+- **1a. Đăng nhập khi đang đặt hàng:** khách chưa có phiên truy cập `GET /api/v1/ordering/checkout` được chuyển đến `GET /api/v1/identity/login`. Sau khi đăng nhập bằng mật khẩu Sobie, Google đã liên kết hoặc Google xác minh OTP lần đầu, khách quay lại checkout. Trình duyệt gửi giỏ trong `localStorage` để gộp theo UC-18 2b và AC-6 rồi hiển thị giỏ tài khoản cho UC-19 và UC-20.
 - **1b. Bấm "Quên mật khẩu":** trong giai đoạn 1, storefront hiển thị nút "Quên mật khẩu" và giữ khách ở trang đăng nhập khi bấm nút. Chức năng khôi phục mật khẩu làm ở giai đoạn 2. Portal quản trị không hiển thị nút này trong giai đoạn 1.
 - **1c. Đăng nhập với Google (storefront):** Khách chọn “Đăng nhập với Google” và xác thực với Google qua OpenID Connect (OAuth 2.0), hoặc tiếp tục từ E1 của UC-01 với kết quả xác thực Google vừa nhận. Sobie kiểm tra phản hồi và tìm tài khoản hiện có theo định danh Google (`sub`). Nếu đã có liên kết, chuyển thẳng đến bước 4. Nếu chưa có liên kết nhưng email đã xác minh trùng với tài khoản Sobie hiện có, chuyển đến 1d. Các trường hợp khác xử lý theo E6. Khách không phải nhập hoặc tạo mật khẩu Sobie.
 - **1d. Dùng Google lần đầu với tài khoản Sobie hiện có:** Sobie gửi OTP đến email đang lưu trên tài khoản Sobie có email trùng. Khách nhập mã và Sobie kiểm tra mã hợp lệ cho lượt liên kết này. Sau khi xác minh OTP thành công và kiểm tra vai trò, trạng thái theo bước 4 và 5, Sobie lưu liên kết Google vào tài khoản hiện có rồi tiếp tục bước 6 để cấp phiên. Nếu xác minh OTP thất bại, xử lý theo E6.
@@ -83,7 +83,8 @@ And: không có phiên đăng nhập nào được tạo
 ### AC-7: Quay lại trang đặt hàng sau đăng nhập
 Given: khách vãng lai bấm đặt hàng và bị chuyển tới trang đăng nhập
 When: khách đăng nhập thành công bằng mật khẩu Sobie hoặc Google
-Then: khách quay lại trang thanh toán với giỏ đã gộp theo UC-19 và UC-20
+Then: khách quay lại trang thanh toán với giỏ đã gộp theo UC-18 2b và AC-6
+And: biến thể trùng được cộng dồn tối đa bằng tồn kho, giỏ trình duyệt đã gửi được làm trống sau khi gộp thành công và gửi lại cùng yêu cầu không cộng thêm lần nữa
 
 ### AC-8: Tài khoản nội bộ đăng nhập ở storefront
 Given: tài khoản Nhân viên "nv1@example.com" trạng thái Hoạt động
@@ -161,6 +162,12 @@ Given: Sobie đã gửi OTP đến email của tài khoản hiện có để xá
 When: khách nhập mã sai, mã hết hạn hoặc mã của lượt khác
 Then: hệ thống báo lỗi xác minh và không lưu liên kết Google hoặc cấp phiên
 
+### AC-22: Khóa OTP liên kết Google sau 5 lần nhập sai
+Given: khách đã nhận OTP để liên kết Google với tài khoản Sobie
+When: khách nhập sai lần thứ năm trong thời hạn của mã
+Then: hệ thống khóa mã, trả `429` và không cấp phiên từ lượt xác minh đã khóa
+And: sau đủ 5 phút kể từ lần sai thứ năm, khách có thể xác thực lại với Google để nhận mã khác
+
 ## Dependencies
 - **Upstream UC:** UC-01 Đăng ký tài khoản, UC-06 Admin tạo tài khoản, UC-08 Khóa và mở khóa tài khoản
 - **Downstream UC:** UC-03 Đăng xuất, UC-04, UC-05, UC-18 Quản lý giỏ hàng, UC-19, UC-20 (đặt hàng cần đăng nhập)
@@ -171,6 +178,7 @@ Then: hệ thống báo lỗi xác minh và không lưu liên kết Google hoặ
 - Cơ chế phiên, thời hạn và rate limit theo BR-GIAIDOAN1, Constraints chung — Xác thực; bảng `identity.session` theo data model v2.15 (Q35).
 
 ### Quyết định đã chốt
+- Hai POST mật khẩu tại `/api/v1/identity/login` và `/api/v1/identity/portal/login` nhận `identifier` và `password`. Thiếu `Origin`, `Origin: null` hoặc origin ngoài danh sách cho phép trả HTTP 403 trước khi gia hạn phiên hoặc truy cập Redis. Trang đăng nhập gửi `Referrer-Policy: strict-origin`.
 - Khi đã có phiên portal hợp lệ, mở lại trang đăng nhập đưa người dùng về tab Tổng quan của vai trò hiện tại. Tab Tổng quan Admin phục vụ quản trị tài khoản. Dashboard báo cáo UC-37 thuộc quyền Nhân viên.
 - Admin chỉ quản lý tài khoản và gán vai trò cho tài khoản; mọi thao tác vận hành cửa hàng do Nhân viên thực hiện (đã chốt 15/11/2026).
 - Email và số điện thoại dùng để đăng nhập nằm trên account (unique); không có username riêng. Vai trò và trạng thái cũng nằm trên account (theo ERD, đã chốt 15/11/2026).

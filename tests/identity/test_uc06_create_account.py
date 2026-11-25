@@ -5,7 +5,7 @@ from urllib.parse import urlparse
 import asyncpg
 import pytest
 
-from identity_support import profile, signed_in, submit
+from identity_support import post_with_csrf, profile, signed_in, submit
 
 
 @pytest.mark.parametrize("role,prefix", [
@@ -16,7 +16,7 @@ from identity_support import profile, signed_in, submit
 def test_uc06_ac1_ac2_ac4_ac6_admin_creates_account(world, role, prefix):
     world.seed_member("admin@example.com", role="admin", phone="0901000001")
     admin = signed_in(world, "admin@example.com", portal=True)
-    path = "/admin/accounts/new"
+    path = "/api/v1/identity/portal/accounts/new"
     page = admin.get(path)
     assert all(f'value="{option}"' in page.text for option in ("customer", "employee", "admin"))
     response = submit(admin, path, **profile(role=role, password="open123"))
@@ -45,7 +45,7 @@ def test_uc06_ac3_ac6_ac8_invalid_form(world, fields, message):
     world.seed_member("taken@example.com", phone="0901000002")
     admin = signed_in(world, "admin@example.com", portal=True)
     data = profile(role="customer", password="open123") | fields
-    response = submit(admin, "/admin/accounts/new", **data)
+    response = submit(admin, "/api/v1/identity/portal/accounts/new", **data)
     assert response.status_code == 400 and message in response.text
     assert world.counts() == (2, 0, 0, 0)
 
@@ -53,10 +53,11 @@ def test_uc06_ac3_ac6_ac8_invalid_form(world, fields, message):
 def test_uc06_ac5_employee_cannot_create(world):
     world.seed_member("staff@example.com", role="employee", phone="0981234567")
     staff = signed_in(world, "staff@example.com", portal=True)
-    assert staff.get("/admin/accounts/new").status_code == 403
-    from test_uc01_register_account import post
+    path = "/api/v1/identity/portal/accounts/new"
+    assert staff.get(path).status_code == 403
+    page = staff.get("/api/v1/identity/portal/password")
     data = profile(role="admin", password="open123")
-    assert post(staff, staff.get("/admin/customers"), "/admin/accounts/new", **data).status_code == 403
+    assert post_with_csrf(staff, page, path, **data).status_code == 403
     assert world.counts() == (1, 0, 0, 0)
 
 
@@ -66,7 +67,7 @@ def test_uc06_ac7_rollback_includes_code_account_and_shopping(world, failure):
     admin = signed_in(world, "admin@example.com", portal=True, client=world.client_without_server_exceptions())
     before = world.counts()
     with world.fail_at(failure):
-        assert submit(admin, "/admin/accounts/new", **profile(role="customer", password="open123")).status_code == 500
+        assert submit(admin, "/api/v1/identity/portal/accounts/new", **profile(role="customer", password="open123")).status_code == 500
     assert world.counts() == before
 
 

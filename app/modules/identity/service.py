@@ -43,6 +43,7 @@ _SESSION_POLICIES = {
 
 _OTP_SECONDS = 300
 _OTP_TRIES = 5
+_OTP_LOCK_SECONDS = 300
 _OTP_FLOW_SECONDS = 1800
 _GRANT_SECONDS = 600
 _GOOGLE_SECONDS = 600
@@ -68,6 +69,8 @@ class RegistrationResult:
     status: int = 200
     location: str = ""
     session_token: str = ""
+    otp_locked: bool = False
+    checkout: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -84,6 +87,8 @@ class _Flow:
     nonce: str = ""
     verifier: str = ""
     allow_create: bool = True
+    retry_at: float = 0
+    checkout: bool = False
 
     def encode(self) -> str:
         return json.dumps(asdict(self), separators=(",", ":"))
@@ -145,6 +150,14 @@ def _flow_problem(
     return RegistrationResult(stage, message, email, status=status)
 
 
+def _locked_otp(flow: _Flow) -> RegistrationResult:
+    if helper.utc_timestamp() < flow.retry_at:
+        message = "Bạn đã nhập sai mã 5 lần. Hãy chờ đủ 5 phút kể từ lần sai cuối rồi yêu cầu mã mới."
+    else:
+        message = "Mã này đã bị khóa sau 5 lần nhập sai. Hãy yêu cầu mã mới."
+    return RegistrationResult(flow.kind, message, flow.email, status=429, otp_locked=True, checkout=flow.checkout)
+
+
 async def _send_challenge(
     store: ChallengeStore,
     key: str,
@@ -162,6 +175,8 @@ async def _send_challenge(
     claim = token_urlsafe(32)
     if not await store.compare_and_set(cooldown, None, claim, _BUSY_SECONDS):
         await _write_flow(store, key, pending.encode(), previous)
+        if previous and previous.attempts <= 0:
+            return _locked_otp(previous)
         return _flow_problem(stage if previous else "email", _RESEND_EARLY, email=flow.email)
 
     otp = helper.generate_otp()
@@ -174,12 +189,13 @@ async def _send_challenge(
         logger.warning("Registration OTP delivery failed (%s)", type(exc).__name__)
         await store.compare_and_set(cooldown, claim, None)
         await _write_flow(store, key, pending.encode(), previous)
-        return _flow_problem(
+        problem = _flow_problem(
             stage if previous else "email",
             "Không thể gửi mã xác minh. Vui lòng thử lại.",
             email=flow.email,
             status=503,
         )
+        return replace(problem, otp_locked=True) if previous and previous.attempts <= 0 else problem
 
     sent_at = helper.utc_timestamp()
     challenge = replace(
@@ -201,27 +217,42 @@ async def _verify_otp(
     store: ChallengeStore, key: str, kind: str, otp: str, *, next_kind: str, next_seconds: int
 ) -> tuple[_Flow | None, RegistrationResult | None]:
     raw, flow = await _read_flow(store, key)
-    if flow is None or flow.kind != kind:
+    if raw is None or flow is None or flow.kind != kind:
         return None, _flow_problem()
-    if helper.utc_timestamp() >= flow.expires_at or flow.attempts <= 0:
-        return None, _flow_problem(kind, _OTP_INVALID, email=flow.email)
-
-    if len(otp) != 6 or not otp.isascii() or not otp.isdigit() or not compare_digest(
+    stamp = flow.stamp
+    invalid = _flow_problem(kind, _OTP_INVALID, email=flow.email)
+    matches = len(otp) == 6 and otp.isascii() and otp.isdigit() and compare_digest(
         _otp_digest(flow, otp), flow.otp_digest
-    ):
-        await _write_flow(store, key, raw, replace(flow, attempts=flow.attempts - 1))
-        return None, _flow_problem(kind, _OTP_INVALID, email=flow.email)
-
-    following = _Flow.new(
-        next_kind,
-        next_seconds,
-        email=flow.email,
-        account_key=flow.account_key,
-        google_sub=flow.google_sub,
     )
-    if not await _write_flow(store, key, raw, following):
-        return None, _flow_problem(kind, _OTP_INVALID, email=flow.email)
-    return following, None
+    while raw is not None and flow is not None and flow.kind == kind and flow.stamp == stamp:
+        now = helper.utc_timestamp()
+        if flow.attempts <= 0:
+            return None, _locked_otp(flow)
+        if now >= flow.expires_at:
+            break
+
+        if matches:
+            following = _Flow.new(
+                next_kind, next_seconds, email=flow.email,
+                account_key=flow.account_key, google_sub=flow.google_sub, checkout=flow.checkout,
+            )
+            if await _write_flow(store, key, raw, following):
+                return following, None
+        elif flow.attempts == 1:
+            retry_at = now + _OTP_LOCK_SECONDS
+            locked = replace(flow, attempts=0, retry_at=retry_at,
+                             retain_until=max(flow.retain_until, retry_at + _OTP_SECONDS))
+            if await store.exhaust_otp(
+                key, raw, locked.encode(), ceil(locked.retain_until - now),
+                cooldown_key=_cooldown_key(kind, flow.email), cooldown_seconds=_OTP_LOCK_SECONDS,
+            ):
+                return None, _locked_otp(locked)
+        elif await _write_flow(store, key, raw, replace(flow, attempts=flow.attempts - 1)):
+            return None, invalid
+
+        # A concurrent update may have charged another attempt. Retry only against the same OTP.
+        raw, flow = await _read_flow(store, key)
+    return None, invalid
 
 
 def _check_customer(account: repository.Account) -> None:
@@ -375,12 +406,12 @@ class IdentityService:
             account, _ = await self._active_actor(db, actor, roles)
             if not await self.repository.verify_password(db, current, account.account_hash_password):
                 raise AccountFormError("current_password", "Mật khẩu hiện tại không đúng")
-            message = helper.password_validation_error(password, confirmation)
-            if message:
-                field = "password_confirmation" if password and confirmation and password != confirmation else "password"
-                raise AccountFormError(field, message)
+            if message := helper.password_validation_error(password, password):
+                raise AccountFormError("password", message)
             if password == current:
                 raise AccountFormError("password", "Mật khẩu mới phải khác mật khẩu hiện tại")
+            if password != confirmation:
+                raise AccountFormError("password_confirmation", "Mật khẩu nhập lại không khớp")
             account.account_hash_password = await self.repository.hash_password(db, password=password)
             await self.repository.save_account(db, account)
             await self.repository.delete_account_sessions(db, actor.account_key)
@@ -484,6 +515,8 @@ class IdentityService:
     async def get_registration_stage(self, browser: str) -> RegistrationResult:
         _, flow = await _read_flow(get_challenge_store(), _flow_key(browser))
         if flow and flow.kind in {"otp", "password", "google_link"}:
+            if flow.kind != "password" and flow.attempts <= 0:
+                return replace(_locked_otp(flow), status=200)
             return RegistrationResult(flow.kind, email=flow.email)
         return RegistrationResult()
 
@@ -519,7 +552,10 @@ class IdentityService:
         raw, previous = await _read_flow(store, key)
         if previous is None or previous.kind != "otp":
             return _flow_problem()
-        if helper.utc_timestamp() < previous.expires_at:
+        now = helper.utc_timestamp()
+        if previous.attempts <= 0 and now < previous.retry_at:
+            return _locked_otp(previous)
+        if now < previous.expires_at:
             return _flow_problem("otp", _RESEND_EARLY, email=previous.email)
 
         async with self.session_factory() as db, transaction(db):
@@ -616,14 +652,16 @@ class IdentityService:
 
 
     # UC-01 Đăng ký tài khoản — 1b.1; E8 (specs/use-cases/identity/UC-01-register-account.md)
-    async def begin_google_registration(self, browser: str, *, allow_create: bool = True) -> RegistrationResult:
+    async def begin_google_registration(
+        self, browser: str, *, allow_create: bool = True, checkout: bool = False
+    ) -> RegistrationResult:
         store = get_challenge_store()
         _, previous = await _read_flow(store, _flow_key(browser))
         if previous and previous.kind == "busy":
             return _flow_problem(message="Yêu cầu đang được xử lý. Vui lòng thử lại.", status=409)
         flow = _Flow.new(
             "google", _GOOGLE_SECONDS, nonce=token_urlsafe(32), verifier=token_urlsafe(48),
-            allow_create=allow_create,
+            allow_create=allow_create, checkout=checkout,
         )
         try:
             location = await get_google_oidc().authorization_url(
@@ -734,12 +772,17 @@ class IdentityService:
             return _flow_problem(message=_REGISTRATION_FAILED, status=500)
 
         if isinstance(result, _Flow):
-            return await _send_challenge(store, key, pending.encode(), result)
+            previous_link = previous if (
+                previous and previous.kind == "google_link" and previous.email == result.email
+            ) else None
+            return await _send_challenge(
+                store, key, pending.encode(), replace(result, checkout=flow.checkout), previous=previous_link
+            )
         if result.stage == "registered":
             return await self._mark_success(store, key, pending)
 
         await self._clear_completed_flow(store, key, pending)
-        return result
+        return replace(result, checkout=flow.checkout)
 
 
     async def _clear_completed_flow(self, store: ChallengeStore, key: str, pending: _Flow) -> None:
@@ -784,4 +827,4 @@ class IdentityService:
             return _flow_problem(message=_GOOGLE_FAILED, status=500)
 
         await self._clear_completed_flow(store, key, grant)
-        return RegistrationResult("signed_in", session_token=token)
+        return RegistrationResult("signed_in", session_token=token, checkout=grant.checkout)

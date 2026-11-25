@@ -66,6 +66,12 @@ When: Admin lưu họ tên hoặc địa chỉ nhận hàng hợp lệ cho tài 
 Then: hệ thống cập nhật hồ sơ của tài khoản Khách hàng đó và giữ nguyên mã `KH-`
 And: trang hồ sơ của Khách hàng hiển thị thông tin đã cập nhật
 
+## Hiện trạng triển khai
+
+- Khách hàng xem và lưu hồ sơ của mình tại `/api/v1/identity/account/profile`. Admin lưu hồ sơ tài khoản Khách hàng đã chọn tại `POST /api/v1/identity/portal/accounts/{account_key}/edit` theo UC-07.
+- Hai POST sửa hồ sơ hiện kiểm tra `csrf_token`. Kiểm tra `Origin` theo API Contract v1 còn chờ triển khai.
+- Checkout hiện hiển thị và gộp giỏ. Nút “Sử dụng thông tin hồ sơ” còn chờ triển khai tại UC-19 và UC-20.
+
 ## Dependencies
 - **Upstream UC:** UC-01 Đăng ký tài khoản, UC-02 Đăng nhập
 - **Downstream UC:** UC-19, UC-20 (nút "Sử dụng thông tin hồ sơ" khi đặt hàng)

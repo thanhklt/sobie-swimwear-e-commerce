@@ -6,3 +6,9 @@ Service công khai cho module khác:
 
 Chỉ gọi repository của chính module này; dữ liệu module khác lấy qua service của module đó.
 """
+
+from app.modules.catalog import repository
+
+
+async def get_cart_variants(db, variant_keys):
+    return await repository.find_cart_variants(db, variant_keys)

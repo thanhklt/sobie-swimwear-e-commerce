@@ -27,7 +27,7 @@ Khách vãng lai bấm "Đăng ký" trên website.
 
 ## Alternative Flows
 - **1a. Đang đăng nhập:** người dùng đã đăng nhập mở trang đăng ký thì hệ thống chuyển về trang chủ, không cho đăng ký thêm tài khoản.
-- **4a. Yêu cầu gửi lại OTP:** sau khi đủ 5 phút kể từ lần gửi gần nhất, khách có thể yêu cầu mã mới. Mã mới có hiệu lực 5 phút kể từ lần gửi mới. Khách tiếp tục ở bước 4.
+- **4a. Yêu cầu gửi lại OTP:** sau khi đủ 5 phút kể từ lần gửi gần nhất, khách có thể yêu cầu mã mới. Nếu đã nhập sai 5 lần, thời gian chờ 5 phút tính từ lần sai thứ năm. Mã mới có hiệu lực 5 phút kể từ lần gửi mới. Khách tiếp tục ở bước 4.
 
 ### 1b. Đăng ký với Google
 1. Trên màn hình đăng ký, khách chọn “Đăng ký với Google”. Sobie chuyển khách đến Google để xác thực qua OpenID Connect (OAuth 2.0).
@@ -131,6 +131,12 @@ Given: khách dùng Google từ màn hình đăng ký và đã có tài khoản 
 When: Sobie xác thực Google và xác nhận tài khoản hiện có theo liên kết Google hoặc theo OTP liên kết lần đầu ở UC-02
 Then: Sobie cấp phiên cho tài khoản hiện có theo UC-02, không yêu cầu mật khẩu Sobie
 And: không tạo tài khoản, giỏ hàng hoặc danh sách yêu thích mới
+
+### AC-17: Khóa OTP sau 5 lần nhập sai
+Given: khách đã nhận OTP đăng ký qua email
+When: khách nhập sai lần thứ năm trong thời hạn của mã
+Then: hệ thống khóa mã và trả `429` cho lần thứ năm và các lần xác minh tiếp theo đối với mã đã khóa
+And: khách có thể yêu cầu mã khác sau đủ 5 phút kể từ lần sai thứ năm
 
 ## Dependencies
 - **Upstream UC:** —

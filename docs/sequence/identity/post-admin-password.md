@@ -13,5 +13,5 @@ sequenceDiagram
     Service->>Data: Xác thực mật khẩu hiện tại và mật khẩu mới
     Service->>Data: Ghi bcrypt mới và xóa tất cả phiên của account cùng transaction
     Service-->>Route: Kết quả xử lý nghiệp vụ
-    Route-->>Browser: 303 /api/v1/admin/login để đăng nhập lại hoặc 400 lỗi theo trường
+    Route-->>Browser: 303 /api/v1/identity/portal/login để đăng nhập lại hoặc 400 lỗi theo trường
 ```

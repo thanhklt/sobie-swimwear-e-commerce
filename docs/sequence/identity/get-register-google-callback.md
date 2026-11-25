@@ -1,6 +1,6 @@
-# GET /register/google/callback
+# GET /api/v1/identity/register/google/callback
 
-UC-01 1b.2–5, E1, E6, E8.
+UC-01 1b.2–5, E1, E6, E8 và UC-02 1c, 1d, AC-7.
 
 ```mermaid
 sequenceDiagram
@@ -26,12 +26,12 @@ sequenceDiagram
             Service->>Repo: Ghi mã KH, account và sub
             Service->>Shopping: Ghi cart và wishlist cùng transaction
             Service->>DB: Commit hoặc rollback toàn bộ
-            Route-->>Browser: Chuyển /api/v1/login khi thành công
+            Route-->>Browser: Chuyển /api/v1/identity/login khi thành công
         else Sub đã liên kết, đúng vai trò và trạng thái
             Service->>Repo: Cấp phiên storefront cho tài khoản cũ
-            Route-->>Browser: Đặt cookie phiên và chuyển trang
+            Route-->>Browser: Đặt cookie phiên và 303 tới trang chủ hoặc checkout theo lượt OIDC
         else Email trùng và đủ điều kiện liên kết lần đầu
-            Service->>Redis: Ghi OTP gắn với tài khoản và sub
+            Service->>Redis: Ghi lượt OTP cùng tài khoản, sub và đích checkout nếu có
             Service->>Mail: Gửi OTP đến email trên tài khoản
             Route-->>Browser: Yêu cầu xác minh liên kết
         end

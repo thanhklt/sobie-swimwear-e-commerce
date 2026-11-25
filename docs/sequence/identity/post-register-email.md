@@ -1,4 +1,4 @@
-# POST /register/email
+# POST /api/v1/identity/register/email
 
 UC-01 Main 2–3, E1, E3.
 
@@ -11,7 +11,10 @@ sequenceDiagram
     participant DB as PostgreSQL
     participant Redis as Trạng thái đăng ký (Redis)
     participant Mail as Dịch vụ email
-    Browser->>Route: Gửi email và mã bảo vệ biểu mẫu
+    Browser->>Route: Gửi email kèm Origin
+    break Origin thiếu, null hoặc không được phép
+        Route-->>Browser: HTTP 403 trước khi xác thực phiên hoặc gọi dịch vụ
+    end
     Route->>Service: Bắt đầu đăng ký cho trình duyệt này
     Service->>Service: Kiểm tra định dạng email
     alt Email không hợp lệ

@@ -1,6 +1,6 @@
 """Xác thực phiên theo cổng và kiểm tra vai trò dành cho các route."""
 
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Set
 
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
@@ -9,15 +9,19 @@ from starlette.types import ASGIApp
 
 from app.error.exceptions import SessionAccessError
 from app.modules.identity.session import AuthenticatedSession, Role, SessionPortal
+from app.security.origin import has_allowed_origin, origin_rejected
 
 STOREFRONT_SESSION_COOKIE = "storefront_session"
 PORTAL_SESSION_COOKIE = "portal_session"
 
 
 class SessionMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app: ASGIApp, *, api_prefix: str) -> None:
+    def __init__(
+        self, app: ASGIApp, *, api_prefix: str, origin_protected_paths: Set[str] = frozenset()
+    ) -> None:
         super().__init__(app)
-        self.portal_prefixes = ("/admin", f"{api_prefix}/admin")
+        self.portal_prefix = f"{api_prefix}/identity/portal"
+        self.origin_protected_paths = origin_protected_paths
 
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
@@ -27,7 +31,15 @@ class SessionMiddleware(BaseHTTPMiddleware):
         if root_path and (path == root_path or path.startswith(f"{root_path}/")):
             path = path[len(root_path) :] or "/"
 
-        if any(path == prefix or path.startswith(f"{prefix}/") for prefix in self.portal_prefixes):
+        # Reject before authenticating or renewing a session and before dispatching to a route.
+        if (
+            request.method == "POST"
+            and path.rstrip("/") in self.origin_protected_paths
+            and not has_allowed_origin(request)
+        ):
+            return origin_rejected()
+
+        if path == self.portal_prefix or path.startswith(f"{self.portal_prefix}/"):
             cookie_name, portal = PORTAL_SESSION_COOKIE, SessionPortal.PORTAL
         else:
             cookie_name, portal = STOREFRONT_SESSION_COOKIE, SessionPortal.STOREFRONT

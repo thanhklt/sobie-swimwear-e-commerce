@@ -5,7 +5,7 @@
     <p class="identity-eyebrow">Sobie / Summer Club</p>
     <h1 id="identity-title">{{ {"email": "Đăng ký tài khoản", "otp": "Xác minh email", "password": "Tạo mật khẩu",
             "google_link": "Xác minh liên kết Google"}[result.stage] }}</h1>
-    {% if result.stage in ("otp", "google_link") %}
+    {% if result.stage in ("otp", "google_link") and not result.otp_locked %}
       <p>Nhập mã xác minh đã gửi đến <strong>{{ result.email }}</strong>.</p>
     {% elif result.stage == "password" %}
       <p>Email đã xác minh: <strong>{{ result.email }}</strong></p>
@@ -18,7 +18,6 @@
 
   {% if result.stage == "email" %}
     <form class="identity-form" action="{{ request.url_for('request_registration_otp').path }}" method="post">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <div class="identity-field">
         <label for="email">Email</label>
         <input id="email" name="email" type="email" autocomplete="email" required maxlength="255"
@@ -36,26 +35,30 @@
       <a href="{{ request.url_for('storefront_login').path }}">Đăng nhập</a>
     </p>
   {% elif result.stage in ("otp", "google_link") %}
-    {% set route = "verify_registration_otp" if result.stage == "otp" else "confirm_google_link" %}
-    <form class="identity-form" action="{{ request.url_for(route).path }}" method="post">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <div class="identity-field">
-        <label for="otp">Mã xác minh</label>
-        <input id="otp" name="otp" type="text" inputmode="numeric" autocomplete="one-time-code"
-               pattern="[0-9]{6}" maxlength="6" required>
-      </div>
-      <button class="identity-button" type="submit">Xác minh</button>
-    </form>
-    {% if result.stage == "otp" %}
-      <form class="identity-form" action="{{ request.url_for('resend_registration_otp').path }}" method="post">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <button class="identity-button identity-button--secondary" type="submit">Gửi lại mã</button>
+    {% if not result.otp_locked %}
+      {% set route = "verify_registration_otp" if result.stage == "otp" else "confirm_google_link" %}
+      <form class="identity-form" action="{{ request.url_for(route).path }}" method="post">
+        <div class="identity-field">
+          <label for="otp">Mã xác minh</label>
+          <input id="otp" name="otp" type="text" inputmode="numeric" autocomplete="one-time-code"
+                 pattern="[0-9]{6}" maxlength="6" required>
+        </div>
+        <button class="identity-button" type="submit">Xác minh</button>
       </form>
     {% endif %}
-    <p class="identity-alternative"><a href="{{ request.url_for('registration_form').path }}?restart=1">Bắt đầu lại</a></p>
+    {% if result.stage == "otp" %}
+      <form class="identity-form" action="{{ request.url_for('resend_registration_otp').path }}" method="post">
+        <button class="identity-button identity-button--secondary" type="submit">Gửi lại mã</button>
+      </form>
+    {% elif result.otp_locked %}
+      <a class="identity-button identity-button--secondary"
+         href="{{ request.url_for('start_google_registration').path }}?{{ google_retry_query }}">Xác thực lại với Google</a>
+    {% endif %}
+    {% if not result.otp_locked %}
+      <p class="identity-alternative"><a href="{{ request.url_for('registration_form').path }}?restart=1">Bắt đầu lại</a></p>
+    {% endif %}
   {% elif result.stage == "password" %}
     <form class="identity-form" action="{{ request.url_for('create_registration_password').path }}" method="post">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <div class="identity-field">
         <label for="password">Mật khẩu mới</label>
         <input id="password" name="password" type="password" autocomplete="new-password"

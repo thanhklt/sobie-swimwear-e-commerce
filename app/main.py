@@ -15,7 +15,15 @@ from app.modules.identity.repository import IdentityRepository
 from app.modules.identity.service import IdentityService
 from app.error.handlers import register_error_handlers
 from app.modules.identity.registration_challenges import close_challenge_store
-from app.modules.identity.router import login_router, router as identity_router, storefront_identity_home
+from app.modules.identity.router import (
+    login_post_paths,
+    logout_post_paths,
+    registration_post_paths,
+    router as identity_router,
+    storefront_identity_home,
+)
+from app.modules.ordering.router import router as ordering_router
+from app.modules.shopping.router import cart_merge_path, router as shopping_router
 from app.security.session import SessionMiddleware
 
 version = "v1"
@@ -39,10 +47,15 @@ app = FastAPI(
     lifespan=life_span,
 )
 app.state.identity_service = IdentityService(IdentityRepository(), session_factory)
-app.add_middleware(SessionMiddleware, api_prefix=API_PREFIX)
+app.state.shopping_session_factory = session_factory
+app.add_middleware(
+    SessionMiddleware, api_prefix=API_PREFIX,
+    origin_protected_paths=registration_post_paths | login_post_paths | logout_post_paths | {cart_merge_path},
+)
 app.mount("/static/css", StaticFiles(directory=Path(__file__).parent / "static" / "css"), name="static_css")
 app.include_router(identity_router)
-app.include_router(login_router, prefix=API_PREFIX)
+app.include_router(ordering_router)
+app.include_router(shopping_router)
 register_error_handlers(app)
 
 

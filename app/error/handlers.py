@@ -26,7 +26,7 @@ HOME_ROUTES = {
 }
 
 # Phản hồi gắn với phiên đăng nhập không được cache (BR-GIAIDOAN1, Cache).
-_NO_STORE = {"Cache-Control": "no-store"}
+_NO_STORE = {"Cache-Control": "no-store", "Vary": "HX-Request"}
 
 _PAGES = {
     401: (

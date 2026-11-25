@@ -1,0 +1,116 @@
+{% set prefix = '/api/v1/inventory/staff' %}
+{% set status_labels = {'ACTIVE':'Đang hợp tác','INACTIVE':'Ngừng hợp tác','DRAFT':'Nháp','CONFIRMED':'Đã xác nhận','CANCELLED':'Đã hủy'} %}
+<section id="inventory-content" hx-history="false">
+  <nav aria-label="Kho hàng">
+    <a href="{{ prefix }}/suppliers">Nhà cung cấp</a>
+    <a href="{{ prefix }}/goods-receipts">Phiếu nhập</a>
+    <a href="{{ prefix }}/stock">Tồn kho</a>
+  </nav>
+  {% if message %}<p role="status">{{ message }}</p>{% endif %}
+  {% if errors %}<div role="alert"><p>Vui lòng kiểm tra dữ liệu:</p><ul>{% for field, error in errors.items() %}<li><strong>{{ field }}:</strong> {{ error }}</li>{% endfor %}</ul></div>{% endif %}
+
+  {% if view == 'suppliers' %}
+    <h1>Nhà cung cấp</h1><a href="{{ prefix }}/suppliers/new">Thêm nhà cung cấp</a>
+    <form method="get"><label>Tìm theo tên <input name="q" value="{{ q or '' }}"></label><button>Tìm kiếm</button></form>
+    <table><caption>Danh sách nhà cung cấp</caption><thead><tr><th>Mã</th><th>Tên</th><th>Số điện thoại</th><th>Email</th><th>Địa chỉ</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>
+    {% for supplier in suppliers %}
+      <tr><td>{{ supplier.supplier_id }}</td><td>{{ supplier.supplier_name }}</td><td>{{ supplier.supplier_phone_number }}</td><td>{{ supplier.supplier_email or '' }}</td><td>{{ supplier.supplier_address or '' }}</td><td>{{ status_labels[supplier.supplier_status] }}</td><td>
+        <a href="{{ prefix }}/suppliers/{{ supplier.supplier_key }}/edit">Sửa</a>
+        {% if supplier.supplier_status == 'ACTIVE' %}<form method="post" action="{{ prefix }}/suppliers/{{ supplier.supplier_key }}/deactivate"><button name="confirm" value="yes">Ngừng hợp tác</button></form>{% endif %}
+        <form method="post" action="{{ prefix }}/suppliers/{{ supplier.supplier_key }}/delete"><button name="confirm" value="yes">Xóa</button></form>
+      </td></tr>
+    {% else %}<tr><td colspan="7">Không tìm thấy nhà cung cấp</td></tr>{% endfor %}
+    </tbody></table>
+
+  {% elif view == 'supplier_form' %}
+    {% set supplier = supplier or {} %}{% set form = form or {} %}
+    <h1>{{ 'Sửa' if supplier.supplier_key else 'Thêm' }} nhà cung cấp</h1>
+    <form method="post" action="{{ prefix }}/suppliers/{{ (supplier.supplier_key|string + '/edit') if supplier.supplier_key else 'new' }}">
+      <label>Tên <input name="name" maxlength="255" required value="{{ form.get('name', supplier.get('supplier_name', '')) }}"></label>
+      <label>Số điện thoại <input name="phone_number" maxlength="20" required value="{{ form.get('phone_number', supplier.get('supplier_phone_number', '')) }}"></label>
+      <label>Email <input name="email" type="email" maxlength="255" value="{{ form.get('email', supplier.get('supplier_email') or '') }}"></label>
+      <label>Địa chỉ <input name="address" maxlength="255" value="{{ form.get('address', supplier.get('supplier_address') or '') }}"></label>
+      <button>Lưu</button><a href="{{ prefix }}/suppliers">Quay lại</a>
+    </form>
+
+  {% elif view == 'receipts' %}
+    <h1>Phiếu nhập</h1><a href="{{ prefix }}/goods-receipts/new">Lập phiếu nhập</a>
+    <form method="get">
+      <label>Trạng thái <select name="status"><option value="">Tất cả</option>{% for code in ['DRAFT','CONFIRMED','CANCELLED'] %}<option value="{{ code }}" {{ 'selected' if status == code else '' }}>{{ status_labels[code] }}</option>{% endfor %}</select></label>
+      <label>Nhà cung cấp <select name="supplier_key"><option value="">Tất cả</option>{% for supplier in suppliers %}<option value="{{ supplier.supplier_key }}" {{ 'selected' if supplier_key|string == supplier.supplier_key|string else '' }}>{{ supplier.supplier_name }}</option>{% endfor %}</select></label><button>Lọc</button>
+    </form>
+    <table><caption>Danh sách phiếu nhập</caption><thead><tr><th>Mã phiếu</th><th>Nhà cung cấp</th><th>Ngày tạo</th><th>Tổng tiền (VND)</th><th>Trạng thái</th></tr></thead><tbody>
+    {% for receipt in receipts %}<tr><td><a href="{{ prefix }}/goods-receipts/{{ receipt.goods_receipt_key }}">{{ receipt.goods_receipt_id }}</a></td><td>{{ receipt.supplier_name }}</td><td>{{ receipt.goods_receipt_created_date | inventory_time }}</td><td>{{ receipt.goods_receipt_final_price }}</td><td>{{ status_labels[receipt.goods_receipt_status] }}</td></tr>
+    {% else %}<tr><td colspan="5">Không tìm thấy phiếu nhập</td></tr>{% endfor %}
+    </tbody></table>
+
+  {% elif view in ['receipt_form','receipt_detail'] %}
+    {% set receipt = receipt or {} %}{% set form = form or {} %}
+    {% set editable = not receipt.get('goods_receipt_key') or receipt.get('goods_receipt_status') == 'DRAFT' %}
+    <h1>{{ receipt.get('goods_receipt_id', 'Lập phiếu nhập') }}</h1>
+    {% if receipt.goods_receipt_key %}
+      <dl><dt>Trạng thái</dt><dd>{{ status_labels[receipt.goods_receipt_status] }}</dd><dt>Nhà cung cấp</dt><dd>{{ receipt.supplier_name }}</dd><dt>Nhân viên lập</dt><dd>{{ receipt.goods_receipt_account_key }}</dd><dt>Ngày tạo</dt><dd>{{ receipt.goods_receipt_created_date | inventory_time }}</dd><dt>Tổng tiền (VND)</dt><dd>{{ receipt.goods_receipt_final_price }}</dd></dl>
+    {% endif %}
+    {% if editable %}
+      <form id="receipt-form" method="post" action="{{ prefix }}/goods-receipts/{{ (receipt.goods_receipt_key|string + '/edit') if receipt.goods_receipt_key else 'new' }}">
+        <label>Nhà cung cấp <select name="supplier_key" required>
+          <option value="">Chọn nhà cung cấp đang hợp tác</option>
+          {% for supplier in suppliers %}<option value="{{ supplier.supplier_key }}" {{ 'selected' if form.get('supplier_key', receipt.get('goods_receipt_supplier_key', ''))|string == supplier.supplier_key|string else '' }}>{{ supplier.supplier_name }}</option>{% endfor %}
+        </select></label>
+        <div id="receipt-lines">
+        {% for line in lines|default([{}], true) %}
+          <fieldset data-line><legend>Dòng {{ loop.index }}</legend>
+            <label>Biến thể <select name="variant_key" required><option value="">Chọn biến thể</option>{% for variant in variants %}<option value="{{ variant.variant_key }}" {{ 'selected' if line.get('variant_key', line.get('goods_receipt_detail_variant_key', ''))|string == variant.variant_key|string else '' }}>{{ variant.product_name }} – {{ variant.color_name }} – {{ variant.size_name }} ({{ variant.variant_id }})</option>{% endfor %}</select></label>
+            <label>Số lượng <input name="quantity" type="number" min="1" max="2147483647" step="1" required value="{{ line.get('quantity', line.get('goods_receipt_detail_quantity', '')) }}"></label>
+            <label>Giá nhập (VND) <input name="unit_price" type="number" min="0" max="999999999999" step="1" required value="{{ line.get('unit_price', line.get('goods_receipt_detail_unit_price', '')) }}"></label>
+            <output data-line-total aria-label="Thành tiền (VND)">{{ line.get('goods_receipt_detail_total_price', '') }}</output><button type="button" data-remove-line>Xóa dòng</button>
+          </fieldset>
+        {% endfor %}
+        </div>
+        <button type="button" id="add-receipt-line">Thêm dòng</button><p>Tổng tiền (VND): <output id="receipt-total">{{ receipt.get('goods_receipt_final_price', '0') }}</output></p><button>Lưu phiếu nháp</button>
+      </form>
+      <template id="receipt-line-template"><fieldset data-line><legend>Dòng nhập</legend>
+        <label>Biến thể <select name="variant_key" required><option value="">Chọn biến thể</option>{% for variant in variants %}<option value="{{ variant.variant_key }}">{{ variant.product_name }} – {{ variant.color_name }} – {{ variant.size_name }} ({{ variant.variant_id }})</option>{% endfor %}</select></label>
+        <label>Số lượng <input name="quantity" type="number" min="1" max="2147483647" step="1" required></label><label>Giá nhập (VND) <input name="unit_price" type="number" min="0" max="999999999999" step="1" required></label><output data-line-total aria-label="Thành tiền (VND)"></output><button type="button" data-remove-line>Xóa dòng</button>
+      </fieldset></template>
+      <script>
+      (() => {
+        const form = document.getElementById('receipt-form');
+        const lines = document.getElementById('receipt-lines');
+        function totals() {
+          let sum = 0n;
+          for (const row of lines.querySelectorAll('[data-line]')) {
+            const quantity = row.querySelector('[name=quantity]').value;
+            const price = row.querySelector('[name=unit_price]').value;
+            const amount = /^\d+$/.test(quantity) && /^\d+$/.test(price) ? BigInt(quantity) * BigInt(price) : 0n;
+            row.querySelector('[data-line-total]').textContent = amount.toString(); sum += amount;
+          }
+          document.getElementById('receipt-total').textContent = sum.toString();
+        }
+        document.getElementById('add-receipt-line').onclick = () => { lines.append(document.getElementById('receipt-line-template').content.cloneNode(true)); totals(); };
+        form.addEventListener('click', event => { if (event.target.hasAttribute('data-remove-line')) { event.target.closest('[data-line]').remove(); totals(); } });
+        form.addEventListener('input', totals); totals();
+      })();
+      </script>
+    {% else %}
+      <table><caption>Chi tiết phiếu nhập</caption><thead><tr><th>Biến thể</th><th>Số lượng</th><th>Giá nhập (VND)</th><th>Thành tiền (VND)</th></tr></thead><tbody>{% for line in lines %}<tr><td>{{ line.product_name }} – {{ line.color_name }} – {{ line.size_name }}</td><td>{{ line.goods_receipt_detail_quantity }}</td><td>{{ line.goods_receipt_detail_unit_price }}</td><td>{{ line.goods_receipt_detail_total_price }}</td></tr>{% endfor %}</tbody></table>
+    {% endif %}
+    {% if receipt.get('goods_receipt_status') == 'DRAFT' %}
+      <form method="post" action="{{ prefix }}/goods-receipts/{{ receipt.goods_receipt_key }}/confirm"><button name="confirm" value="yes">Xác nhận phiếu nhập</button></form>
+      <form method="post" action="{{ prefix }}/goods-receipts/{{ receipt.goods_receipt_key }}/cancel"><button name="confirm" value="yes">Hủy phiếu nháp</button></form>
+    {% endif %}
+    <a href="{{ prefix }}/goods-receipts">Quay lại danh sách</a>
+
+  {% elif view == 'stock' %}
+    <h1>Tồn kho</h1>
+    <form method="get"><label>Tìm theo tên sản phẩm <input name="q" value="{{ q or '' }}"></label><label>Danh mục <select name="category_key"><option value="">Tất cả</option>{% for category in categories %}<option value="{{ category.category_key }}" {{ 'selected' if category_key|string == category.category_key|string else '' }}>{{ category.category_name }}</option>{% endfor %}</select></label><button>Tìm kiếm / lọc</button></form>
+    <table><caption>Tồn kho theo biến thể</caption><thead><tr><th>Sản phẩm</th><th>Màu</th><th>Size</th><th>Số lượng tồn</th><th>Cảnh báo</th></tr></thead><tbody>
+    {% for stock in stocks %}<tr><td>{{ stock.product_name }}</td><td>{{ stock.color_name }}</td><td>{{ stock.size_name }}</td><td>{{ stock.stock_quantity }}</td><td>{{ 'Tồn kho thấp' if stock.is_low_stock else '' }}</td></tr>
+    {% else %}<tr><td colspan="5">Không tìm thấy biến thể</td></tr>{% endfor %}
+    </tbody></table>
+  {% elif view == 'error' %}<h1>Không thể thực hiện</h1>{% endif %}
+
+  {% if view in ['suppliers','receipts','stock'] and page is defined %}
+    <nav aria-label="Phân trang"><span>Trang {{ page }} · {{ total }} kết quả</span>{% if page > 1 %}<a href="{{ request.url.include_query_params(page=page - 1) }}">Trang trước</a>{% endif %}{% if page * page_size < total %}<a href="{{ request.url.include_query_params(page=page + 1) }}">Trang sau</a>{% endif %}</nav>
+  {% endif %}
+</section>

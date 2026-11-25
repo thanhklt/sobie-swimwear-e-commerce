@@ -12,4 +12,7 @@ Phạm vi:
 
 Phụ thuộc module khác (chỉ qua service công khai):
 - catalog: kiểm tra biến thể tồn tại.
+
+Endpoint nhân viên: /api/v1/inventory/staff (UC-32/33/34/39).
+UC-35 dùng restore_stock trong transaction của ordering; không có endpoint cộng tồn riêng.
 """

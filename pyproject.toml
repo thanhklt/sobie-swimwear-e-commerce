@@ -10,6 +10,8 @@ dependencies = [
     "asyncpg (>=0.32.0,<0.33.0)",
     "sqlmodel (>=0.0.50,<0.0.51)",
     "sqlalchemy[asyncio] (>=2.0.14,<3.0.0)",
+    "redis (>=5,<8)",
+    "tzdata (>=2026.6,<2027.0)",
 ]
 
 [dependency-groups]

@@ -17,6 +17,7 @@ services:
       - postgresdb:/var/lib/postgresql/data
       - ./postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
       - ./postgres/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+      - ./postgres/inventory-support.sql:/docker-entrypoint-initdb.d/03-inventory-support.sql:ro
 
 
 networks:

@@ -11,6 +11,7 @@ from app.modules.identity import service
 from app.modules.identity.session import AuthenticatedSession, Role, SessionPortal
 
 PORTAL_PREFIX = "/admin"
+INVENTORY_PORTAL_PREFIX = "/api/v1/inventory/staff"
 STOREFRONT_SESSION_COOKIE = "storefront_session"
 PORTAL_SESSION_COOKIE = "portal_session"
 
@@ -24,7 +25,10 @@ class SessionMiddleware(BaseHTTPMiddleware):
         if root_path and (path == root_path or path.startswith(f"{root_path}/")):
             path = path[len(root_path) :] or "/"
 
-        if path == PORTAL_PREFIX or path.startswith(f"{PORTAL_PREFIX}/"):
+        if any(
+            path == prefix or path.startswith(f"{prefix}/")
+            for prefix in (PORTAL_PREFIX, INVENTORY_PORTAL_PREFIX)
+        ):
             cookie_name, portal = PORTAL_SESSION_COOKIE, SessionPortal.PORTAL
         else:
             cookie_name, portal = STOREFRONT_SESSION_COOKIE, SessionPortal.STOREFRONT

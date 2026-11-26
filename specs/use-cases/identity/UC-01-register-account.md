@@ -185,5 +185,8 @@ And: sau lần nhập sai thứ năm, đồng hồ đếm 5 phút tính từ l�
 - v10 (2026-11-23): cập nhật E1 và AC-16 để khách dùng Google có thể đăng nhập vào tài khoản Sobie hiện có.
 - v11 (2026-11-23): bỏ các trường hồ sơ khỏi hai luồng đăng ký và bỏ E2, AC-3, AC-9, AC-10 liên quan.
 - v12 (2026-11-23): đồng bộ E1 và AC-16 với xác minh OTP khi liên kết Google lần đầu ở UC-02.
+<<<<<<< HEAD
 - v13 (2026-11-26): thêm AC-18 đồng hồ đếm ngược gửi lại OTP; ghi module notification ở Dependencies.
+=======
+>>>>>>> fcb9380e60b4edef3fd9791b45e5863224124b98
 - v14 (2026-11-26): gộp đăng ký và đăng nhập Google, đăng nhập ngay sau khi tạo tài khoản và liên kết theo email không cần OTP.

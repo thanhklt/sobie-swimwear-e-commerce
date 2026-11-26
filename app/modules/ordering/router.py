@@ -22,7 +22,7 @@ async def checkout(request: Request):
     actor = request.state.auth_session
     if actor is None:
         login = request.url_for("storefront_login").path
-        query = urlencode({"return_to": request.url_for("checkout").path})
+        query = urlencode({"return_url": request.url_for("checkout").path})
         return RedirectResponse(f"{login}?{query}", status_code=303, headers=_NO_STORE)
     if actor.role != Role.CUSTOMER:
         raise SessionAccessError(status_code=403)

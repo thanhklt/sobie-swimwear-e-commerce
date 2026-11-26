@@ -9,7 +9,7 @@ sequenceDiagram
     participant Service as SessionService
     participant Redis
     participant Data as Repository và PostgreSQL
-    Browser->>Route: Gửi Origin, identifier và password
+    Browser->>Route: Gửi Origin, identifier, password và return_url tùy chọn
     break Origin thiếu, null hoặc không được phép
         Route-->>Browser: 403 trước khi gia hạn phiên hoặc đếm Redis
     end

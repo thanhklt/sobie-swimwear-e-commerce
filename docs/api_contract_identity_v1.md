@@ -21,12 +21,12 @@ Nguồn nghiệp vụ gồm [UC-01 đến UC-08](../specs/use-cases/identity/) v
 | `POST /api/v1/identity/register/otp/resend` | Vãng lai | Header `Origin` | 200 nhập OTP mới, 400 sai lượt hoặc gửi lại quá sớm, 403 Origin không hợp lệ, 409 xung đột, 429 lượt OTP đang bị khóa, 503 lỗi dịch vụ | [Sơ đồ](sequence/identity/post-register-otp-resend.md) |
 | `POST /api/v1/identity/register/otp` | Vãng lai | Header `Origin`, form `otp` | 200 tạo mật khẩu, 400 mã sai hoặc hết hạn, 403 Origin không hợp lệ, 429 mã bị khóa, 503 lỗi kho xác minh | [Sơ đồ](sequence/identity/post-register-otp.md) |
 | `POST /api/v1/identity/register/password` | Vãng lai | Header `Origin`, form `password`, `password_confirmation` | 303 về đăng nhập, 400 mật khẩu hoặc lượt xác minh không hợp lệ, 403 Origin không hợp lệ, 409 email trùng, 500/503 lỗi xử lý | [Sơ đồ](sequence/identity/post-register-password.md) |
-| `GET /api/v1/identity/register/google` | Vãng lai | Query `login=1` và `return_to=/api/v1/ordering/checkout` tùy chọn | 303 sang Google hoặc tới trang đích nếu có phiên, 400/409/503 lỗi khởi tạo OIDC | [Sơ đồ](sequence/identity/get-register-google.md) |
+| `GET /api/v1/identity/register/google` | Vãng lai | Query `login=1` và `return_url=/api/v1/ordering/checkout` tùy chọn | 303 sang Google hoặc tới trang đích nếu có phiên, 400/409/503 lỗi khởi tạo OIDC | [Sơ đồ](sequence/identity/get-register-google.md) |
 | `GET /api/v1/identity/register/google/callback` | Google / Vãng lai | Query `state`, `code` hoặc `error` | 303 tới trang chủ hoặc checkout kèm phiên, 400/409 lỗi xác minh, 500/503 lỗi xử lý | [Sơ đồ](sequence/identity/get-register-google-callback.md) |
-| `GET /api/v1/identity/login` | Vãng lai / Khách | Query `return_to`, `password_changed` tùy chọn | 200 mẫu đăng nhập, 303 tới `/` hoặc checkout nếu có phiên | [Sơ đồ](sequence/identity/get-login.md) |
+| `GET /api/v1/identity/login` | Vãng lai / Khách | Query `return_url`, `password_changed` tùy chọn | 200 mẫu đăng nhập, 303 tới `/` hoặc checkout nếu có phiên | [Sơ đồ](sequence/identity/get-login.md) |
 | `GET /` | Vãng lai / Khách hàng | Header `Accept` | 200 HTML Identity nếu `Accept` chứa `text/html`, các trường hợp còn lại trả JSON | [Sơ đồ](sequence/identity/get-home.md) |
 | `GET /api/v1/identity/portal/login` | Vãng lai / Nội bộ | Query `password_changed`, `locked`, `role_changed` tùy chọn | 200 mẫu đăng nhập, 303 tới `/api/v1/identity/portal` nếu có phiên | [Sơ đồ](sequence/identity/get-admin-login.md) |
-| `POST /api/v1/identity/login` | Vãng lai / Khách | Header `Origin`, form `identifier`, `password`, query `return_to` tùy chọn | 303 tới `/` hoặc checkout kèm phiên storefront khi đăng nhập thành công, 400/401/403 lỗi xác thực hoặc Origin, 429 quá giới hạn, 503 lỗi Redis | [Sơ đồ](sequence/identity/post-login.md) |
+| `POST /api/v1/identity/login` | Vãng lai / Khách | Header `Origin`, form `identifier`, `password`, query `return_url` tùy chọn | 303 tới `/` hoặc checkout kèm phiên storefront khi đăng nhập thành công, 400/401/403 lỗi xác thực hoặc Origin, 429 quá giới hạn, 503 lỗi Redis | [Sơ đồ](sequence/identity/post-login.md) |
 | `POST /api/v1/identity/portal/login` | Vãng lai / Nội bộ | Header `Origin`, form `identifier`, `password` | 303 tới `/api/v1/identity/portal` kèm phiên portal khi đăng nhập thành công, 400/401/403 lỗi xác thực hoặc Origin, 429 quá giới hạn, 503 lỗi Redis | [Sơ đồ](sequence/identity/post-admin-login.md) |
 | `GET /api/v1/identity/portal` | Nhân viên / Admin | — | 200 trang Tổng quan với liên kết theo vai trò | [Sơ đồ](sequence/identity/get-admin.md) |
 | `POST /api/v1/identity/logout` | Vãng lai / Khách hàng | Header `Origin`, cookie `storefront_session` nếu có | 303 về `/` và hết hạn cookie storefront, kể cả phiên hết hạn hoặc thiếu cookie, 403 Origin không hợp lệ | [Sơ đồ](sequence/identity/post-logout.md) |
@@ -88,7 +88,7 @@ Các phản hồi HTML ở bước OTP đăng ký hiển thị thời gian chờ
 ### `GET /api/v1/identity/register/google`
 
 - `303` điều hướng tới Google OpenID Connect. Server tạo cookie đăng ký nếu cần và lưu trạng thái OIDC trong 10 phút. Luồng dùng scope `openid email` và PKCE `S256`.
-- Trang đăng ký và đăng nhập dùng chung luồng Google. Khi có cả `login=1` và `return_to=/api/v1/ordering/checkout`, server lưu đích checkout trong lượt OIDC.
+- Trang đăng ký và đăng nhập dùng chung luồng Google. Khi có cả `login=1` và `return_url=/api/v1/ordering/checkout`, server lưu đích checkout trong lượt OIDC.
 - `400` nếu không lưu được trạng thái do xung đột. `409` nếu lượt đang được xử lý. `503` nếu cấu hình Google thiếu hoặc dịch vụ xác minh không khả dụng.
 
 ### `GET /api/v1/identity/register/google/callback`
@@ -108,7 +108,7 @@ Các phản hồi HTML ở bước OTP đăng ký hiển thị thời gian chờ
 ## `GET /api/v1/identity/login`
 
 - `200` hiển thị form đăng nhập bằng mật khẩu, nút Quên mật khẩu, liên kết Google và đăng ký. Sau khi tạo tài khoản bằng email, thông báo “Đăng ký thành công.” có thể hiển thị một lần trong 2 phút khi dùng cùng cookie đăng ký. Nếu không đọc được thông báo, trang vẫn trả `200`.
-- `303` nếu đã có phiên storefront hợp lệ, tới checkout khi `return_to` khớp chính xác đường dẫn checkout, hoặc tới `/` trong các trường hợp còn lại. Biểu mẫu mật khẩu và liên kết Google giữ đích checkout khi có.
+- `303` nếu đã có phiên storefront hợp lệ, tới checkout khi `return_url` khớp chính xác đường dẫn checkout, hoặc tới `/` trong các trường hợp còn lại. Biểu mẫu mật khẩu và liên kết Google giữ đích checkout khi có.
 
 ## Đăng nhập bằng mật khẩu và phiên
 
@@ -147,7 +147,7 @@ Các phản hồi HTML ở bước OTP đăng ký hiển thị thời gian chờ
 
 ## Quay lại checkout (UC-02 AC-7)
 
-- `GET /api/v1/ordering/checkout` trả `303` đến trang đăng nhập storefront với query `return_to=/api/v1/ordering/checkout` khi chưa có phiên. Đăng nhập bằng mật khẩu hoặc Google thành công đều chuyển về checkout khi luồng khởi đầu từ checkout. Checkout hiển thị giỏ tài khoản. [Sơ đồ checkout](sequence/ordering/get-checkout.md)
+- `GET /api/v1/ordering/checkout` trả `303` đến trang đăng nhập storefront với query `return_url=/api/v1/ordering/checkout` khi chưa có phiên. Đăng nhập bằng mật khẩu hoặc Google thành công đều chuyển về checkout khi luồng khởi đầu từ checkout. Checkout hiển thị giỏ tài khoản. [Sơ đồ checkout](sequence/ordering/get-checkout.md)
 - Trình duyệt đọc key `sobie.guest-cart` trong `localStorage` có dạng `{"items":[{"variant_key":"<uuid>","quantity":2}]}`. Checkout thêm `merge_key` là UUID vào bản ghi trước lần gửi đầu tiên và giữ khóa khi thử lại. Khi nhận `200`, trình duyệt xóa bản ghi đã gửi nếu bản ghi chưa bị thay đổi và tải giỏ đã gộp.
 - `POST /api/v1/shopping/cart/merge` yêu cầu phiên Khách hàng và `Origin` hợp lệ. Form gửi `merge_key` và hai trường lặp `variant_key`, `quantity` theo từng cặp. `200` trả JSON `items` với `variant_key`, `sku`, `quantity`, `added` và `status` (`merged`, `limited`, `unavailable`). Dòng trùng cộng dồn tối đa bằng tồn kho. Biến thể hết hàng, ngừng bán hoặc không có giá bị bỏ qua. Dữ liệu sai trả `400`; gửi lại cùng khóa và cùng giỏ trả nguyên kết quả; cùng khóa với giỏ khác trả `409`. [Sơ đồ gộp giỏ](sequence/shopping/post-cart-merge.md)
 - Với PostgreSQL đã khởi tạo, áp dụng [lệnh cập nhật schema](../infra/postgres/uc02-cart-merge.sql) trước khi bật checkout.

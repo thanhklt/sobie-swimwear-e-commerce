@@ -9,7 +9,7 @@ sequenceDiagram
     participant Service as GoogleAuthService
     participant Redis as Trạng thái đăng ký (Redis)
     participant Google as Google OIDC
-    Browser->>Route: Chọn Google, kèm login=1 và return_to nếu bắt đầu từ checkout
+    Browser->>Route: Chọn Google, kèm login=1 và return_url nếu bắt đầu từ checkout
     Route->>Service: Khởi tạo lượt OIDC
     Service->>Redis: Lưu đích checkout nếu có, nonce và PKCE verifier theo cặp trình duyệt và state
     Service-->>Route: URL ủy quyền Google

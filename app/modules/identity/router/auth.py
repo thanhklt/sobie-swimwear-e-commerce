@@ -52,7 +52,7 @@ def _login_page(request: Request, *, registered: bool = False, result: Registrat
     template = "identity/auth/portal_login.html" if portal else "identity/auth/login.html"
     submit_route = "portal_password_login" if portal else "storefront_password_login"
     checkout = not portal and _checkout_requested(request)
-    query = {"return_to": request.url_for("checkout").path} if checkout else {}
+    query = {"return_url": request.url_for("checkout").path} if checkout else {}
     form_action = request.url_for(submit_route).path
     if query:
         form_action += "?" + urlencode(query)

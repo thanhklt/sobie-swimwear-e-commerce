@@ -158,7 +158,7 @@ def test_uc02_ac7_checkout_merges_cart_once(world, monkeypatch, branch):
     start = client.get(CHECKOUT, follow_redirects=False)
     assert start.status_code == 303
     entry = urlsplit(start.headers["location"])
-    assert entry.path == LOGIN and parse_qs(entry.query) == {"return_to": [CHECKOUT]}
+    assert entry.path == LOGIN and parse_qs(entry.query) == {"return_url": [CHECKOUT]}
     page = client.get(start.headers["location"])
     if branch == "password":
         action = unescape(re.search(r'<form [^>]*action="([^"]+)"', page.text)[1])

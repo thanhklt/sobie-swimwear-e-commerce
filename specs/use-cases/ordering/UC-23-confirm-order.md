@@ -19,7 +19,7 @@ Nhân viên mở trang quản lý đơn hàng trong khu vực quản trị.
 1. Hệ thống hiển thị danh sách đơn, có phân trang và lọc theo trạng thái đơn `[GD]`: mã đơn, khách, ngày đặt, tổng thanh toán, phương thức, trạng thái đơn, trạng thái thanh toán.
 2. Nhân viên mở một đơn "Chưa xử lý" và xem chi tiết.
 3. Nhân viên bấm "Xác nhận".
-4. Hệ thống kiểm tra lại đơn vẫn "Chưa xử lý", chuyển sang "Đã xác nhận" và lưu lịch sử trạng thái đơn.
+4. Trong cùng một transaction, hệ thống khóa đơn, kiểm tra lại đơn vẫn "Chưa xử lý" và nếu là đơn QR thì phải "Đã thanh toán"; sau đó chuyển sang "Đã xác nhận" và lưu lịch sử trạng thái đơn. Tồn kho đã được trừ khi đặt hàng nên không trừ lại khi xác nhận.
 5. Đơn chờ Nhân viên bàn giao cho vận chuyển (UC-40); đơn chưa xuất hiện trên Trang giả lập vận chuyển.
 
 ## Alternative Flows
@@ -28,6 +28,7 @@ Nhân viên mở trang quản lý đơn hàng trong khu vực quản trị.
 ## Exceptions
 - **E1. Đơn không còn "Chưa xử lý":** khách vừa hủy, hệ thống vừa tự hủy hoặc Nhân viên khác vừa xử lý → từ chối thao tác, báo trạng thái hiện tại.
 - **E2. Xác nhận đơn QR chưa thanh toán:** hệ thống không cho xác nhận, báo "Đơn chưa được thanh toán" `[GD]`.
+- **E3. Lỗi lưu trạng thái hoặc lịch sử:** rollback toàn bộ thay đổi; đơn vẫn "Chưa xử lý", thông báo xác nhận không thành công.
 
 ## Postconditions
 - Đơn ở trạng thái "Đã xác nhận", chờ bàn giao vận chuyển (UC-40).
@@ -67,6 +68,16 @@ Given: có 3 đơn "Chưa xử lý" và 2 đơn "Đã xác nhận"
 When: Nhân viên lọc "Chưa xử lý"
 Then: danh sách chỉ hiển thị 3 đơn "Chưa xử lý"
 
+### AC-7: Không trừ tồn kho lần hai
+Given: đơn "Chưa xử lý" đã trừ tồn kho khi đặt hàng
+When: Nhân viên xác nhận đơn
+Then: đơn chuyển sang "Đã xác nhận" và tồn kho không bị trừ thêm
+
+### AC-8: Xác nhận thất bại phải rollback
+Given: đơn "Chưa xử lý"
+When: việc lưu trạng thái hoặc lịch sử thất bại
+Then: đơn vẫn "Chưa xử lý" và không có lịch sử chuyển sang "Đã xác nhận"
+
 ## Dependencies
 - **Upstream UC:** UC-19 Đặt hàng thanh toán COD, UC-20 Đặt hàng thanh toán chuyển khoản QR, UC-25 Tự đối soát chuyển khoản qua webhook SePay
 - **Downstream UC:** UC-40 Bàn giao đơn cho vận chuyển, UC-22 Hủy đơn hàng, UC-21 Theo dõi đơn hàng
@@ -92,3 +103,5 @@ Then: danh sách chỉ hiển thị 3 đơn "Chưa xử lý"
 - v3 (2026-11-15): xác nhận đơn không còn tự đưa lên trang giả lập (bàn giao qua UC-40); thêm lưu lịch sử trạng thái đơn (theo ERD); hoàn lượt khuyến mãi theo hóa đơn khi từ chối
 - v4 (2026-11-15): bỏ lý do từ chối đơn (không nhập, không lưu) theo data model v1
 - v5 (2026-11-20): đổi tên thành "Xác nhận đơn hàng", đổi file thành `UC-23-confirm-order.md`; bỏ thao tác "Từ chối" và trạng thái "Bị từ chối" — Nhân viên dùng "Hủy đơn" (UC-22)
+- v6 (2026-11-22): làm rõ transaction xác nhận, không trừ tồn kho lần hai, xử lý đồng thời và rollback khi lưu thất bại; thêm AC-7, AC-8.
+- v7 (2026-11-22): kiểm tra trạng thái thanh toán QR trong transaction xác nhận đơn.

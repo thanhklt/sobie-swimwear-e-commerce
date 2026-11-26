@@ -12,7 +12,7 @@ sequenceDiagram
     participant DB as PostgreSQL
     Browser->>Route: Mở checkout
     alt Chưa có phiên storefront
-        Route-->>Browser: 303 tới trang đăng nhập storefront kèm return_to
+        Route-->>Browser: 303 tới trang đăng nhập storefront kèm return_url
         Note over Browser,Route: Đăng nhập thành công bằng mật khẩu hoặc Google đều quay lại checkout
     else Phiên Khách hàng hợp lệ
         Route->>Service: Đọc giỏ để hiển thị

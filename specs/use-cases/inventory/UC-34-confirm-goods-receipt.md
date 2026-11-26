@@ -21,13 +21,14 @@ Hàng đã về kho; Nhân viên chọn "Xác nhận" trên một phiếu nhập
 2. Hệ thống mở một transaction:
    1. Khóa dòng phiếu trong `inventory.goods_receipt` bằng `SELECT ... FOR UPDATE`, rồi kiểm tra lại trạng thái `DRAFT` sau khi lấy được khóa. Nếu không còn `DRAFT`, xử lý E1.
    2. Đọc lại các dòng chi tiết đã lưu của phiếu sau khi khóa phiếu. Mọi thao tác sửa chi tiết hoặc hủy phiếu ở UC-33 phải khóa cùng dòng phiếu và kiểm tra lại `DRAFT` trước khi ghi.
-   3. Khóa các dòng `inventory.stock` tương ứng bằng `SELECT ... FOR UPDATE`, theo thứ tự tăng dần `stock_variant_key` để các phiếu có biến thể chung lấy khóa theo cùng thứ tự. Giữ các khóa đến khi transaction kết thúc. Các phiếu khác nhau cùng nhập một biến thể phải chờ khóa dòng tồn kho đó; sau khi lấy khóa, bước 3 dùng tồn và giá vốn đã được transaction trước commit.
+   3. Gọi Service công khai Catalog trong cùng session/transaction khóa toàn bộ sản phẩm cha theo `product_key ASC`, rồi khóa biến thể theo `variant_key ASC`. Giữ khóa đến commit/rollback, không gọi trực tiếp Repository/bảng Catalog từ inventory và không lấy thêm khóa taxonomy sau khóa sản phẩm. Sau chờ phải đọc lại dữ liệu hiện hành.
+   4. Khóa các dòng `inventory.stock` tương ứng bằng `SELECT ... FOR UPDATE`, theo thứ tự tăng dần `stock_variant_key` để các phiếu có biến thể chung lấy khóa theo cùng thứ tự. Giữ các khóa đến khi transaction kết thúc. Các phiếu khác nhau cùng nhập một biến thể phải chờ khóa dòng tồn kho đó; sau khi lấy khóa, bước 3 dùng tồn và giá vốn đã được transaction trước commit.
 3. Với mỗi dòng (biến thể, số lượng nhập, đơn giá nhập thực tế), hệ thống:
    1. Đọc tồn hiện tại và giá vốn hiện tại từ dòng `inventory.stock` đã khóa; giá trị tồn hiện tại = tồn hiện tại × giá vốn hiện tại.
    2. Tính tồn sau khi nhập = tồn hiện tại + số lượng nhập.
    3. Tính `Giá vốn mới = (Giá trị tồn hiện tại + Tiền nhập lô này) / Tồn sau khi nhập`, với tiền nhập lô này = số lượng nhập × giá nhập; dùng số nguyên VND / `Decimal`, không dùng `float`, làm tròn `ROUND_HALF_UP` về số nguyên VND ở kết quả cuối.
    4. Cập nhật tồn kho và giá vốn của biến thể (bảng `inventory.stock`).
-4. Hệ thống chuyển phiếu sang "Đã xác nhận".
+4. Hệ thống chuyển phiếu sang "Đã xác nhận" trong cùng transaction. Sau khi commit, mọi sản phẩm có biến thể thuộc phiếu này chỉ được sửa Mô tả theo UC-14-Q11; không tự đổi giá, trạng thái hay cấu hình sản phẩm để đáp ứng điều kiện mở bán.
 5. Hệ thống commit transaction.
 6. Sau khi commit thành công, hệ thống gọi service công khai của catalog để tăng số phiên bản cache catalog theo Constraints chung của BR-GIAIDOAN1. Nếu cập nhật cache thành công, các lượt đọc mới dùng key có phiên bản mới để lấy dữ liệu tồn kho đã cập nhật; nếu lỗi, xử lý E3.
 7. Hệ thống thông báo xác nhận phiếu thành công, kể cả khi gặp lỗi cache sau commit theo E3.
@@ -42,6 +43,7 @@ Hàng đã về kho; Nhân viên chọn "Xác nhận" trên một phiếu nhập
 - **E3. Lỗi tăng phiên bản cache catalog sau commit:** phiếu vẫn ở "Đã xác nhận", tồn kho và giá vốn giữ nguyên kết quả đã commit; hệ thống vẫn thông báo xác nhận thành công, ghi log lỗi cache kèm mã phiếu. Không rollback dữ liệu đã commit, không yêu cầu xác nhận lại và không thêm cơ chế retry cache. Dữ liệu cache cũ có thể còn được hiển thị tối đa 5 phút theo TTL dự phòng; khi key hết hạn, lượt đọc tiếp theo lấy dữ liệu mới từ Database.
 
 ## Postconditions
+- Việc chuyển CONFIRMED và cập nhật tồn kho/giá vốn là một commit. Các request sửa Catalog chờ cùng khóa sản phẩm rồi kiểm tra lại phiếu; không được lưu thay đổi ngoài Mô tả dựa trên trạng thái DRAFT cũ. Nếu xác nhận rollback, không phát sinh khóa nghiệp vụ sau nhập mới từ phiếu thất bại này.
 - **Xác nhận thành công:** phiếu ở trạng thái "Đã xác nhận", không sửa được; tồn kho từng biến thể tăng đúng số lượng nhập, giá vốn được tính lại theo bình quân gia quyền; hệ thống thông báo xác nhận thành công.
 - **Cache cập nhật thành công sau commit:** phiên bản cache catalog được tăng và lượt đọc mới không dùng dữ liệu tồn kho cache của phiên bản cũ.
 - **Cache lỗi sau commit (E3):** phiếu, tồn kho và giá vốn giữ kết quả đã commit; vẫn thông báo xác nhận thành công, ghi log và chờ TTL dự phòng 5 phút làm hết hạn dữ liệu cũ, không retry.
@@ -156,23 +158,40 @@ And: dữ liệu cache cũ chỉ có thể còn được hiển thị tối đa 
 ### AC-15: Hai phiếu khác nhau cùng nhập một biến thể đồng thời
 Given: biến thể A tồn 10, giá vốn 100.000đ; phiếu nháp P1 nhập 10 cái A giá 120.000đ, phiếu nháp P2 nhập 20 cái A giá 130.000đ; service cache catalog hoạt động bình thường
 When: Nhân viên xác nhận P1 và P2 đồng thời, cả hai transaction đều thành công
-Then: các yêu cầu được tuần tự hóa tại khóa cùng dòng `inventory.stock` của A; yêu cầu chờ khóa dùng tồn kho và giá vốn đã được yêu cầu trước commit
+Then: các yêu cầu được tuần tự hóa qua khóa sản phẩm cha rồi khóa cùng dòng `inventory.stock` của A; yêu cầu chờ khóa dùng tồn kho và giá vốn đã được yêu cầu trước commit
 And: sau khi cả hai transaction hoàn tất, A tồn 40, giá vốn 120.000đ, bất kể P1 hay P2 lấy khóa tồn kho trước
 And: P1 và P2 đều ở trạng thái "Đã xác nhận", mỗi phiếu chỉ cộng tồn một lần; hệ thống thông báo xác nhận thành công cho cả hai
 And: mỗi lần xác nhận chỉ cập nhật phiên bản cache catalog sau khi transaction của phiếu đó commit
 
+### AC-16: Xác nhận nhập và sửa Catalog tuân thủ cùng khóa sản phẩm
+Given: A chưa có phiếu CONFIRMED, phiếu P đang DRAFT nhập một biến thể của A; Nhân viên đã mở form sửa tên A
+When: chạy độc lập hai thứ tự khóa giữa xác nhận P và lưu tên A, dùng chung giao thức khóa sản phẩm qua Service Catalog
+Then: nếu xác nhận P giữ khóa trước và commit, request sửa chờ rồi đọc lại CONFIRMED, bị chặn theo UC-14 E10, tên A giữ nguyên
+And: nếu sửa tên giữ khóa trước và commit, xác nhận P chờ rồi tiếp tục trên dữ liệu mới; sau commit CONFIRMED, mọi request sửa ngoài Mô tả tiếp theo bị chặn
+And: nếu xác nhận P rollback thì tồn kho/giá vốn và trạng thái P giữ nguyên, A không bị khóa sửa bởi lần xác nhận thất bại này
+
+### AC-17: Hai phiếu nhập nhiều sản phẩm không đảo thứ tự khóa
+Given: P và Q là hai phiếu DRAFT khác nhau cùng chứa sản phẩm A và B nhưng thứ tự các dòng trên form ngược nhau; tồn ban đầu bằng 0, giá nhập hợp lệ
+When: xác nhận đồng thời P và Q
+Then: cả hai lấy khóa sản phẩm theo product_key ASC trước bất kỳ khóa biến thể nào, không theo thứ tự dòng trên form
+And: cả hai phiếu được xác nhận lần lượt, không chờ vòng do đảo thứ tự sản phẩm; tồn kho cuối bằng tổng nhập của cả hai phiếu và giá vốn tính từ các lần nhập đã commit
+
 ## Dependencies
+- **Internal Services:** Catalog khóa sản phẩm/biến thể và lấy quan hệ biến thể–sản phẩm qua Service công khai dùng cùng DB session; đồng bộ hợp đồng với UC-14/15/16/17.
 - **Upstream UC:** UC-02, UC-33
 - **Downstream UC:** UC-12 (tình trạng còn/hết hàng), UC-18, UC-19, UC-20, UC-37, UC-39
 - **External Systems:** không có
 
 ## Notes
+- Khóa dòng phiếu → toàn bộ sản phẩm cha theo product_key ASC qua Service Catalog → biến thể theo variant_key ASC → cập nhật stock trong cùng transaction. Catalog kiểm tra CONFIRMED bằng Service inventory sau cùng khóa sản phẩm. Hợp đồng này ngăn xác nhận nhập chen giữa kiểm tra và ghi thay đổi Catalog; không khóa taxonomy trong khi đã giữ khóa sản phẩm. Giữ Status draft vì lượt này chỉ đồng bộ hợp đồng liên UC đã được yêu cầu tại Codex, không chốt toàn bộ nghiệp vụ inventory.
+- Khi được gọi từ Catalog để kiểm tra CONFIRMED, Service inventory chỉ đọc dữ liệu đã commit trong cùng session, không lấy khóa dòng phiếu vì bên gọi đã giữ khóa sản phẩm; tránh vòng chờ ngược với luồng xác nhận phiếu.
+- Hợp đồng này dùng isolation READ COMMITTED; sau chờ khóa, Catalog phải thực hiện truy vấn kiểm tra CONFIRMED mới trong cùng transaction, không dùng snapshot/kết quả kiểm tra trước khi chờ.
 - Công thức giá vốn, cách làm tròn và giá vốn theo biến thể đã chốt trong BR-GIAIDOAN1 (Constraints của BR-007).
 - Cộng tồn và cập nhật giá vốn trong cùng một transaction.
 - Tồn kho không bao giờ âm (BR-005).
 - Tồn kho và giá vốn bình quân gia quyền của biến thể lưu ở `inventory.stock` (`stock_quantity`, `stock_cost_price`), chỉ module inventory ghi (data model v2, đã chốt 20/11/2026).
 - Service của inventory điều phối transaction; repository của inventory khóa phiếu và tồn kho thuộc module này. Không khóa hoặc cập nhật `catalog.variant` để thay cho khóa `inventory.stock`.
-- UC-33 và UC-34 dùng chung quy tắc: khóa phiếu trước khi kiểm tra `DRAFT` và đọc/ghi chi tiết hoặc trạng thái; sau đó UC-34 mới khóa các dòng tồn kho. Không dùng trạng thái hay chi tiết từ trước khi lấy khóa để quyết định xác nhận.
+- UC-33 và UC-34 dùng chung quy tắc: khóa phiếu trước khi kiểm tra `DRAFT` và đọc/ghi chi tiết hoặc trạng thái; sau đó UC-34 khóa sản phẩm/biến thể qua Service Catalog trước các dòng tồn kho. Không dùng trạng thái hay chi tiết từ trước khi lấy khóa để quyết định xác nhận.
 - Cache catalog chỉ đổi phiên bản sau commit thành công, qua service công khai của catalog; không tăng phiên bản khi từ chối hoặc rollback. Portal quản trị không cache theo Constraints chung của BR-GIAIDOAN1.
 - Lỗi cache sau commit không làm thất bại việc xác nhận phiếu: ghi log và dựa vào TTL dự phòng 5 phút để hết hạn dữ liệu cũ, không thêm cơ chế retry. E2 chỉ xử lý lỗi transaction Database; lỗi cache sau commit xử lý theo E3.
 
@@ -194,3 +213,6 @@ And: mỗi lần xác nhận chỉ cập nhật phiên bản cache catalog sau k
 - v6 (2026-11-22): hoàn thiện khóa phiếu/tồn kho và đồng bộ sửa/hủy UC-33; sửa AC-3 và AC-5; thêm AC-8 đến AC-13; cập nhật phiên bản cache catalog sau commit thành công
 - v7 (2026-11-22): chốt lỗi cache sau commit vẫn báo xác nhận thành công, ghi log và chờ TTL 5 phút, không retry; thêm E3 và AC-14, làm rõ hậu điều kiện cùng AC-8/AC-12 khi cache hoạt động bình thường
 - v8 (2026-11-22): tách hậu điều kiện thành công/từ chối/rollback; cụ thể hóa AC-4, mở rộng AC-6 cho lỗi đổi trạng thái và commit; thêm AC-15 cho hai phiếu khác nhau cùng nhập một biến thể đồng thời
+
+- v9 (2026-11-23): đồng bộ phạm vi khóa với Catalog theo yêu cầu developer tại Codex: khóa phiếu, gọi Service Catalog cùng session khóa sản phẩm ASC rồi biến thể ASC, kiểm tra lại sau chờ; thêm AC-16/17, bảo toàn khóa sửa sau CONFIRMED và rollback, giữ draft ngoài phạm vi hoàn thiện Catalog.
+- v10 (2026-11-23): merge main, giữ toàn bộ quyết định Inventory và AC-1..15; ghép khóa cha/biến thể trước khóa stock, giữ quyền sở hữu inventory.stock của inventory và thêm AC-16/17 từ contract Catalog.

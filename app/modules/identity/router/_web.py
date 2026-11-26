@@ -48,7 +48,7 @@ def _home(request: Request) -> RedirectResponse:
 
 
 def _checkout_requested(request: Request) -> bool:
-    return request.query_params.getlist("return_to") == [request.url_for("checkout").path]
+    return request.query_params.getlist("return_url") == [request.url_for("checkout").path]
 
 
 def _storefront_destination(request: Request, checkout: bool) -> str:

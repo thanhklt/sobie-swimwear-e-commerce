@@ -6,7 +6,7 @@ UC-02 · Đăng nhập bằng mật khẩu portal.
 sequenceDiagram
     actor Browser as Trình duyệt
     participant Route as Router và middleware
-    participant Service as IdentityService
+    participant Service as SessionService
     participant Redis
     participant Data as Repository và PostgreSQL
     Browser->>Route: Gửi Origin, identifier và password

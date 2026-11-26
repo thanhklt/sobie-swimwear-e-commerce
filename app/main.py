@@ -1,6 +1,6 @@
-"""Điểm khởi tạo ứng dụng và đăng ký router của 9 module.
+"""Điểm khởi tạo ứng dụng gồm 10 module và đăng ký các router.
 
-Module: identity, catalog, shopping, ordering, payment, promotion, inventory, shipping, reporting.
+Module: identity, catalog, shopping, ordering, payment, promotion, inventory, shipping, reporting, notification.
 """
 
 from contextlib import asynccontextmanager
@@ -11,20 +11,19 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.database.engine import session_factory
-from app.modules.identity.repository import IdentityRepository
-from app.modules.identity.service import IdentityService
+from app.redis.engine import close_redis, get_redis
+from app.modules.identity.service import build_identity_services
 from app.error.handlers import register_error_handlers
-from app.modules.identity.registration_challenges import close_challenge_store
 from app.modules.identity.router import (
-    login_post_paths,
-    logout_post_paths,
-    registration_post_paths,
+    origin_protected_paths,
     router as identity_router,
     storefront_identity_home,
 )
+from app.modules.notification import facade as notification_facade
 from app.modules.ordering.router import router as ordering_router
 from app.modules.shopping.router import cart_merge_path, router as shopping_router
 from app.security.session import SessionMiddleware
+from app.shared.web.rendering import register_templates
 
 version = "v1"
 API_PREFIX = f"/api/{version}"
@@ -36,7 +35,7 @@ async def life_span(app: FastAPI):
     try:
         yield
     finally:
-        await close_challenge_store()
+        await close_redis()
         print("Shutdown the server")
 
 
@@ -46,13 +45,21 @@ app = FastAPI(
     version=version,
     lifespan=life_span,
 )
-app.state.identity_service = IdentityService(IdentityRepository(), session_factory)
+app.state.identity = build_identity_services(
+    session_factory, redis=get_redis, send_email=notification_facade.send_email
+)
 app.state.shopping_session_factory = session_factory
 app.add_middleware(
     SessionMiddleware, api_prefix=API_PREFIX,
-    origin_protected_paths=registration_post_paths | login_post_paths | logout_post_paths | {cart_merge_path},
+    origin_protected_paths=origin_protected_paths | {cart_merge_path},
 )
-app.mount("/static/css", StaticFiles(directory=Path(__file__).parent / "static" / "css"), name="static_css")
+app_dir = Path(__file__).parent
+identity_dir = app_dir / "modules" / "identity"
+register_templates("identity", identity_dir / "templates")
+register_templates("ordering", app_dir / "modules" / "ordering" / "templates")
+
+app.mount("/static/css", StaticFiles(directory=app_dir / "static" / "css"), name="static_css")
+app.mount("/static/identity", StaticFiles(directory=identity_dir / "css"), name="identity_css")
 app.include_router(identity_router)
 app.include_router(ordering_router)
 app.include_router(shopping_router)

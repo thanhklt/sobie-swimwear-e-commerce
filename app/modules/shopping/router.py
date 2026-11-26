@@ -10,7 +10,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 
-from app.modules.identity.session import AuthenticatedSession, Role
+from app.modules.identity.facade import AuthenticatedSession, Role
 from app.modules.shopping.service import CartMergeConflict, merge_guest_cart
 from app.security.session import require_roles
 

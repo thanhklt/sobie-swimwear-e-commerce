@@ -7,7 +7,7 @@ sequenceDiagram
     actor Browser as Trình duyệt
     participant Middleware as SessionMiddleware
     participant Route as Router
-    participant Service as IdentityService
+    participant Service as SessionService
     participant Data as Repository và PostgreSQL
     Browser->>Middleware: POST kèm Origin và storefront_session nếu có
     Middleware->>Middleware: Kiểm tra Origin trước khi xác thực phiên

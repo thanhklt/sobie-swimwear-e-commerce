@@ -27,6 +27,7 @@ Theo SDD Ebook — Tầng 3: Entity Model trả lời câu hỏi *hệ thống �
 | inventory | Supplier, GoodsReceipt, GoodsReceiptDetail, Stock | — |
 | shipping | (không có) | Trang giả lập vận chuyển |
 | reporting | (không có) | Dashboard (view tổng hợp) |
+| notification | (không có) | Mẫu email (tiêu đề, nội dung) |
 
 ---
 

@@ -42,7 +42,7 @@
        payment   : bank_transaction
        promotion : promotion, product_promotion, order_promotion, code_promotion
        inventory : supplier, goods_receipt, goods_receipt_detail, stock
-       shipping, reporting: không có bảng.
+       shipping, reporting, notification: không có bảng.
      Khóa ngoại giữa 2 schema vẫn khai báo ở DB để giữ toàn vẹn dữ liệu, nhưng code
      của module chỉ đọc / ghi bảng của chính nó; cần dữ liệu module khác thì gọi
      service công khai của module đó (AGENTS.md).
@@ -63,7 +63,7 @@ Tên entity trong sơ đồ là tên bảng viết hoa; schema (= module) ghi �
 
 ## 0. Toàn hệ thống
 
-30 bảng, 36 quan hệ, 7 module có bảng (`shipping`, `reporting` không có bảng). Sơ đồ này chỉ vẽ khóa chính, khóa ngoại và mã tự nhiên; cột đầy đủ xem các mục theo module.
+30 bảng, 36 quan hệ, 7 module có bảng (`shipping`, `reporting`, `notification` không có bảng). Sơ đồ này chỉ vẽ khóa chính, khóa ngoại và mã tự nhiên; cột đầy đủ xem các mục theo module.
 
 ```mermaid
 erDiagram
@@ -326,7 +326,7 @@ Khi cần, thêm identity.permission và identity.role_permission (N-N) mà khô
 | `account_email` | `varchar(255)` | UK | NOT NULL | [MOI] đăng nhập bằng email |
 | `account_phone_number` | `varchar(20)` | UK | NULL với Khách hàng | Khách bổ sung số điện thoại ở UC-04. Nhân viên và Admin phải có số điện thoại. |
 | `account_hash_password` | `varchar(255)` |  | NULL với tài khoản chỉ dùng Google | Mật khẩu Sobie được băm bằng bcrypt. Mỗi tài khoản phải có hash mật khẩu hoặc định danh Google. |
-| `account_google_sub` | `varchar(255)` | UK | NULL khi chưa liên kết | Định danh Google duy nhất cho tài khoản Khách hàng. Khi liên kết lần đầu với tài khoản đã có, Sobie xác minh OTP gửi đến email đang lưu. |
+| `account_google_sub` | `varchar(255)` | UK | NULL khi chưa liên kết | Định danh Google duy nhất cho tài khoản Khách hàng. Sobie lưu định danh này khi tạo tài khoản qua Google hoặc khi liên kết lần đầu với tài khoản Khách hàng đang Hoạt động có email trùng với email đã được Google xác minh (UC-01, UC-02). |
 | `account_status` | `varchar(20)` |  | NOT NULL DEFAULT `ACTIVE` | [MOI] khóa / mở khóa. CHECK IN (ACTIVE, LOCKED) |
 | `account_name` | `varchar(255)` |  | NULL với Khách hàng | Khách bổ sung họ tên ở UC-04. Nhân viên và Admin phải có họ tên. |
 | `account_date_of_birth` | `date` |  |  | [MOI] ngày sinh. Bắt buộc với Nhân viên / Admin (mã dùng ngày sinh), không bắt buộc với Khách hàng — service kiểm tra theo vai trò |
@@ -1221,7 +1221,8 @@ Trừ tồn dùng UPDATE ... SET stock_quantity = stock_quantity - :n
 WHERE stock_quantity >= :n để không âm khi nhiều đơn đặt cùng lúc.
 ```
 
-## 8. shipping, reporting — không có bảng
+## 8. shipping, reporting, notification — không có bảng
 
 - `shipping` (UC-36, UC-40): bàn giao và trang giả lập vận chuyển; đổi trạng thái đơn qua service của `ordering`.
 - `reporting` (UC-37): dashboard chỉ đọc qua service của `ordering`, `inventory`, `catalog`.
+- `notification` (UC-01): gửi email OTP qua `facade.send_email`; không có bảng.

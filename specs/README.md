@@ -23,7 +23,7 @@
 
 ## Module (đã chốt 20/11/2026)
 
-Dự án là modular monolith gồm 9 module. Một module dùng chung một tên cho: thư mục UC ở đây, schema PostgreSQL, `TableGroup` trong [data_model_v2.dbml](../entity-model/data_model_v2.dbml) và package code `app/modules/<module>/`. `shipping` và `reporting` không có bảng riêng.
+Dự án là modular monolith gồm 10 module, trong đó `notification` được thêm ngày 26/11/2026. Mỗi module dùng cùng một tên cho package code `app/modules/<module>/` và cho thư mục UC, schema PostgreSQL, `TableGroup` trong [data_model_v2.dbml](../entity-model/data_model_v2.dbml) khi có. `shipping`, `reporting` và `notification` không có bảng riêng.
 
 | Module | BR | Phạm vi | Bảng (schema cùng tên) |
 |---|---|---|---|
@@ -36,6 +36,7 @@ Dự án là modular monolith gồm 9 module. Một module dùng chung một tê
 | [inventory](inventory/) | BR-005 | Nhà cung cấp, phiếu nhập, tồn kho, giá vốn | supplier, goods_receipt, goods_receipt_detail, stock |
 | [shipping](shipping/) | BR-006 | Bàn giao vận chuyển, trang giả lập vận chuyển | (không có — đổi trạng thái đơn qua service của ordering) |
 | [reporting](reporting/) | BR-007, BR-002 | Dashboard; khối bán chạy trên trang chủ `[GD]` | (không có — đọc qua service của module khác) |
+| `notification` | — | Gửi email theo mẫu (OTP đăng ký UC-01); giai đoạn 2 nhắc giỏ hàng, báo giảm giá wishlist | (không có — module khác gọi `notification/facade.py`) |
 
 Module giao tiếp qua service công khai; không đọc / ghi bảng hoặc gọi repository của module khác (AGENTS.md).
 
@@ -112,7 +113,7 @@ Chưa xử lý ──(UC-23 xác nhận)──► Đã xác nhận ──(UC-40 
 | Mã khách hàng | Ngày đăng ký trong mã `KH-` lấy theo giờ `Asia/Ho_Chi_Minh` (21/11/2026) | UC-01, UC-06 |
 | Giỏ hàng, danh sách yêu thích | Mỗi Khách hàng có 1 giỏ và 1 danh sách yêu thích, tạo cùng transaction tạo tài khoản Khách hàng; identity gọi service công khai của shopping (21/11/2026, Q39) | UC-01, UC-06, UC-18, UC-38 |
 | Thông tin nhận hàng | Khách nhập tên người nhận, số điện thoại và địa chỉ, hoặc bấm "Sử dụng thông tin hồ sơ" nếu hồ sơ có đủ họ tên, ngày sinh, số điện thoại và địa chỉ nhận hàng hợp lệ. Khách sửa được thông tin cho riêng đơn (23/11/2026). | UC-04, UC-19, UC-20 |
-| Đăng ký / đăng nhập | Đăng ký bằng email đã xác minh OTP và mật khẩu, hoặc qua Google. Khách bổ sung số điện thoại ở UC-04. Đăng nhập bằng email hoặc số điện thoại đã lưu kèm mật khẩu, hoặc qua Google khi tài khoản đã liên kết. | UC-01, UC-02, UC-04 |
+| Đăng ký / đăng nhập | Đăng ký bằng email OTP rồi tạo mật khẩu Sobie. Đăng nhập bằng email hoặc số điện thoại đã lưu kèm mật khẩu. Luồng Google dùng chung cho hai trang, cấp phiên ngay sau khi tìm, liên kết hoặc tạo tài khoản. | UC-01, UC-02, UC-04 |
 | Cổng đăng nhập | Storefront chỉ cho Khách hàng; Nhân viên / Admin đăng nhập ở storefront bị báo "Thông tin đăng nhập không đúng"; Nhân viên và Admin dùng portal quản trị riêng (21/11/2026) | UC-02 |
 | Quên mật khẩu | Làm ở giai đoạn 2; giai đoạn 1 storefront có nút "Quên mật khẩu" nhưng không có hành động (21/11/2026) | UC-02 |
 | Xác thực | Website SSR nên dùng phiên phía server lưu ở `identity.session`, không dùng JWT; cookie `HttpOnly`, `Secure`, `SameSite=Lax`, kiểm tra header `Origin` ở mọi request ghi; hạn phiên Khách hàng 30 phút, Nhân viên / Admin 1 giờ, tính từ lần thao tác cuối; rate limit theo IP: đăng nhập 5 lần/phút (21/11/2026) | UC-02, UC-03 |
@@ -166,14 +167,14 @@ Chưa xử lý ──(UC-23 xác nhận)──► Đã xác nhận ──(UC-40 
 Bản hiện hành: [data_model_v2.dbml](../entity-model/data_model_v2.dbml) — review ERD vẽ tay theo BR, changelog và câu hỏi mở ở cuối file.
 ## Tổng hợp giả định `[GD]`
 
-Mỗi dòng là một giả định đang có trong mục *Notes* của UC, chờ developer xác nhận hoặc sửa. Cách chia 9 module ở trên đã được developer chốt (20/11/2026).
+Mỗi dòng là một giả định đang có trong mục *Notes* của UC, chờ developer xác nhận hoặc sửa. Developer chốt 9 module ngày 20/11/2026 và bổ sung `notification` ngày 26/11/2026, nâng tổng số lên 10 module.
 
 | UC | Giả định |
 |---|---|
 | UC-01 | Ngày sinh và địa chỉ nhận hàng không bắt buộc khi đăng ký; khách bổ sung ở UC-04. |
 | UC-01 | Cấp mã và tạo account trong cùng một transaction. |
 | UC-01 | Mật khẩu tối thiểu 6 ký tự. |
-| UC-01 | Đăng ký xong chuyển tới trang đăng nhập, không tự đăng nhập. |
+| UC-01 | Đăng ký bằng email OTP xong thì chuyển tới trang đăng nhập. Đăng ký qua Google cấp phiên ngay và đưa khách tới trang chủ hoặc checkout. |
 | UC-01 | Người đã đăng nhập mở trang đăng ký thì bị chuyển về trang chủ. |
 | UC-02 | Sau đăng nhập: Khách hàng về trang bán hàng; Nhân viên và Admin về trang đầu của portal quản trị. |
 | UC-02 | Đăng nhập khi đang đặt hàng thì quay lại trang đang thao tác. |
@@ -183,7 +184,7 @@ Mỗi dòng là một giả định đang có trong mục *Notes* của UC, ch�
 | UC-02 | Vượt rate limit trả HTTP 429. |
 | UC-02 | Storefront và portal quản trị dùng 2 cookie phiên khác tên; một trình duyệt có thể đăng nhập cùng lúc vào cả hai cổng. |
 | UC-03 | Toàn bộ UC này là giả định: BR-001 chỉ nêu đăng ký và đăng nhập, không nêu đăng xuất. |
-| UC-04 | Đổi email hoặc số điện thoại không cần xác minh lại. |
+| UC-04 | Email trên hồ sơ storefront chỉ xem. Khách có thể đổi số điện thoại mà không cần xác minh lại. Admin có thể đổi email qua UC-07. |
 | UC-07 | Việc xem và tìm danh sách tài khoản gộp vào UC này. |
 | UC-07 | Danh sách có phân trang; tìm theo họ tên, email hoặc số điện thoại. |
 | UC-07 | Admin sửa được thông tin mọi tài khoản. |

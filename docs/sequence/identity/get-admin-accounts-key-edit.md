@@ -6,7 +6,7 @@ UC-04/07/08 · Mở chi tiết quản trị.
 sequenceDiagram
     actor Browser as Trình duyệt
     participant Route as Router và middleware
-    participant Service as IdentityService
+    participant Service as AccountService
     participant Data as Repository và PostgreSQL
     Browser->>Route: Chọn account theo khóa
     Route->>Service: Xác thực phiên Admin

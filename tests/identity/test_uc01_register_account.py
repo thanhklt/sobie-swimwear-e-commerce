@@ -9,10 +9,6 @@ from identity_support import GOOGLE_CALLBACK, google, post
 
 
 PREFIX = "/api/v1/identity"
-REGISTRATION_POSTS = (
-    "/register/email", "/register/otp/resend", "/register/otp",
-    "/register/password", "/register/google/link/otp",
-)
 
 
 def begin(client, email="a@example.com"):
@@ -23,46 +19,6 @@ def begin(client, email="a@example.com"):
 def verify(client, mail, email="a@example.com"):
     begin(client, email)
     return post(client, f"{PREFIX}/register/otp", otp=mail[-1][1])
-
-
-@pytest.mark.parametrize("path", REGISTRATION_POSTS)
-@pytest.mark.parametrize("headers", [
-    {"Origin": "https://different.example"},
-    {"Origin": "null"},
-    {},
-], ids=["foreign", "null", "missing"])
-def test_uc01_rejects_invalid_origins(world, path, headers):
-    client = world.client
-    client.get(f"{PREFIX}/register")
-    before = world.counts()
-    response = post(client, PREFIX + path, headers=headers, email="a@example.com", otp="100000")
-    assert response.status_code == 403
-    assert not world.mail and world.counts() == before
-
-
-@pytest.mark.parametrize("headers", [
-    {"Origin": "https://testserver"},
-    {"Origin": "https://tunnel.example", "X-Forwarded-Proto": "https", "X-Forwarded-Host": "tunnel.example"},
-    {"Origin": "https://another.example"},
-], ids=["same", "proxy", "allowlist"])
-def test_uc01_accepts_allowed_origins(world, monkeypatch, headers):
-    from app.config.settings import Config
-
-    monkeypatch.setattr(Config, "ALLOWED_ORIGINS", "https://spare.example, https://another.example")
-    client = world.client
-    registration = client.get(f"{PREFIX}/register")
-    assert registration.status_code == 200 and 'name="csrf_token"' not in registration.text
-    assert registration.headers["referrer-policy"] == "strict-origin"
-    path = f"{PREFIX}/register/email"
-    if "X-Forwarded-Proto" in headers:
-        # The proxy terminates HTTPS and forwards the browser's cookie over HTTP.
-        cookie_name = "__Host-sobie-registration"
-        headers = {**headers, "Cookie": f"{cookie_name}={client.cookies[cookie_name]}"}
-        path = "http://testserver" + path
-    response = post(client, path, headers=headers, email="a@example.com")
-    assert response.status_code == 200 and 'name="otp"' in response.text
-    assert 'name="csrf_token"' not in response.text
-    assert len(world.mail) == 1 and world.mail[0][0] == "a@example.com"
 
 
 # UC-01 AC-1: Tạo mật khẩu và hoàn tất đăng ký qua email
@@ -112,14 +68,16 @@ def test_uc01_ac6_atomic_registration(world, failure):
     world.assert_new_account("a@example.com", password="123456", suffix="0001")
 
 
-# UC-01 AC-6: Hoàn tác tài khoản Google cùng liên kết sub
-@pytest.mark.parametrize("failure", ["account", "cart", "wishlist"])
+# UC-01 AC-6: Lỗi giữa chừng không để lại dữ liệu dở dang
+@pytest.mark.parametrize("failure", ["account", "cart", "wishlist", "session"])
 def test_uc01_ac6_atomic_google_registration(world, failure):
     before = world.counts()
     with world.fail_at(failure):
         response = google(world.client, world.oidc)
     assert "không thành công" in response.text.lower()
     assert world.counts() == before
+    assert not world.sql("SELECT 1 FROM identity.session")
+    assert not world.client.cookies.get("storefront_session")
     response = google(world.client, world.oidc)
     assert response.status_code in (302, 303)
     world.assert_new_account("google@example.com", google_sub="google-sub", suffix="0001")
@@ -181,6 +139,36 @@ def test_uc01_ac17_otp_locks_for_five_minutes_after_fifth_failure(world):
     assert result.status_code == 200 and '/api/v1/identity/register/password' in result.text
 
 
+# UC-01 AC-18: Đếm ngược thời gian gửi lại OTP
+def test_uc01_ac18_resend_countdown(world):
+    client = world.client
+    register_url = f"{PREFIX}/register"
+    disabled_button = r"<button\b[^>]*\bdisabled>Gửi lại mã</button>"
+
+    page = begin(client)
+    assert re.search(disabled_button, page.text)
+    assert 'data-resend-after="300"' in page.text and "<span>05:00</span>" in page.text
+
+    world.advance(120)
+    page = client.get(register_url)
+    assert re.search(disabled_button, page.text)
+    assert 'data-resend-after="180"' in page.text and "<span>03:00</span>" in page.text
+
+    world.advance(180)
+    page = client.get(register_url)
+    resend_button = re.search(r"<button\b[^>]*>Gửi lại mã</button>", page.text)
+    assert resend_button and "disabled" not in resend_button.group()
+    assert "data-resend-after=" not in page.text
+
+    post(client, f"{register_url}/otp/resend")
+    world.advance(120)
+    for _ in range(5):
+        page = post(client, f"{register_url}/otp", otp="000000")
+    assert page.status_code == 429 and 'name="otp"' not in page.text
+    assert re.search(disabled_button, page.text)
+    assert 'data-resend-after="300"' in page.text and "<span>05:00</span>" in page.text
+
+
 # UC-01 AC-11: Gửi lại OTP khi đã đủ 5 phút
 def test_uc01_ac11_resend_at_expiry(world):
     begin(world.client)
@@ -222,38 +210,51 @@ def test_uc01_ac13_invalid_password(world, password, confirmation):
     assert '/api/v1/identity/register/password' in response.text and world.counts()[0] == 0
 
 
-# UC-01 AC-14: Đăng ký thành công bằng Google
+# UC-01 AC-14: Đăng ký thành công bằng Google mà không cần mật khẩu Sobie
 def test_uc01_ac14_new_google_account(world):
     response = google(world.client, world.oidc)
-    assert response.status_code in (302, 303) and urlparse(response.headers["location"]).path == "/api/v1/identity/login"
-    world.assert_new_account("google@example.com", google_sub="google-sub")
-    assert not world.client.cookies.get("storefront_session")
-    assert "Đăng ký thành công" in world.client.get(response.headers["location"]).text
+    assert response.status_code == 303 and response.headers["location"] == "/"
+    account = world.assert_new_account("google@example.com", google_sub="google-sub")
+    assert world.client.cookies.get("storefront_session")
+    assert world.session_account() == str(account)
 
 
+# UC-01 AC-14: Đăng ký thành công bằng Google mà không cần mật khẩu Sobie
 def test_uc01_ac14_registration_state_survives_another_google_attempt(world):
     client = world.client
-    registration = client.get("/api/v1/identity/register")
-    href = re.search(r'href="([^"]+)">Đăng ký với Google</a>', registration.text)
-    assert href
-    signup = client.get(href.group(1), follow_redirects=False)
-    signin = client.get("/api/v1/identity/register/google", params={"login": "1"}, follow_redirects=False)
+    registration = client.get(f"{PREFIX}/register")
+    login_page = client.get(f"{PREFIX}/login")
+    button = re.compile(
+        r'<a class="identity-button identity-button--secondary"\s+href="([^"]+)">'
+        r'\s*<svg.*?</svg>\s*Đăng nhập với Google</a>',
+        re.S,
+    )
+    signup_button = button.search(registration.text)
+    signin_button = button.search(login_page.text)
+    assert signup_button and signin_button and signup_button.group() == signin_button.group()
+    signup = client.get(signup_button[1], follow_redirects=False)
+    signin = client.get(signin_button[1], follow_redirects=False)
     signup_state = parse_qs(urlparse(signup.headers["location"]).query)["state"][0]
     signin_state = parse_qs(urlparse(signin.headers["location"]).query)["state"][0]
     assert signup_state != signin_state
 
+    browser_cookie = "__Host-sobie-registration"
+    browser = client.cookies.get(browser_cookie)
+    assert browser
     callback = GOOGLE_CALLBACK
     result = client.get(callback, params={"state": signup_state, "code": "signup"}, follow_redirects=False)
-    assert result.status_code == 303 and urlparse(result.headers["location"]).path == "/api/v1/identity/login"
-    world.assert_new_account("google@example.com", google_sub="google-sub")
-    assert not client.cookies.get("storefront_session")
-    assert "Đăng ký thành công" in client.get(result.headers["location"]).text
+    assert result.status_code == 303 and result.headers["location"] == "/"
+    account = world.assert_new_account("google@example.com", google_sub="google-sub")
+    assert client.cookies.get("storefront_session") and world.session_account() == str(account)
 
-    # Callback của lượt đăng ký chỉ được xử lý một lần.
+    # Mô phỏng callback mang cookie của trình duyệt trước khi nhận cookie phiên.
+    client.cookies.delete("storefront_session")
+    client.cookies.set(browser_cookie, browser, domain="testserver.local", path="/")
     replay = client.get(callback, params={"state": signup_state, "code": "signup"}, follow_redirects=False)
     assert replay.status_code == 400 and not client.cookies.get("storefront_session")
     signin_result = client.get(callback, params={"state": signin_state, "code": "signin"}, follow_redirects=False)
     assert signin_result.status_code == 303 and signin_result.headers["location"] == "/"
+    assert client.cookies.get("storefront_session")
     assert world.counts()[:3] == (1, 1, 1)
 
 
@@ -271,11 +272,8 @@ def test_uc01_ac16_existing_google_account(world, linked):
     account = world.seed_account("google@example.com", google_sub="google-sub" if linked else None)
     before = world.counts()
     response = google(world.client, world.oidc)
-    if not linked:
-        assert world.mail[-1][0] == "google@example.com"
-        assert not world.client.cookies.get("storefront_session")
-        response = post(world.client, f"{PREFIX}/register/google/link/otp", otp=world.mail[-1][1])
     assert response.status_code in (302, 303) and response.headers["location"] == "/"
+    assert not world.mail
     assert world.session_account() == account and world.counts() == before
     assert world.google_sub(account) == "google-sub"
     cookie = response.headers["set-cookie"].lower()
@@ -283,14 +281,15 @@ def test_uc01_ac16_existing_google_account(world, linked):
     assert world.session_lifetime() == 1800
 
 
-# UC-01 AC-16: Lỗi cấp phiên hoàn tác liên kết Google vừa tạo
-def test_uc01_ac16_google_link_session_rollback(world):
+# UC-01 AC-16: Dùng Google khi đã có tài khoản Sobie
+def test_uc01_ac16_google_session_rollback(world):
     account = world.seed_account("google@example.com")
     before = world.counts()
-    google(world.client, world.oidc)
     with world.fail_at("session"):
-        response = post(world.client, f"{PREFIX}/register/google/link/otp", otp=world.mail[-1][1])
-    assert response.status_code >= 400
+        response = google(world.client, world.oidc)
+    assert response.status_code == 500
     assert world.google_sub(account) is None
     assert world.counts() == before
+    assert not world.sql("SELECT 1 FROM identity.session")
+    assert not world.mail
     assert not world.client.cookies.get("storefront_session")

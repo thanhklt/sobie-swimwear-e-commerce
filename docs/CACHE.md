@@ -9,9 +9,9 @@ Một khách có thể đóng tab, gửi lại biểu mẫu hoặc quay lại t�
 | Gửi OTP đăng ký | Mã lượt gắn với trình duyệt, email, mục đích đăng ký, giá trị kiểm tra OTP được bảo vệ bằng khóa bí mật, thời điểm gửi/hết hạn và số lần nhập sai. Các giá trị này ràng buộc mã với đúng lượt xác minh. | OTP có hiệu lực 300 giây từ lúc gửi. Xác minh thành công sẽ chuyển lượt sang bước tạo mật khẩu. Mã cũ mất hiệu lực sau khi cấp mã mới. |
 | Gửi OTP tới cùng địa chỉ | Một khóa riêng cho email đã chuẩn hóa và mục đích gửi, dùng chung giữa các trình duyệt. | Khóa chặn gửi lại trong 300 giây kể từ lần gửi gần nhất. |
 | Xác minh OTP thành công | Lượt đã xác minh được email và có quyền gửi mật khẩu từ cùng trình duyệt. | Quyền ngắn hạn dùng một lần. Nếu hết hạn, khách xác minh email lại. |
-| Chuyển trình duyệt sang Google | Mỗi lượt có khóa Redis riêng theo cookie trình duyệt và `state`. Khóa này lưu mục đích đăng ký hoặc đăng nhập, `nonce` và PKCE verifier. | Dùng một lần cho callback hoặc tự hết hạn sau 10 phút. |
-| Google xác nhận email trùng tài khoản Sobie | Định danh Google đang chờ liên kết, khóa tài khoản hiện có, email đang lưu và trạng thái OTP cho lần liên kết. | Khi xác minh thành công, Sobie ghi liên kết và cấp phiên cho tài khoản hiện có. Quá hạn, khách bắt đầu lại theo hướng dẫn của màn hình. |
-| Hoàn tất đăng ký mới | Dấu hiệu đăng ký thành công để màn hình đăng nhập hiển thị thông báo sau redirect. | Xóa sau khi hiển thị hoặc khi hết hạn. |
+| Chuyển trình duyệt sang Google | Mỗi lượt có khóa Redis riêng theo cookie trình duyệt và `state`. Khóa này lưu đích checkout nếu có, `nonce` và PKCE verifier. | Dùng một lần cho callback hoặc tự hết hạn sau 10 phút. |
+| Callback Google xác thực thành công | Trạng thái đang xử lý theo cookie trình duyệt trong lúc Sobie tra cứu, tạo hoặc liên kết tài khoản và cấp phiên storefront. | Xóa khi thành công. Nếu xử lý thất bại, khôi phục trạng thái đăng ký trước đó nếu còn hiệu lực. |
+| Hoàn tất đăng ký bằng email và mật khẩu | Dấu hiệu đăng ký thành công để màn hình đăng nhập hiển thị thông báo sau redirect. | Xóa sau khi hiển thị hoặc khi hết hạn. |
 
 Mật khẩu khách nhập, mã OTP gốc và khóa bí mật ứng dụng không được đưa vào dữ liệu Redis. Tài khoản, liên kết Google đã xác nhận, giỏ hàng, danh sách yêu thích và phiên đăng nhập có bản ghi lâu dài trong PostgreSQL. Khi Redis mất dữ liệu giữa luồng, khách có thể bắt đầu lại; các tài khoản đã tạo vẫn tồn tại.
 

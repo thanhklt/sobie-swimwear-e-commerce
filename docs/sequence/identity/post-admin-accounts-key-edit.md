@@ -6,7 +6,7 @@ UC-04/07 · Lưu hồ sơ và vai trò trong một lần gửi.
 sequenceDiagram
     actor Browser as Trình duyệt
     participant Route as Router và middleware
-    participant Service as IdentityService
+    participant Service as AdminAccountService
     participant Data as Repository và PostgreSQL
     Browser->>Route: Gửi hồ sơ, vai trò nội bộ nếu có và csrf_token
     Route->>Service: Kiểm tra CSRF, khóa bảo vệ Admin và xác nhận quyền trong transaction

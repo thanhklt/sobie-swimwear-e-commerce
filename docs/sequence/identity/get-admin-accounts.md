@@ -6,7 +6,7 @@ UC-07 và UC-08 · Danh sách, tìm kiếm và điểm vào khóa/mở khóa cho
 sequenceDiagram
     actor Browser as Trình duyệt
     participant Route as Router và middleware
-    participant Service as IdentityService
+    participant Service as AdminAccountService
     participant Data as Repository và PostgreSQL
     Browser->>Route: Mở danh sách hoặc gửi q và page
     Route->>Service: Xác thực phiên Admin

@@ -1,4 +1,5 @@
 from datetime import date
+import re
 
 import pytest
 
@@ -18,7 +19,9 @@ def stored_profile(world, key):
     return {column.removeprefix("account_"): value for column, value in row.items()}
 
 
-def test_uc04_ac1_and_ac2_saved_contacts_work_without_reverification(world):
+# UC-04 AC-1: Cập nhật thành công
+# UC-04 AC-2: Khách hàng không đổi được email
+def test_uc04_ac1_ac2_profile_updates_keep_email(world):
     key = world.seed_member("old@example.com")
     before = stored_profile(world, key)
     client = signed_in(world, "old@example.com")
@@ -29,26 +32,31 @@ def test_uc04_ac1_and_ac2_saved_contacts_work_without_reverification(world):
     page = client.get(response.headers["location"])
     assert page.status_code == 200
     assert "Đã lưu thông tin tài khoản" in page.text
-    assert all(value in page.text for value in values.values())
+    assert all(value in page.text for field, value in values.items() if field != "email")
+    email = re.search(r'<input id="email"[^>]*>', page.text)
+    assert email and 'value="old@example.com"' in email.group() and "readonly" in email.group()
     assert stored_profile(world, key) == values | {
         "id": before["id"],
         "date_of_birth": date.fromisoformat(values["date_of_birth"]),
+        "email": before["email"],
     }
     assert not world.mail
     assert post(client, "/api/v1/identity/logout").status_code == 303
-    for identifier in (values["email"], values["phone_number"]):
+    for identifier in (before["email"], values["phone_number"]):
         assert login(world.new_client(), identifier).status_code == 303
-    assert login(world.new_client(), "old@example.com").status_code == 401
+    assert login(world.new_client(), values["email"]).status_code == 401
 
 
+# UC-04 AC-3: Số điện thoại trùng tài khoản khác
+# UC-04 AC-4: Dữ liệu không hợp lệ
 @pytest.mark.parametrize("field,value,message", [
-    ("email", "taken@example.com", "Email đã được sử dụng"),
+    ("phone_number", "0981234567", "Số điện thoại đã được sử dụng"),
     ("phone_number", "abc", "Số điện thoại không hợp lệ"),
     ("name", "", "Vui lòng nhập họ tên"),
 ])
-def test_uc04_ac3_and_ac4_profile_error_preserves_existing_values(world, field, value, message):
+def test_uc04_ac3_ac4_profile_error_preserves_existing_values(world, field, value, message):
     key = world.seed_member("old@example.com", phone="0901000001")
-    world.seed_member("taken@example.com")
+    world.seed_member("taken@example.com", phone="0981234567")
     before = stored_profile(world, key)
     client = signed_in(world, "old@example.com")
     response = submit(client, PROFILE_PATH, **profile(**{field: value}))

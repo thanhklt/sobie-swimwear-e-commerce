@@ -6,7 +6,7 @@ UC-02 · Trang đích portal.
 sequenceDiagram
     actor Browser as Trình duyệt
     participant Route as Router và middleware
-    participant Service as IdentityService
+    participant Service as SessionService
     participant Data as Repository và PostgreSQL
     Browser->>Route: Mở trang đích của portal
     Route->>Service: Middleware xác thực và gia hạn portal_session

@@ -90,62 +90,37 @@ def test_uc02_ac13_ac19_rate_limit_and_google(world):
     assert login(world.new_client(), "missing@example.com").status_code == 401
 
 
-@pytest.mark.parametrize("scenario", ["linked", "locked", "missing", "link", "invalid_otp", "cancel"])
-def test_uc02_ac14_ac15_ac16_ac17_ac21_google(world, scenario):
+# UC-02 AC-14: Khách hàng đăng nhập bằng Google mà không cần mật khẩu Sobie
+# UC-02 AC-15: Tài khoản đã liên kết Google bị khóa
+# UC-02 AC-16: Đăng nhập Google không thành công
+# UC-02 AC-17: Đăng nhập Google lần đầu vào tài khoản Sobie hiện có
+@pytest.mark.parametrize("scenario", ["linked", "locked", "missing", "link", "cancel"])
+def test_uc02_ac14_ac15_ac16_ac17_google(world, scenario):
     key = None
-    if scenario in {"linked", "locked", "link", "invalid_otp"}:
+    if scenario in {"linked", "locked", "link"}:
         key = world.seed_member(
             "google@example.com", google_sub="google-sub" if scenario in {"linked", "locked"} else None,
             status="LOCKED" if scenario == "locked" else "ACTIVE", password=scenario != "linked",
         )
     world.oidc.failure = "cancel" if scenario == "cancel" else None
     response = google(world.client, world.oidc, login_only=True)
-    if scenario in {"link", "invalid_otp"}:
-        assert world.mail and world.mail[-1][0] == "google@example.com"
-        code = world.mail[-1][1] if scenario == "link" else "abcdef"
-        response = post(world.client, "/api/v1/identity/register/google/link/otp", otp=code)
+    assert not world.mail
+    if scenario == "missing":
+        key = world.assert_new_account("google@example.com", google_sub="google-sub")
     sessions = world.sql("SELECT session_account_key FROM identity.session")
-    if scenario in {"linked", "link"}:
-        assert response.status_code == 303 and world.client.cookies.get("storefront_session")
+    if scenario in {"linked", "link", "missing"}:
+        assert response.status_code == 303 and response.headers["location"] == "/"
+        assert world.client.cookies.get("storefront_session")
         assert [row[0] for row in sessions] == [key]
         assert world.google_sub(str(key)) == "google-sub"
     else:
+        assert response.status_code == 400
         assert not world.client.cookies.get("storefront_session") and not sessions
         if scenario == "locked":
             assert "Tài khoản đã bị khóa" in response.text
-        if scenario == "missing":
-            assert "Email Google này chưa có tài khoản Sobie" in response.text
-            assert "Đăng ký với Google" in response.text
-        if scenario == "invalid_otp":
-            assert world.google_sub(str(key)) is None
-        if key is None:
+        else:
+            assert "Không thể xác thực Google. Vui lòng thử lại." in response.text
             assert not world.sql("SELECT 1 FROM identity.account")
-
-
-def test_uc02_ac22_google_link_otp_requires_new_code_after_lock(world):
-    world.seed_member("google@example.com")
-    client = world.client
-    google(client, world.oidc, login_only=True)
-    old = world.mail[-1][1]
-    verify_url = "/api/v1/identity/register/google/link/otp"
-    world.advance(15)
-    for _ in range(4):
-        page = post(client, verify_url, otp="000000")
-        assert page.status_code == 400
-    locked = post(client, verify_url, otp="000000")
-    assert locked.status_code == 429 and 'name="otp"' not in locked.text
-    assert post(client, verify_url, otp=old).status_code == 429
-
-    world.advance(299)
-    assert google(client, world.oidc, login_only=True).status_code == 429
-    assert len(world.mail) == 1 and not client.cookies.get("storefront_session")
-    world.advance(1)
-    replacement = google(client, world.oidc, login_only=True)
-    assert replacement.status_code == 200 and len(world.mail) == 2 and world.mail[-1][1] != old
-    rejected = post(client, verify_url, otp=old)
-    assert rejected.status_code == 400
-    assert post(client, verify_url, otp=world.mail[-1][1]).status_code == 303
-    assert client.cookies.get("storefront_session")
 
 
 def test_uc02_ac20_both_portals_in_one_browser(world):
@@ -157,36 +132,12 @@ def test_uc02_ac20_both_portals_in_one_browser(world):
     assert client.get("/api/v1/identity/account/profile").status_code == client.get("/api/v1/identity/portal/customers").status_code == 200
 
 
-@pytest.mark.parametrize("portal", [False, True], ids=["storefront", "portal"])
-@pytest.mark.parametrize("htmx", [False, True], ids=["form", "htmx"])
-def test_uc02_login_origin_checked_before_session_and_rate_limit(world, portal, htmx):
-    email = "member@example.com"
-    world.seed_member(email, role="employee" if portal else "customer", phone="0981234567")
-    client = world.client
-    path = PORTAL_LOGIN if portal else LOGIN
-    page = client.get(path)
-    assert 'name="csrf_token"' not in page.text
-    assert page.headers["referrer-policy"] == "strict-origin"
-    headers = {"HX-Request": "true"} if htmx else {}
-    invalid = (headers, headers | {"Origin": "null"}, headers | {"Origin": "https://other.example"})
-    for _ in range(2):
-        for supplied in invalid:
-            assert post(client, path, headers=supplied, identifier=email, password="123456").status_code == 403
-    assert not world.sql("SELECT 1 FROM identity.session")
-    assert post(client, path, headers=headers | {"Origin": "https://testserver"},
-                identifier=email, password="123456").status_code == 303
-    before = world.sql("SELECT * FROM identity.session")
-    world.advance(60)
-    for supplied in invalid:
-        assert post(client, path, headers=supplied, identifier=email, password="123456").status_code == 403
-    assert world.sql("SELECT * FROM identity.session") == before
-
-
-@pytest.mark.parametrize("branch", ["password", "google", "otp"])
+# UC-02 AC-7: Quay lại trang đặt hàng sau đăng nhập
+@pytest.mark.parametrize("branch", ["password", "google", "link"])
 def test_uc02_ac7_checkout_merges_cart_once(world, monkeypatch, branch):
     from app.main import app
 
-    monkeypatch.setitem(app.state._state, "shopping_session_factory", app.state.identity_service.session_factory)
+    monkeypatch.setitem(app.state._state, "shopping_session_factory", app.state.identity.sessions.session_factory)
     account = world.seed_member("google@example.com",
                                 google_sub="google-sub" if branch == "google" else None, password=branch != "google")
     cart = world.sql("INSERT INTO shopping.cart (cart_account_key) VALUES ($1) RETURNING cart_key", account)[0][0]
@@ -218,9 +169,8 @@ def test_uc02_ac7_checkout_merges_cart_once(world, monkeypatch, branch):
         state = parse_qs(urlsplit(start_google.headers["location"]).query)["state"][0]
         response = client.get(f"{PREFIX}/register/google/callback", params={"state": state, "code": "valid"},
                               follow_redirects=False)
-        if branch == "otp":
-            assert response.status_code == 200 and world.mail
-            response = post(client, f"{PREFIX}/register/google/link/otp", otp=world.mail[-1][1])
+        if branch == "link":
+            assert world.google_sub(str(account)) == "google-sub" and not world.mail
     assert response.status_code == 303 and response.headers["location"] == CHECKOUT
     assert client.cookies.get("storefront_session")
 

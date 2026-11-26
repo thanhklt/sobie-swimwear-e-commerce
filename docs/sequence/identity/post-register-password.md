@@ -6,8 +6,8 @@ UC-01 Main 6–8, E6, E7.
 sequenceDiagram
     actor Browser as Trình duyệt
     participant Route as Router storefront
-    participant Service as IdentityService
-    participant Repo as IdentityRepository
+    participant Service as EmailRegistrationService
+    participant Repo as AccountRepository
     participant Shopping as Service shopping
     participant DB as PostgreSQL
     participant Redis as Trạng thái đăng ký (Redis)

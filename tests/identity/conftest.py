@@ -4,6 +4,7 @@ import os
 from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
+from math import ceil
 from types import SimpleNamespace
 from urllib.parse import urlparse
 from uuid import UUID, uuid4
@@ -20,17 +21,17 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 @pytest.fixture
 def world(monkeypatch):
     from app.main import app
-    from app.modules.identity import google_oidc, helper, service
-    from app.modules.identity.session import AuthenticatedSession, Role
+    from app.modules.identity import google_oidc
+    from app.modules.identity.repository import AccountRepository, SessionRepository
+    from app.modules.identity.service import _otp_flow, _rules, build_identity_services
+    from app.modules.identity.facade import AuthenticatedSession, Role
     from app.modules.shopping import repository as shopping
 
     dsn = os.environ["UC01_TEST_DATABASE_URL"]
     if urlparse(dsn).path != "/uc01test":
         raise RuntimeError("UC01_TEST_DATABASE_URL must point to the dedicated uc01test database")
     engine = create_async_engine(dsn.replace("postgresql://", "postgresql+asyncpg://"), poolclass=NullPool)
-    monkeypatch.setattr(app.state.identity_service, "session_factory", async_sessionmaker(
-        engine, class_=AsyncSession, expire_on_commit=False
-    ))
+    session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
     async def run_sql(query, *args, fetch=True):
         connection = await asyncpg.connect(dsn)
@@ -47,9 +48,9 @@ def world(monkeypatch):
 
     w = SimpleNamespace(mail=[], now=datetime(2026, 11, 23, 18, 0, tzinfo=UTC), failure=None, sql=sql)
     w.advance = lambda seconds: setattr(w, "now", w.now + timedelta(seconds=seconds))
-    monkeypatch.setattr(helper, "utc_now", lambda: w.now)
+    monkeypatch.setattr(_rules, "utc_now", lambda: w.now)
     otp_numbers = iter(range(100000, 200000))
-    monkeypatch.setattr(helper, "generate_otp", lambda: str(next(otp_numbers)))
+    monkeypatch.setattr(_otp_flow, "generate_otp", lambda: str(next(otp_numbers)))
 
     class Store:
         def __init__(self):
@@ -70,6 +71,12 @@ def world(monkeypatch):
                 return None
             return entry[0] if entry else None
 
+        async def ttl(self, key):
+            if await self.get(key) is None:
+                return 0
+            _, deadline = self.values[key]
+            return ceil((deadline - w.now).total_seconds())
+
         async def compare_and_set(self, key, expected, value, ttl=0):
             if await self.get(key) != expected:
                 return False
@@ -89,11 +96,9 @@ def world(monkeypatch):
             return True
 
     store = Store()
-    monkeypatch.setattr(service, "get_challenge_store", lambda: store)
 
-    async def mail(email, otp):
-        w.mail.append((email, otp))
-    monkeypatch.setattr(service, "send_registration_otp", mail)
+    async def mail(to, template, data):
+        w.mail.append((to, data["otp"]))
 
     class OIDC:
         failure = None
@@ -110,17 +115,16 @@ def world(monkeypatch):
             )
 
     w.oidc = OIDC()
-    monkeypatch.setattr(service, "get_google_oidc", lambda: w.oidc)
 
     def fail(name):
         if w.failure == name:
             raise RuntimeError(f"injected {name} failure")
 
-    identity_repository = app.state.identity_service.repository
-    for method_name, failure_name in (
-        ("next_account_suffix", "suffix"), ("insert_customer", "account"),
-        ("insert_session", "session"), ("delete_account_sessions", "revoke"),
-        ("save_account", "save_account"),
+    accounts, sessions = AccountRepository(), SessionRepository()
+    for identity_repository, method_name, failure_name in (
+        (accounts, "next_account_suffix", "suffix"), (accounts, "insert_customer", "account"),
+        (sessions, "insert_session", "session"), (sessions, "delete_account_sessions", "revoke"),
+        (accounts, "save_account", "save_account"),
     ):
         original = getattr(identity_repository, method_name)
 
@@ -132,6 +136,13 @@ def world(monkeypatch):
             return wrapper
 
         monkeypatch.setattr(identity_repository, method_name, wrapper_factory(original, failure_name))
+
+    identity = build_identity_services(
+        session_factory, accounts=accounts, sessions=sessions,
+        challenge_store=lambda: store, google_oidc=lambda: w.oidc, send_email=mail,
+    )
+    # Patch Starlette State's backing mapping so pytest restores the original value.
+    monkeypatch.setitem(app.state._state, "identity", identity)
 
     for method_name, failure_name in (("insert_cart", "cart"), ("insert_wishlist", "wishlist")):
         original = getattr(shopping, method_name)
@@ -195,7 +206,7 @@ def world(monkeypatch):
     def authenticated():
         async def auth(token, portal):
             return AuthenticatedSession(uuid4(), uuid4(), Role.CUSTOMER)
-        monkeypatch.setattr(app.state.identity_service, "authenticate_session", auth)
+        monkeypatch.setattr(app.state.identity.sessions, "authenticate_session", auth)
         w.client.cookies.set("storefront_session", "test", domain="testserver.local", path="/")
     w.authenticated = authenticated
 
@@ -225,6 +236,7 @@ def world(monkeypatch):
         assert sql("SELECT wishlist_account_key FROM shopping.wishlist")[0][0] == item["account_key"]
         assert sql("SELECT count(*) FROM shopping.cart_item")[0][0] == 0
         assert sql("SELECT count(*) FROM shopping.wishlist_item")[0][0] == 0
+        return item["account_key"]
     w.assert_new_account = assert_new_account
     w.session_account = lambda: str(sql("SELECT session_account_key FROM identity.session WHERE session_token_hash=$1",
         sha256(w.client.cookies["storefront_session"].encode()).hexdigest())[0][0])

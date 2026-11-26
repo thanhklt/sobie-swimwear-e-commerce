@@ -1,0 +1,28 @@
+{% from "identity/_partials/icons.html" import eye %}
+
+{% macro error(field, result) %}
+  {% if result.field == field %}
+    <p id="{{ field }}-error" class="identity-field-error" role="alert">{{ result.message }}</p>
+  {% endif %}
+{% endmacro %}
+
+{% macro credentials(identifier, result) %}
+  <div class="identity-field">
+    <label for="identifier">Email hoặc số điện thoại</label>
+    <input id="identifier" name="identifier" type="text" autocomplete="username"
+           placeholder="Nhập email hoặc số điện thoại" value="{{ identifier }}" required
+           {% if result.field == "identifier" %}aria-invalid="true" aria-describedby="identifier-error"{% endif %}>
+    {{ error("identifier", result) }}
+  </div>
+  <div class="identity-field">
+    <label for="password">Mật khẩu</label>
+    <div class="identity-password">
+      <input id="password" name="password" type="password" autocomplete="current-password"
+             placeholder="Nhập mật khẩu" required
+             {% if result.field == "password" %}aria-invalid="true" aria-describedby="password-error"{% endif %}>
+      <button class="identity-password-toggle" type="button" aria-controls="password"
+              aria-label="Hiện mật khẩu" aria-pressed="false">{{ eye() }}</button>
+    </div>
+    {{ error("password", result) }}
+  </div>
+{% endmacro %}

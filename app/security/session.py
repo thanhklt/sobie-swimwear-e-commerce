@@ -8,7 +8,7 @@ from starlette.responses import Response
 from starlette.types import ASGIApp
 
 from app.error.exceptions import SessionAccessError
-from app.modules.identity.session import AuthenticatedSession, Role, SessionPortal
+from app.modules.identity.facade import AuthenticatedSession, Role, SessionPortal, authenticate_session
 from app.security.origin import has_allowed_origin, origin_rejected
 
 STOREFRONT_SESSION_COOKIE = "storefront_session"
@@ -47,7 +47,7 @@ class SessionMiddleware(BaseHTTPMiddleware):
         token = request.cookies.get(cookie_name)
         request.state.auth_portal = portal
         request.state.auth_session = (
-            await request.app.state.identity_service.authenticate_session(token, portal) if token else None
+            await authenticate_session(request, token, portal) if token else None
         )
         return await call_next(request)
 

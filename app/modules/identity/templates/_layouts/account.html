@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ request.url_for('identity_css', path='/base.css').path }}">
+  <link rel="stylesheet" href="{{ request.url_for('identity_css', path='/account.css').path }}">
+{% endblock %}
+
+{% block content %}
+  <div class="identity-page">
+    <div class="identity-shell">
+      <header class="identity-header">
+        {% set in_portal = request.state.auth_session and request.state.auth_portal.value == 'portal' %}
+        <a class="identity-brand" href="{{ request.url_for('portal_home' if in_portal else 'root').path }}">Sobie</a>
+      </header>
+      <div class="identity-card">
+        <div class="identity-art" aria-hidden="true"></div>
+        <section class="identity-panel" aria-labelledby="identity-title">
+          {% block account_content %}{% endblock %}
+        </section>
+      </div>
+    </div>
+  </div>
+{% endblock %}

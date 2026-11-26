@@ -6,7 +6,7 @@ UC-07 · Chi tiết khách cho Nhân viên.
 sequenceDiagram
     actor Browser as Trình duyệt
     participant Route as Router và middleware
-    participant Service as IdentityService
+    participant Service as AccountService
     participant Data as Repository và PostgreSQL
     Browser->>Route: Chọn tài khoản Khách hàng
     Route->>Service: Xác thực phiên Nhân viên

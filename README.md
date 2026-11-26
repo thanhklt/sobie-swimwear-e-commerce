@@ -1,6 +1,6 @@
 # Sobie — thương mại điện tử đồ bơi
 
-Dự án tổ chức theo **modular monolith**: một ứng dụng gồm 9 module nghiệp vụ.
+Dự án tổ chức theo **modular monolith** với chín module nghiệp vụ và module kỹ thuật notification.
 
 Hiện repo **chỉ có khung thư mục / file** (mỗi file chỉ có docstring mô tả trách nhiệm). Chưa chọn framework, chưa khai báo thư viện, chưa có API, kết nối database hay logic nghiệp vụ.
 
@@ -17,7 +17,7 @@ Hiện repo **chỉ có khung thư mục / file** (mỗi file chỉ có docstrin
 
 ## Module
 
-Một module dùng chung **một tên** cho: thư mục use case `specs/use-cases/<module>/`, schema PostgreSQL, `TableGroup` trong data model và package `app/modules/<module>/`.
+Một module nghiệp vụ dùng chung **một tên** cho: thư mục use case `specs/use-cases/<module>/`, schema PostgreSQL, `TableGroup` trong data model và package `app/modules/<module>/`.
 
 | Module | BR | Phạm vi | Bảng | Use case |
 |---|---|---|---|---|
@@ -30,17 +30,19 @@ Một module dùng chung **một tên** cho: thư mục use case `specs/use-case
 | `inventory` | BR-005 | Nhà cung cấp, phiếu nhập, tồn kho, giá vốn | supplier, goods_receipt, goods_receipt_detail, stock | UC-32 → 35, 39 |
 | `shipping` | BR-006 | Bàn giao vận chuyển, trang giả lập vận chuyển | (không có) | UC-36, 40 |
 | `reporting` | BR-007 | Dashboard, chỉ đọc | (không có) | UC-37 |
+| `notification` | Không có BR riêng | Gửi email | Không có bảng | UC-01 và giai đoạn 2 (nhắc giỏ hàng, báo giảm giá) |
 
 ## Cấu trúc thư mục
 
 ```text
 soobin-swimwear-e-commerce/
 ├── app/
-│   ├── main.py                     # Khởi tạo ứng dụng, đăng ký router của 9 module
+│   ├── main.py                     # Khởi tạo ứng dụng, đăng ký router
 │   ├── config/settings.py          # Nạp cấu hình từ biến môi trường
 │   ├── database/
 │   │   ├── engine.py               # Async engine, session factory
 │   │   └── transaction.py          # Transaction đi qua nhiều module
+│   ├── redis/engine.py             # Client Redis dùng chung, tạo lười khi dùng lần đầu
 │   ├── security/session.py         # Middleware phiên, kiểm tra vai trò
 │   ├── shared/web/                 # Template và cấu hình render HTML dùng chung
 │   │   ├── rendering.py
@@ -49,6 +51,13 @@ soobin-swimwear-e-commerce/
 │   ├── money.py                    # VND / Decimal, ROUND_HALF_UP
 │   └── modules/
 │       ├── identity/
+│       │   ├── facade.py
+│       │   ├── router/
+│       │   ├── service/
+│       │   ├── repository/
+│       │   ├── css/
+│       │   └── templates/
+│       ├── notification/           # facade.py, service.py, smtp.py, templates/email/
 │       ├── catalog/
 │       ├── shopping/
 │       ├── ordering/               # có thêm jobs.py (tự hủy đơn QR quá hạn)
@@ -71,13 +80,15 @@ soobin-swimwear-e-commerce/
 app/modules/<module>/
 ├── __init__.py      # Phạm vi, bảng sở hữu, use case, phụ thuộc
 ├── router.py        # Nhận request, kiểm tra dữ liệu, gọi service
-├── service.py       # Nghiệp vụ, transaction, service công khai cho module khác
+├── service.py       # Nghiệp vụ và transaction
 ├── repository.py    # Truy vấn bảng do module sở hữu
 ├── schemas.py       # Schema đầu vào / đầu ra API
 └── models.py        # Model lưu trữ (schema PostgreSQL cùng tên module)
 ```
 
-Luồng bắt buộc: `Route → Service → Repository → Database`. Module chỉ gọi **service công khai** của module khác; không import repository / model hoặc truy cập bảng của module khác. Thao tác đi qua nhiều module (trừ tồn + áp khuyến mãi + tạo đơn) chạy trong cùng một transaction: service gọi truyền session cho service được gọi.
+`identity` tổ chức router, service và repository thành các package cùng tên. Module có `facade.py` và giữ template, CSS trong `templates/` và `css/`.
+
+Request đi theo luồng `Route → Service → Repository → Database`. Module gọi qua `facade.py` khi module đích có facade. Các module còn lại cung cấp service công khai. Repository, model và bảng chỉ được truy cập trong module sở hữu. Service truyền cùng session cho các module tham gia một transaction, chẳng hạn khi trừ tồn kho, áp khuyến mãi và tạo đơn.
 
 ## Trạng thái và phần còn chờ
 

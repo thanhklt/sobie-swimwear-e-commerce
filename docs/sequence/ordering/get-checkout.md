@@ -13,7 +13,7 @@ sequenceDiagram
     Browser->>Route: Mở checkout
     alt Chưa có phiên storefront
         Route-->>Browser: 303 tới trang đăng nhập storefront kèm return_to
-        Note over Browser,Route: Mật khẩu, Google đã liên kết và OTP liên kết đều quay lại checkout
+        Note over Browser,Route: Đăng nhập thành công bằng mật khẩu hoặc Google đều quay lại checkout
     else Phiên Khách hàng hợp lệ
         Route->>Service: Đọc giỏ để hiển thị
         Service->>Shopping: Lấy các dòng giỏ tài khoản

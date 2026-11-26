@@ -1,0 +1,29 @@
+{% extends "identity/_layouts/auth.html" %}
+{% block title %}Sobie{% endblock %}
+{% block account_content %}
+  <header class="identity-intro">
+    <p class="identity-eyebrow">Sobie / Summer Club</p>
+    <h1 id="identity-title">Sobie</h1>
+    {% if not request.state.auth_session %}
+      <p>Đăng nhập hoặc tạo tài khoản để mua sắm cùng Sobie.</p>
+    {% endif %}
+  </header>
+
+  {% if request.state.auth_session %}
+    <div class="identity-form">
+      <a class="identity-button" href="{{ request.url_for('customer_profile').path }}">Hồ sơ khách hàng</a>
+    </div>
+    <div class="identity-alternative">
+      {% set logout_button_class = "identity-button identity-button--secondary" %}
+      {% include "identity/_partials/logout.html" %}
+    </div>
+  {% else %}
+    <div class="identity-form">
+      <a class="identity-button" href="{{ request.url_for('storefront_login').path }}">Đăng nhập</a>
+    </div>
+    <div class="identity-alternative">
+      <a class="identity-button identity-button--secondary"
+         href="{{ request.url_for('registration_form').path }}">Đăng ký tài khoản</a>
+    </div>
+  {% endif %}
+{% endblock %}

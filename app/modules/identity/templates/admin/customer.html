@@ -1,0 +1,13 @@
+{% extends "identity/_layouts/account.html" %}
+{% block title %}Hồ sơ khách hàng · Sobie{% endblock %}
+{% block account_content %}
+  <h1 id="identity-title">Hồ sơ khách hàng</h1>
+  <p>{{ account.code }} · {{ "Hoạt động" if account.status == "ACTIVE" else "Bị khóa" }}</p>
+  <dl>
+    {% for field, (label, limit) in fields.items() %}
+      <dt>{{ label }}</dt><dd>{{ account.get(field) or "—" }}</dd>
+    {% endfor %}
+  </dl>
+  {% include "identity/_partials/account_lock.html" %}
+  <a href="{{ request.url_for('employee_customers').path }}">Danh sách khách hàng</a>
+{% endblock %}

@@ -6,7 +6,7 @@ UC-05 · Đổi mật khẩu portal.
 sequenceDiagram
     actor Browser as Trình duyệt
     participant Route as Router và middleware
-    participant Service as IdentityService
+    participant Service as AccountService
     participant Data as Repository và PostgreSQL
     Browser->>Route: Gửi mật khẩu hiện tại, mật khẩu mới, xác nhận và csrf_token
     Route->>Service: Kiểm tra CSRF, khóa account và xác nhận phiên nội bộ

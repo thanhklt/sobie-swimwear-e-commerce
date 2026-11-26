@@ -6,7 +6,7 @@ UC-08 · Khóa tài khoản.
 sequenceDiagram
     actor Browser as Trình duyệt
     participant Route as Router và middleware
-    participant Service as IdentityService
+    participant Service as AdminAccountService
     participant Data as Repository và PostgreSQL
     Browser->>Route: Gửi confirm, csrf_token và ngữ cảnh danh sách nếu có
     Route->>Route: Kiểm tra phiên, vai trò và CSRF

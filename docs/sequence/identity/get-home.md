@@ -6,7 +6,7 @@ UC-02/03 · Điều hướng storefront.
 sequenceDiagram
     actor Browser as Trình duyệt
     participant Route as Router và middleware
-    participant Service as IdentityService
+    participant Service as SessionService
     participant Data as Repository và PostgreSQL
     Browser->>Route: Accept: text/html
     Route->>Service: Dùng storefront_session để xác thực và gia hạn phiên nếu hợp lệ

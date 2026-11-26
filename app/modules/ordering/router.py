@@ -9,7 +9,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.error.exceptions import SessionAccessError
-from app.modules.identity.session import Role
+from app.modules.identity.facade import Role
 from app.modules.ordering.service import preview_checkout
 from app.shared.web.rendering import templates
 
@@ -28,6 +28,6 @@ async def checkout(request: Request):
         raise SessionAccessError(status_code=403)
     items = await preview_checkout(request.app.state.shopping_session_factory, actor.account_key)
     return templates.TemplateResponse(
-        request, "checkout.html", {"items": items},
+        request, "ordering/checkout.html", {"items": items},
         headers=_NO_STORE | {"Referrer-Policy": "strict-origin"},
     )

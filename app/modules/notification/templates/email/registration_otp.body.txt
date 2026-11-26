@@ -1,0 +1,1 @@
+Mã xác minh Sobie của bạn là {{ otp }}. Mã có hiệu lực trong 5 phút.

@@ -1,6 +1,6 @@
 # API Contract Identity v1
 
-Tài liệu mô tả các endpoint storefront và portal của [router Identity](../app/modules/identity/router.py). Router Identity dùng tiền tố `/api/v1/identity`. Mỗi cổng dùng chung đường dẫn cho GET hiển thị biểu mẫu và POST xử lý đăng nhập.
+Tài liệu mô tả các endpoint storefront và portal của [router Identity](../app/modules/identity/router/__init__.py). Router Identity dùng tiền tố `/api/v1/identity`. Mỗi cổng dùng chung đường dẫn cho GET hiển thị biểu mẫu và POST xử lý đăng nhập.
 
 Nguồn nghiệp vụ gồm [UC-01 đến UC-08](../specs/use-cases/identity/) và [BR giai đoạn 1](../specs/business-requirements/BR-GIAIDOAN1.md).
 
@@ -8,7 +8,7 @@ Nguồn nghiệp vụ gồm [UC-01 đến UC-08](../specs/use-cases/identity/) v
 
 - `GET` nhận tham số qua query string. `POST` nhận biểu mẫu HTML với `Content-Type: application/x-www-form-urlencoded`. Trang Identity trả HTML và `Cache-Control: no-store`. Chuyển hướng dùng `303` cùng header `Location`.
 - Thiếu phiên hợp lệ ở endpoint yêu cầu đăng nhập dẫn tới `303` về trang đăng nhập đúng cổng. Với `HX-Request: true`, ứng dụng trả `401` kèm `HX-Redirect`. Sai vai trò trả `403`. Tham số path `account_key` phải là UUID. `page` nhận số nguyên. FastAPI trả `422` nếu các tham số này sai kiểu.
-- Năm POST đăng ký, hai POST đăng nhập và hai POST đăng xuất kiểm tra `Origin` trước khi xác thực hoặc gia hạn phiên. Header thiếu, có giá trị `null` hoặc nguồn khác origin của request và các mục trong `ALLOWED_ORIGINS` trả `403`. Các POST này không gửi `csrf_token`. Trang đăng ký, đăng nhập và trang có form đăng xuất dùng `Referrer-Policy: strict-origin`.
+- Bốn POST đăng ký (`/register/email`, `/register/otp/resend`, `/register/otp`, `/register/password`), hai POST đăng nhập và hai POST đăng xuất kiểm tra `Origin` trước khi xác thực hoặc gia hạn phiên. Header thiếu, có giá trị `null` hoặc nguồn khác origin của request và các mục trong `ALLOWED_ORIGINS` trả `403`. Các POST này không gửi `csrf_token`. Trang đăng ký, đăng nhập và trang có form đăng xuất dùng `Referrer-Policy: strict-origin`.
 - POST sửa hồ sơ, đổi mật khẩu, tạo hoặc sửa tài khoản, khóa và mở khóa kiểm tra trường `csrf_token`. Token được tạo từ cookie trình duyệt `__Host-sobie-registration` và dùng lại giữa các biểu mẫu khi cookie còn hiệu lực. Các POST này chưa kiểm tra `Origin` theo quy ước chung của contract. Cookie có `Path=/`, `Max-Age=3600`, `Secure`, `HttpOnly`, `SameSite=Lax` và cũng dùng để định danh lượt xác minh đăng ký. OTP và trạng thái nghiệp vụ có thời hạn riêng ở server.
 - Cookie xác thực `storefront_session` và `portal_session` dùng `Path=/`, `Secure`, `HttpOnly`, `SameSite=Lax`. Storefront gia hạn 30 phút khi xác thực thành công, portal gia hạn 60 phút. Đăng nhập Google thành công cấp cookie storefront và xóa cookie đăng ký.
 
@@ -22,8 +22,7 @@ Nguồn nghiệp vụ gồm [UC-01 đến UC-08](../specs/use-cases/identity/) v
 | `POST /api/v1/identity/register/otp` | Vãng lai | Header `Origin`, form `otp` | 200 tạo mật khẩu, 400 mã sai hoặc hết hạn, 403 Origin không hợp lệ, 429 mã bị khóa, 503 lỗi kho xác minh | [Sơ đồ](sequence/identity/post-register-otp.md) |
 | `POST /api/v1/identity/register/password` | Vãng lai | Header `Origin`, form `password`, `password_confirmation` | 303 về đăng nhập, 400 mật khẩu hoặc lượt xác minh không hợp lệ, 403 Origin không hợp lệ, 409 email trùng, 500/503 lỗi xử lý | [Sơ đồ](sequence/identity/post-register-password.md) |
 | `GET /api/v1/identity/register/google` | Vãng lai | Query `login=1` và `return_to=/api/v1/ordering/checkout` tùy chọn | 303 sang Google hoặc tới trang đích nếu có phiên, 400/409/503 lỗi khởi tạo OIDC | [Sơ đồ](sequence/identity/get-register-google.md) |
-| `GET /api/v1/identity/register/google/callback` | Google / Vãng lai | Query `state`, `code` hoặc `error` | 303 về đăng nhập, trang chủ hoặc checkout, 200 nhập OTP liên kết, 400/409/429 lỗi xác minh, 500/503 lỗi xử lý | [Sơ đồ](sequence/identity/get-register-google-callback.md) |
-| `POST /api/v1/identity/register/google/link/otp` | Vãng lai | Header `Origin`, form `otp` | 303 tới trang chủ hoặc checkout kèm phiên, 400 OTP hoặc lượt không hợp lệ, 403 Origin không hợp lệ, 429 mã bị khóa, 500/503 lỗi xử lý | [Sơ đồ](sequence/identity/post-register-google-link-otp.md) |
+| `GET /api/v1/identity/register/google/callback` | Google / Vãng lai | Query `state`, `code` hoặc `error` | 303 tới trang chủ hoặc checkout kèm phiên, 400/409 lỗi xác minh, 500/503 lỗi xử lý | [Sơ đồ](sequence/identity/get-register-google-callback.md) |
 | `GET /api/v1/identity/login` | Vãng lai / Khách | Query `return_to`, `password_changed` tùy chọn | 200 mẫu đăng nhập, 303 tới `/` hoặc checkout nếu có phiên | [Sơ đồ](sequence/identity/get-login.md) |
 | `GET /` | Vãng lai / Khách hàng | Header `Accept` | 200 HTML Identity nếu `Accept` chứa `text/html`, các trường hợp còn lại trả JSON | [Sơ đồ](sequence/identity/get-home.md) |
 | `GET /api/v1/identity/portal/login` | Vãng lai / Nội bộ | Query `password_changed`, `locked`, `role_changed` tùy chọn | 200 mẫu đăng nhập, 303 tới `/api/v1/identity/portal` nếu có phiên | [Sơ đồ](sequence/identity/get-admin-login.md) |
@@ -32,8 +31,8 @@ Nguồn nghiệp vụ gồm [UC-01 đến UC-08](../specs/use-cases/identity/) v
 | `GET /api/v1/identity/portal` | Nhân viên / Admin | — | 200 trang Tổng quan với liên kết theo vai trò | [Sơ đồ](sequence/identity/get-admin.md) |
 | `POST /api/v1/identity/logout` | Vãng lai / Khách hàng | Header `Origin`, cookie `storefront_session` nếu có | 303 về `/` và hết hạn cookie storefront, kể cả phiên hết hạn hoặc thiếu cookie, 403 Origin không hợp lệ | [Sơ đồ](sequence/identity/post-logout.md) |
 | `POST /api/v1/identity/portal/logout` | Vãng lai / Nhân viên / Admin | Header `Origin`, cookie `portal_session` nếu có | 303 về `/` và hết hạn cookie portal, kể cả phiên hết hạn hoặc thiếu cookie, 403 Origin không hợp lệ | [Sơ đồ](sequence/identity/post-admin-logout.md) |
-| `GET /api/v1/identity/account/profile` | Khách | Query `saved=1` tùy chọn | 200 hồ sơ của chủ phiên, mã tài khoản chỉ đọc và form có `csrf_token` | [Sơ đồ](sequence/identity/get-account-profile.md) |
-| `POST /api/v1/identity/account/profile` | Khách | Các trường hồ sơ và `csrf_token` | 303 về hồ sơ với `saved=1`, 400 lỗi theo trường, 403 khi CSRF không hợp lệ | [Sơ đồ](sequence/identity/post-account-profile.md) |
+| `GET /api/v1/identity/account/profile` | Khách | Query `saved=1` tùy chọn | 200 hồ sơ của chủ phiên, mã tài khoản và email chỉ xem, form có `csrf_token` | [Sơ đồ](sequence/identity/get-account-profile.md) |
+| `POST /api/v1/identity/account/profile` | Khách | Các trường hồ sơ được sửa và `csrf_token`. Server bỏ qua `email` nếu được gửi | 303 về hồ sơ với `saved=1`, 400 lỗi theo trường, 403 khi CSRF không hợp lệ | [Sơ đồ](sequence/identity/post-account-profile.md) |
 | `GET /api/v1/identity/account/password` | Khách | — | 200 mẫu đổi mật khẩu có `csrf_token`, 403 nếu chưa có mật khẩu Sobie | [Sơ đồ](sequence/identity/get-account-password.md) |
 | `POST /api/v1/identity/account/password` | Khách | `current_password`, `password`, `password_confirmation`, `csrf_token` | 303 tới `/api/v1/identity/login?password_changed=1`, 400 lỗi theo trường, 403 khi CSRF không hợp lệ | [Sơ đồ](sequence/identity/post-account-password.md) |
 | `GET /api/v1/identity/portal/password` | Nhân viên / Admin | — | 200 mẫu đổi mật khẩu có `csrf_token`, 403 nếu chưa có mật khẩu Sobie | [Sơ đồ](sequence/identity/get-admin-password.md) |
@@ -50,9 +49,11 @@ Nguồn nghiệp vụ gồm [UC-01 đến UC-08](../specs/use-cases/identity/) v
 
 ## Đăng ký qua email
 
+Các phản hồi HTML ở bước OTP đăng ký hiển thị thời gian chờ gửi lại theo TTL cooldown của email, kể cả khi tải lại trang. Nút "Gửi lại mã" bị vô hiệu hóa trong lúc đếm ngược và được bật lại khi hết giờ. Sau lần nhập sai thứ năm, thời gian chờ 5 phút được tính từ lần sai đó.
+
 ### `GET /api/v1/identity/register`
 
-- `200` hiển thị trang nhập email khi mở lần đầu. Nếu cookie có lượt xác minh phù hợp, trang hiển thị bước nhập OTP, tạo mật khẩu hoặc nhập OTP liên kết Google tương ứng.
+- `200` hiển thị trang nhập email và nút “Đăng nhập với Google” khi mở lần đầu. Nếu cookie có lượt đăng ký qua email phù hợp, trang hiển thị bước nhập OTP hoặc tạo mật khẩu.
 - `?restart=1` mở trang nhập email bằng cách bỏ qua bước đọc trạng thái. Thao tác này giữ cookie hợp lệ hiện có và không xóa trạng thái đang lưu.
 - `503` nếu route gặp lỗi khi đọc trạng thái đăng ký. `303` tới `/` nếu đã đăng nhập.
 
@@ -87,31 +88,26 @@ Nguồn nghiệp vụ gồm [UC-01 đến UC-08](../specs/use-cases/identity/) v
 ### `GET /api/v1/identity/register/google`
 
 - `303` điều hướng tới Google OpenID Connect. Server tạo cookie đăng ký nếu cần và lưu trạng thái OIDC trong 10 phút. Luồng dùng scope `openid email` và PKCE `S256`.
-- `/api/v1/identity/register/google` cho phép tạo tài khoản mới. `?login=1` dùng kết quả Google cho tài khoản Sobie đã có. Trong chế độ này, `return_to=/api/v1/ordering/checkout` được lưu trong lượt OIDC phía server và truyền sang lượt OTP liên kết nếu cần.
+- Trang đăng ký và đăng nhập dùng chung luồng Google. Khi có cả `login=1` và `return_to=/api/v1/ordering/checkout`, server lưu đích checkout trong lượt OIDC.
 - `400` nếu không lưu được trạng thái do xung đột. `409` nếu lượt đang được xử lý. `503` nếu cấu hình Google thiếu hoặc dịch vụ xác minh không khả dụng.
 
 ### `GET /api/v1/identity/register/google/callback`
 
-- `state` phải khớp lượt Google còn hạn của cookie đăng ký. `code` là mã Google trả khi người dùng chấp thuận. `error` khác rỗng được xử lý như xác thực thất bại.
+- `state` phải khớp lượt Google còn hạn của cookie đăng ký và chỉ dùng một lần. `code` là mã Google trả khi người dùng chấp thuận. `error` khác rỗng hoặc `email_verified` khác `true` được xử lý như xác thực thất bại.
 
-| Kết quả xác thực | Phản hồi |
+| Thứ tự tìm tài khoản | Xử lý |
 | --- | --- |
-| Tìm thấy tài khoản Khách hàng đang hoạt động theo `sub` | `303` tới checkout nếu lượt OIDC khởi đầu từ checkout, nếu không thì tới `/`. Cấp cookie phiên storefront. |
-| Email Google đã xác minh trùng tài khoản Khách hàng đang hoạt động chưa liên kết Google | `200` trang nhập OTP. Mã được gửi đến email đã lưu trên tài khoản Sobie. |
-| Email đã xác minh chưa có tài khoản và lượt cho phép đăng ký | `303` tới `/api/v1/identity/login` sau khi tạo tài khoản Google mới, giỏ hàng và danh sách yêu thích trống. Tài khoản được tạo không cần mật khẩu Sobie. |
+| Tìm thấy tài khoản Khách hàng đang Hoạt động theo `sub` | Cấp phiên cho tài khoản đã liên kết. |
+| Email đã xác minh trùng tài khoản Khách hàng đang Hoạt động chưa liên kết Google | Lưu `sub` rồi cấp phiên trong cùng transaction, không gửi OTP. |
+| Chưa có tài khoản theo `sub` hoặc email đã xác minh | Tạo tài khoản Khách hàng kèm `sub`, giỏ hàng và danh sách yêu thích trống, rồi cấp phiên trong cùng transaction. Tài khoản mới không cần mật khẩu Sobie. |
 
-- `400` nếu thiếu cookie hoặc trạng thái hợp lệ, tham số `state`, `code` hay `error` lặp, người dùng hủy, xác thực thất bại, tài khoản không đủ điều kiện, yêu cầu gửi OTP đang trong thời gian chờ hoặc lượt chỉ đăng nhập không tìm được tài khoản. Ở trường hợp cuối, thông báo hướng dẫn chọn Đăng ký với Google.
-- `409` nếu trạng thái thay đổi khi chuẩn bị gửi OTP liên kết. `429` nếu xác thực lại trong thời gian khóa OTP của lượt hiện tại. `500` nếu thao tác với tài khoản hoặc phiên thất bại. `503` nếu gửi OTP liên kết hoặc dịch vụ xác minh gặp lỗi.
-
-### `POST /api/v1/identity/register/google/link/otp`
-
-- `otp` là chuỗi 6 chữ số ASCII. Mã có hiệu lực 5 phút và tối đa 5 lần nhập sai. Trang liên kết có biểu mẫu xác minh và liên kết bắt đầu lại.
-- `303` tới checkout nếu lượt liên kết khởi đầu từ checkout, nếu không thì tới `/`. Xác minh thành công dẫn đến liên kết `sub` và cấp phiên storefront trong cùng transaction.
-- `400` nếu mã sai, hết hạn, không có lượt liên kết phù hợp hoặc tài khoản không còn đủ điều kiện. Lần sai thứ năm khóa mã và trả `429`. Mã đã khóa luôn bị từ chối khi lượt còn lưu. Sau 5 phút kể từ lần sai thứ năm, khách có thể xác thực lại với Google để nhận mã mới. `500` nếu lưu liên kết hoặc tạo phiên thất bại. `503` nếu dịch vụ xác minh gặp lỗi.
+- Khi thành công, server đặt cookie `storefront_session`, xóa cookie đăng ký và trả `303` tới checkout nếu lượt OIDC bắt đầu từ checkout, hoặc tới `/`.
+- `400` nếu cookie hoặc trạng thái không hợp lệ, tham số `state`, `code` hay `error` lặp, người dùng hủy, xác thực thất bại, tài khoản sai vai trò hoặc bị khóa, hoặc email trùng với tài khoản đã liên kết một `sub` khác.
+- `409` nếu có yêu cầu đồng thời đang xử lý trạng thái đăng ký của trình duyệt. Nếu hai lượt xung đột trên ràng buộc duy nhất của email hoặc `sub`, server hoàn tác lần ghi thất bại và tra lại tài khoản. `500` nếu thao tác tài khoản hoặc phiên thất bại. `503` nếu dịch vụ xác minh gặp lỗi.
 
 ## `GET /api/v1/identity/login`
 
-- `200` hiển thị form đăng nhập bằng mật khẩu, nút Quên mật khẩu, liên kết Google và đăng ký. Sau khi tạo tài khoản, thông báo “Đăng ký thành công.” có thể hiển thị một lần trong 2 phút khi dùng cùng cookie đăng ký. Nếu không đọc được thông báo, trang vẫn trả `200`.
+- `200` hiển thị form đăng nhập bằng mật khẩu, nút Quên mật khẩu, liên kết Google và đăng ký. Sau khi tạo tài khoản bằng email, thông báo “Đăng ký thành công.” có thể hiển thị một lần trong 2 phút khi dùng cùng cookie đăng ký. Nếu không đọc được thông báo, trang vẫn trả `200`.
 - `303` nếu đã có phiên storefront hợp lệ, tới checkout khi `return_to` khớp chính xác đường dẫn checkout, hoặc tới `/` trong các trường hợp còn lại. Biểu mẫu mật khẩu và liên kết Google giữ đích checkout khi có.
 
 ## Đăng nhập bằng mật khẩu và phiên
@@ -129,7 +125,7 @@ Nguồn nghiệp vụ gồm [UC-01 đến UC-08](../specs/use-cases/identity/) v
 
 ## Hồ sơ (UC-04)
 
-- Khách hàng thao tác trên hồ sơ của chủ phiên tại `/api/v1/identity/account/profile`. Các trường gồm `name`, `date_of_birth`, `house_number`, `ward`, `city`, `country`, `email`, `phone_number`. Mã tài khoản chỉ đọc. Email và số điện thoại mới phải đúng định dạng và chưa được tài khoản khác dùng. Đổi thông tin liên hệ không yêu cầu xác minh lại.
+- Khách hàng thao tác trên hồ sơ của chủ phiên tại `/api/v1/identity/account/profile`. Trang hiển thị mã tài khoản và email ở dạng chỉ xem. POST lưu `name`, `date_of_birth`, `house_number`, `ward`, `city`, `country`, `phone_number` và bỏ qua `email` nếu được gửi. Số điện thoại mới phải đúng định dạng và chưa được tài khoản khác dùng. Đổi số điện thoại không yêu cầu xác minh lại.
 - Admin sửa hồ sơ của khách hàng được chọn qua endpoint sửa tài khoản portal của UC-07.
 
 ## Đổi mật khẩu (UC-05)
@@ -151,7 +147,7 @@ Nguồn nghiệp vụ gồm [UC-01 đến UC-08](../specs/use-cases/identity/) v
 
 ## Quay lại checkout (UC-02 AC-7)
 
-- `GET /api/v1/ordering/checkout` trả `303` đến trang đăng nhập storefront với query `return_to=/api/v1/ordering/checkout` khi chưa có phiên. Mật khẩu, callback Google đã liên kết và OTP liên kết thành công đều chuyển về checkout khi luồng khởi đầu từ checkout. Checkout hiển thị giỏ tài khoản. [Sơ đồ checkout](sequence/ordering/get-checkout.md)
+- `GET /api/v1/ordering/checkout` trả `303` đến trang đăng nhập storefront với query `return_to=/api/v1/ordering/checkout` khi chưa có phiên. Đăng nhập bằng mật khẩu hoặc Google thành công đều chuyển về checkout khi luồng khởi đầu từ checkout. Checkout hiển thị giỏ tài khoản. [Sơ đồ checkout](sequence/ordering/get-checkout.md)
 - Trình duyệt đọc key `sobie.guest-cart` trong `localStorage` có dạng `{"items":[{"variant_key":"<uuid>","quantity":2}]}`. Checkout thêm `merge_key` là UUID vào bản ghi trước lần gửi đầu tiên và giữ khóa khi thử lại. Khi nhận `200`, trình duyệt xóa bản ghi đã gửi nếu bản ghi chưa bị thay đổi và tải giỏ đã gộp.
 - `POST /api/v1/shopping/cart/merge` yêu cầu phiên Khách hàng và `Origin` hợp lệ. Form gửi `merge_key` và hai trường lặp `variant_key`, `quantity` theo từng cặp. `200` trả JSON `items` với `variant_key`, `sku`, `quantity`, `added` và `status` (`merged`, `limited`, `unavailable`). Dòng trùng cộng dồn tối đa bằng tồn kho. Biến thể hết hàng, ngừng bán hoặc không có giá bị bỏ qua. Dữ liệu sai trả `400`; gửi lại cùng khóa và cùng giỏ trả nguyên kết quả; cùng khóa với giỏ khác trả `409`. [Sơ đồ gộp giỏ](sequence/shopping/post-cart-merge.md)
 - Với PostgreSQL đã khởi tạo, áp dụng [lệnh cập nhật schema](../infra/postgres/uc02-cart-merge.sql) trước khi bật checkout.

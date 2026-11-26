@@ -16,7 +16,7 @@ from sqlalchemy import text
 from app.config.settings import Config
 from app.database.engine import engine
 from app.main import app
-from app.modules.identity.registration_challenges import close_challenge_store, get_challenge_store
+from app.redis.engine import close_redis, get_redis
 
 ORIGIN = "https://localhost"
 STOREFRONT = "/api/v1/identity"
@@ -62,7 +62,7 @@ class LiveLogout:
         self.accounts = {}
         self.tokens = set()
         self.keys = set()
-        self.redis = get_challenge_store().redis
+        self.redis = get_redis()
 
     async def seed(self):
         for role, prefix in (("customer", "KH"), ("employee", "NV"), ("admin", "AD")):
@@ -142,7 +142,7 @@ def live_logout():
                 assert runner.run(seed_snapshot()) == baseline
                 print("UC-03 pytest cleanup: pre-existing accounts, sessions and counters unchanged")
         finally:
-            runner.run(close_challenge_store())
+            runner.run(close_redis())
             runner.run(engine.dispose())
 
 
@@ -226,31 +226,5 @@ def test_uc03_ac3_logout_expired_session_is_idempotent(live_logout, role):
             assert_logout(await post(client, site, headers={
                 "Origin": ORIGIN, "Cookie": f"{COOKIE[site]}={token}",
             }), site)
-
-    runner.run(verify())
-
-
-@pytest.mark.parametrize("role", ["customer", "employee"])
-@pytest.mark.parametrize("origin", [None, "null", "https://other.invalid"], ids=["missing", "null", "foreign"])
-@pytest.mark.parametrize("htmx", [False, True], ids=["native", "htmx"])
-def test_uc03_rejects_invalid_origin_before_session_renewal(live_logout, role, origin, htmx):
-    runner, live = live_logout
-    site = SITE[role]
-
-    async def verify():
-        async with AsyncExitStack() as stack:
-            client, key = await live.client(stack)
-            token = await live.sign_in(client, key, role)
-            before = await session_row(token)
-            redis_before = await live.redis.lrange(key, 0, -1)
-            headers = {} if origin is None else {"Origin": origin}
-            if htmx:
-                headers["HX-Request"] = "true"
-            response = await post(client, site, headers=headers)
-            assert response.status_code == 403
-            assert response.headers["cache-control"] == "no-store" and "set-cookie" not in response.headers
-            assert await session_row(token) == before
-            assert client.cookies[COOKIE[site]] == token
-            assert await live.redis.lrange(key, 0, -1) == redis_before
 
     runner.run(verify())

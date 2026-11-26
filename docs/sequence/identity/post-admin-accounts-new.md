@@ -6,7 +6,7 @@ UC-06 · Tạo tài khoản.
 sequenceDiagram
     actor Browser as Trình duyệt
     participant Route as Router và middleware
-    participant Service as IdentityService
+    participant Service as AdminAccountService
     participant Data as Repository và PostgreSQL
     Browser->>Route: Gửi vai trò, hồ sơ, mật khẩu và csrf_token
     Route->>Service: Kiểm tra CSRF và xác nhận quyền Admin trong transaction

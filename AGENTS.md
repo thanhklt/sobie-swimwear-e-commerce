@@ -10,7 +10,7 @@
 
 ## 2. Kiến trúc & Phân tầng (Architecture & Boundaries)
 - **Tuân thủ nghiêm ngặt 3 tầng (3-Layer Pattern)**: Luôn đi theo luồng `Route` → `Service` → `Repository` → `Database`. Tuyệt đối không gọi tắt (Route không gọi trực tiếp Repository hoặc DB).
-- **Ranh giới Modular Monolith**: Các module nghiệp vụ (catalog, cart, orders,...) giao tiếp với nhau qua Service/Interface công khai; không truy cập trực tiếp Repository hoặc database table của module khác.
+- **Ranh giới Modular Monolith**. Module có `facade.py` cung cấp cửa công khai duy nhất qua file này. Hiện `identity` và `notification` dùng facade. Với các module còn lại, gọi qua Service/Interface công khai. Repository và bảng chỉ được truy cập trong module sở hữu.
 
 ## 3. Quy ước Dữ liệu
 - **Tiền tệ & Số học tài chính**: Tiền tệ luôn biểu diễn bằng số nguyên VND hoặc kiểu `Decimal` trong Python, làm tròn theo `ROUND_HALF_UP`. Tuyệt đối không dùng `float` để tránh sai số tính toán đơn hàng / khuyến mãi.

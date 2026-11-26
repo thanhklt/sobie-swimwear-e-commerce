@@ -326,7 +326,7 @@ Khi cần, thêm identity.permission và identity.role_permission (N-N) mà khô
 | `account_email` | `varchar(255)` | UK | NOT NULL | [MOI] đăng nhập bằng email |
 | `account_phone_number` | `varchar(20)` | UK | NULL với Khách hàng | Khách bổ sung số điện thoại ở UC-04. Nhân viên và Admin phải có số điện thoại. |
 | `account_hash_password` | `varchar(255)` |  | NULL với tài khoản chỉ dùng Google | Mật khẩu Sobie được băm bằng bcrypt. Mỗi tài khoản phải có hash mật khẩu hoặc định danh Google. |
-| `account_google_sub` | `varchar(255)` | UK | NULL khi chưa liên kết | Định danh Google duy nhất cho tài khoản Khách hàng. Khi liên kết lần đầu với tài khoản đã có, Sobie xác minh OTP gửi đến email đang lưu. |
+| `account_google_sub` | `varchar(255)` | UK | NULL khi chưa liên kết | Định danh Google duy nhất cho tài khoản Khách hàng. Sobie lưu định danh này khi tạo tài khoản qua Google hoặc khi liên kết lần đầu với tài khoản Khách hàng đang Hoạt động có email trùng với email đã được Google xác minh (UC-01, UC-02). |
 | `account_status` | `varchar(20)` |  | NOT NULL DEFAULT `ACTIVE` | [MOI] khóa / mở khóa. CHECK IN (ACTIVE, LOCKED) |
 | `account_name` | `varchar(255)` |  | NULL với Khách hàng | Khách bổ sung họ tên ở UC-04. Nhân viên và Admin phải có họ tên. |
 | `account_date_of_birth` | `date` |  |  | [MOI] ngày sinh. Bắt buộc với Nhân viên / Admin (mã dùng ngày sinh), không bắt buộc với Khách hàng — service kiểm tra theo vai trò |

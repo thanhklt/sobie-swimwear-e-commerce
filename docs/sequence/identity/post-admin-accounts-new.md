@@ -8,8 +8,11 @@ sequenceDiagram
     participant Route as Router và middleware
     participant Service as AdminAccountService
     participant Data as Repository và PostgreSQL
-    Browser->>Route: Gửi vai trò, hồ sơ, mật khẩu và csrf_token
-    Route->>Service: Kiểm tra CSRF và xác nhận quyền Admin trong transaction
+    Browser->>Route: Gửi Origin, vai trò, hồ sơ và mật khẩu
+    break Origin thiếu, null hoặc không được phép
+        Route-->>Browser: 403 trước khi xác thực hoặc gia hạn phiên
+    end
+    Route->>Service: Xác nhận quyền Admin trong transaction
     Service->>Data: Kiểm tra dữ liệu, cấp mã, băm mật khẩu và ghi account
     Service->>Data: Nếu vai trò Khách hàng, gọi ShoppingService tạo cart và wishlist trong cùng transaction
     Service-->>Route: Kết quả xử lý nghiệp vụ

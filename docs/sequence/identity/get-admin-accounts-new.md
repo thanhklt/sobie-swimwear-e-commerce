@@ -11,5 +11,5 @@ sequenceDiagram
     Route->>Service: Xác thực phiên và quyền Admin
     Service-->>Route: Trạng thái phiên
     Route->>Route: Chuẩn bị biểu mẫu có ba vai trò cố định
-    Route-->>Browser: 200 biểu mẫu tạo tài khoản có CSRF
+    Route-->>Browser: 200 strict-origin và biểu mẫu tạo tài khoản
 ```

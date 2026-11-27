@@ -11,5 +11,5 @@ sequenceDiagram
     Browser->>Route: Mở trang với phiên Khách hàng
     Route->>Service: Xác thực phiên và kiểm tra tài khoản đã có mật khẩu Sobie
     Service-->>Route: Dữ liệu và trạng thái phiên
-    Route-->>Browser: 200 biểu mẫu đổi mật khẩu có CSRF hoặc 403
+    Route-->>Browser: 200 strict-origin và biểu mẫu đổi mật khẩu hoặc 403
 ```

@@ -8,8 +8,10 @@ sequenceDiagram
     participant Route as Router và middleware
     participant Service as AccountService
     participant Data as Repository và PostgreSQL
-    Browser->>Route: Gửi các trường hồ sơ được sửa và csrf_token
-    Route->>Route: Kiểm tra CSRF
+    Browser->>Route: Gửi Origin và các trường hồ sơ được sửa
+    break Origin thiếu, null hoặc không được phép
+        Route-->>Browser: 403 trước khi xác thực hoặc gia hạn phiên
+    end
     Route->>Service: Cập nhật hồ sơ của chủ phiên Khách hàng
     Service->>Service: Bỏ qua email nếu được gửi và kiểm tra dữ liệu được sửa
     Service->>Data: Khóa tài khoản, kiểm tra phiên và số điện thoại trùng

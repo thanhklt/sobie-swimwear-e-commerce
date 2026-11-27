@@ -2,7 +2,7 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
 from urllib.parse import parse_qs, urlparse
 
-from identity_support import login, post_with_csrf, signed_in
+from identity_support import login, post_from_page, signed_in
 
 
 PORTAL = "/api/v1/identity/portal"
@@ -10,7 +10,7 @@ PORTAL = "/api/v1/identity/portal"
 
 def lock(client, source_page, key, *, action="lock", confirm="yes", **fields):
     path = f"{PORTAL}/accounts/{key}/{action}"
-    return post_with_csrf(client, client.get(source_page, follow_redirects=False), path, confirm=confirm, **fields)
+    return post_from_page(client, client.get(source_page, follow_redirects=False), path, confirm=confirm, **fields)
 
 
 def test_uc08_ac1_ac3_ac4_confirm_cancel_revoke_and_unlock(world):
@@ -138,11 +138,11 @@ def test_uc08_ac10_lock_and_demotion_leave_an_active_admin(world):
     def submit_lock():
         start.wait()
         path = f"/api/v1/identity/portal/accounts/{first}/lock"
-        return post_with_csrf(locker, first_page, path, confirm="yes")
+        return post_from_page(locker, first_page, path, confirm="yes")
 
     def submit_demote():
         start.wait()
-        return post_with_csrf(editor, second_page, second_path, role="employee")
+        return post_from_page(editor, second_page, second_path, role="employee")
 
     with ThreadPoolExecutor(max_workers=2) as workers:
         lock_response = workers.submit(submit_lock)

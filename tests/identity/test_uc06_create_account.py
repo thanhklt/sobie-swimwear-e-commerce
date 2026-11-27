@@ -5,7 +5,7 @@ from urllib.parse import urlparse
 import asyncpg
 import pytest
 
-from identity_support import post_with_csrf, profile, signed_in, submit
+from identity_support import post_from_page, profile, signed_in, submit
 
 
 @pytest.mark.parametrize("role,prefix", [
@@ -57,7 +57,7 @@ def test_uc06_ac5_employee_cannot_create(world):
     assert staff.get(path).status_code == 403
     page = staff.get("/api/v1/identity/portal/password")
     data = profile(role="admin", password="open123")
-    assert post_with_csrf(staff, page, path, **data).status_code == 403
+    assert post_from_page(staff, page, path, **data).status_code == 403
     assert world.counts() == (1, 0, 0, 0)
 
 

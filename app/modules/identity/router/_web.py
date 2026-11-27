@@ -1,15 +1,11 @@
 """Cookie, trang được bảo vệ và dependency dùng chung cho router identity."""
 
 import re
-from hashlib import sha256
-from hmac import compare_digest
-from secrets import token_urlsafe
 from typing import Annotated
 
 from fastapi import Depends, Request
 from fastapi.responses import RedirectResponse, Response
 
-from app.error.exceptions import SessionAccessError
 from app.security.session import PORTAL_SESSION_COOKIE, STOREFRONT_SESSION_COOKIE, require_roles
 from app.shared.web.rendering import templates
 
@@ -71,30 +67,15 @@ def _set_browser_cookie(response: Response, browser: str) -> None:
     )
 
 
-def _csrf_token(browser: str) -> str:
-    return sha256(f"registration-csrf:{browser}".encode("ascii")).hexdigest()
-
-
 def _set_session_cookie(response: Response, portal: SessionPortal, token: str) -> None:
     response.set_cookie(_SESSION_COOKIES[portal], token, **_COOKIE_FLAGS)
 
 
-def _protected_page(
-    request: Request, template: str, context: dict, status: int = 200, *, logout_form: bool = False
-) -> Response:
-    browser = _browser_cookie(request) or token_urlsafe(32)
-    response = templates.TemplateResponse(
-        request, template, context | {"csrf_token": _csrf_token(browser)}, status_code=status,
-        headers=_ORIGIN_FORM_HEADERS if logout_form else _NO_STORE,
+def _protected_page(request: Request, template: str, context: dict, status: int = 200) -> Response:
+    # Trang có biểu mẫu POST phải gửi strict-origin; no-referrer làm trình duyệt gửi Origin: null.
+    return templates.TemplateResponse(
+        request, template, context, status_code=status, headers=_ORIGIN_FORM_HEADERS,
     )
-    _set_browser_cookie(response, browser)
-    return response
-
-
-def _check_csrf(request: Request, token: str) -> None:
-    browser = _browser_cookie(request)
-    if not browser or not compare_digest(_csrf_token(browser).encode("ascii"), token.encode("utf-8")):
-        raise SessionAccessError(status_code=403)
 
 
 async def get_sessions_service(request: Request) -> SessionService:

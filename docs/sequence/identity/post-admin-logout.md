@@ -1,6 +1,6 @@
 # POST /api/v1/identity/portal/logout
 
-UC-03 · Đăng xuất portal qua form không có `csrf_token`.
+UC-03 · Đăng xuất portal qua form; chống CSRF bằng `SameSite=Lax` và Origin, không dùng CSRF token.
 
 ```mermaid
 sequenceDiagram

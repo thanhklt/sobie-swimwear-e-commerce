@@ -8,8 +8,11 @@ sequenceDiagram
     participant Route as Router và middleware
     participant Service as AdminAccountService
     participant Data as Repository và PostgreSQL
-    Browser->>Route: Gửi confirm, csrf_token và ngữ cảnh danh sách nếu có
-    Route->>Route: Kiểm tra phiên Admin và CSRF
+    Browser->>Route: Gửi Origin, confirm và ngữ cảnh danh sách nếu có
+    break Origin thiếu, null hoặc không được phép
+        Route-->>Browser: 403 trước khi xác thực hoặc gia hạn phiên
+    end
+    Route->>Route: Kiểm tra phiên Admin
     alt Hủy xác nhận
         Route-->>Browser: 303 về danh sách hoặc trang sửa đã gửi form
     else Xác nhận mở khóa

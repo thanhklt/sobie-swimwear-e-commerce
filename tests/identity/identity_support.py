@@ -1,5 +1,4 @@
 """Gửi biểu mẫu Identity qua HTTP trong các ca nghiệm thu."""
-from html.parser import HTMLParser
 from urllib.parse import parse_qs, urlparse
 
 
@@ -12,27 +11,10 @@ def post(client, path, *, headers=None, **data):
     return client.post(path, data=data, headers=headers, follow_redirects=False)
 
 
-class _CSRFInputs(HTMLParser):
-    def __init__(self):
-        super().__init__()
-        self.tokens: set[str] = set()
-
-    def handle_starttag(self, tag, attrs):
-        attributes = dict(attrs)
-        if tag == "input" and attributes.get("type") == "hidden" and attributes.get("name") == "csrf_token":
-            value = attributes.get("value")
-            if value:
-                self.tokens.add(value)
-
-
-def post_with_csrf(client, response, path, **form):
-    assert response.status_code == 200, f"CSRF page returned {response.status_code}"
-    inputs = _CSRFInputs()
-    inputs.feed(response.text)
-    # Multiple forms on a page can carry the same browser CSRF token.
-    assert len(inputs.tokens) == 1, "Expected one CSRF token value on the page"
-    token, = inputs.tokens
-    return post(client, path, csrf_token=token, **form)
+def post_from_page(client, response, path, **form):
+    """Gửi biểu mẫu từ một trang đã mở; chống CSRF chỉ dựa vào Origin (BR-GIAIDOAN1)."""
+    assert response.status_code == 200, f"Form page returned {response.status_code}"
+    return post(client, path, **form)
 
 
 def google(client, oidc, *, login_only=False):
@@ -56,7 +38,7 @@ def signed_in(world, email, *, portal=False, client=None):
 
 
 def submit(client, path, **form):
-    return post_with_csrf(client, client.get(path, follow_redirects=False), path, **form)
+    return post_from_page(client, client.get(path, follow_redirects=False), path, **form)
 
 
 def profile(**updates):

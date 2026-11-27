@@ -1,6 +1,6 @@
 import pytest
 
-from identity_support import post_with_csrf, profile, signed_in, submit
+from identity_support import post_from_page, profile, signed_in, submit
 
 
 def seed_admin(world, n=1):
@@ -49,7 +49,7 @@ def test_uc07_ac4_ac6_edit_fields_and_reject_duplicate(world):
     page = admin.get(saved_path)
     assert "Nguyễn Minh Anh" in page.text and "Đã lưu thông tin tài khoản" in page.text
 
-    rejected = post_with_csrf(admin, page, saved_path, **profile(email="duplicate@example.com", role="admin"))
+    rejected = post_from_page(admin, page, saved_path, **profile(email="duplicate@example.com", role="admin"))
     assert rejected.status_code == 400 and "Email đã được sử dụng" in rejected.text
     unchanged = world.sql("""SELECT account_email, role_code FROM identity.account
         JOIN identity.role ON account_role_key=role_key WHERE account_key=$1""", key)
@@ -81,7 +81,7 @@ def test_uc07_ac4_ac5_ac10_profile_and_role_save_together(world):
     page = admin.get(path)
     edit_form = page.text.split('<form method="post" class="identity-form">', 1)[1].split("</form>", 1)[0]
     assert 'name="name"' in edit_form and 'name="role"' in edit_form and ">Lưu</button>" in edit_form
-    response = post_with_csrf(admin, page, path, **profile(role="admin", date_of_birth="1999-01-05"))
+    response = post_from_page(admin, page, path, **profile(role="admin", date_of_birth="1999-01-05"))
     assert response.status_code == 303
     rows = world.sql("""SELECT account_id, role_code, account_name, account_email, account_phone_number
         FROM identity.account JOIN identity.role ON account_role_key=role_key WHERE account_key=$1""", key)
@@ -114,9 +114,9 @@ def test_uc07_ac9_ac14_ac15_employee_customer_access_only(world):
     assert staff.get("/api/v1/identity/portal/accounts").status_code == 403
     assert staff.get(f"/api/v1/identity/portal/customers/{admin_key}").status_code == 404
     assert staff.get(f"/api/v1/identity/portal/customers/{staff_key}").status_code == 404
-    csrf_page = staff.get("/api/v1/identity/portal/password")
+    form_page = staff.get("/api/v1/identity/portal/password")
     edit_path = f"/api/v1/identity/portal/accounts/{customer_key}/edit"
-    assert post_with_csrf(staff, csrf_page, edit_path, **profile()).status_code == 403
+    assert post_from_page(staff, form_page, edit_path, **profile()).status_code == 403
 
 
 def test_uc07_ac11_ac13_self_demotion_requires_another_admin(world):

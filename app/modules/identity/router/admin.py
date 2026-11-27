@@ -17,7 +17,6 @@ from ._web import (
     _COOKIE_FLAGS,
     _NO_STORE,
     _ROLE_LABELS,
-    _check_csrf,
     _protected_page,
     _redirect,
     AccountServiceDep,
@@ -39,7 +38,7 @@ async def portal_home(request: Request, actor: Internal) -> Response:
         "role_label": _ROLE_LABELS[actor.role],
         "management_route": "admin_accounts" if is_admin else "employee_customers",
         "management_label": "Quản lý tài khoản" if is_admin else "Quản lý khách hàng",
-    }, logout_form=True)
+    })
 
 
 async def _account_list(
@@ -52,7 +51,7 @@ async def _account_list(
         "accounts": accounts, "has_next": has_next, "page": page, "q": q,
         "customers_only": customers_only, "labels": _ROLE_LABELS,
         "notice": request.query_params.get("notice", ""), "error": error,
-    }, 400 if error else 200, logout_form=True)
+    }, 400 if error else 200)
 
 
 @router.get("/portal/accounts", response_class=HTMLResponse)
@@ -134,7 +133,6 @@ async def _lock_action(
     admin_service: AdminAccountService, account_service: AccountService, *, locked: bool,
 ) -> Response:
     form = await request.form()
-    _check_csrf(request, str(form.get("csrf_token", "")))
     is_admin = actor.role == Role.ADMIN
     from_accounts = is_admin and form.get("source") == "accounts"
     query: dict[str, str | int] = {}

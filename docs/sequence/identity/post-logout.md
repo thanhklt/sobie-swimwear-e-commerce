@@ -1,6 +1,6 @@
 # POST /api/v1/identity/logout
 
-UC-03 · Đăng xuất storefront qua form không có `csrf_token`.
+UC-03 · Đăng xuất storefront qua form; chống CSRF bằng `SameSite=Lax` và Origin, không dùng CSRF token.
 
 ```mermaid
 sequenceDiagram

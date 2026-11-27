@@ -11,5 +11,5 @@ sequenceDiagram
     Browser->>Route: Mở hồ sơ với phiên Khách hàng
     Route->>Service: Xác thực phiên và đọc hồ sơ theo khóa tài khoản trong phiên
     Service-->>Route: Dữ liệu và trạng thái phiên
-    Route-->>Browser: 200 hồ sơ với mã tài khoản và email chỉ xem, kèm CSRF
+    Route-->>Browser: 200 strict-origin, hồ sơ với mã tài khoản và email chỉ xem
 ```

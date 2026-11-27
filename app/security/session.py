@@ -13,15 +13,18 @@ from app.security.origin import has_allowed_origin, origin_rejected
 
 STOREFRONT_SESSION_COOKIE = "storefront_session"
 PORTAL_SESSION_COOKIE = "portal_session"
+# BR-GIAIDOAN1 — Xác thực: chống CSRF bằng SameSite=Lax + Origin, không dùng CSRF token.
+_WRITE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 
 
 class SessionMiddleware(BaseHTTPMiddleware):
     def __init__(
-        self, app: ASGIApp, *, api_prefix: str, origin_protected_paths: Set[str] = frozenset()
+        self, app: ASGIApp, *, api_prefix: str, origin_exempt_paths: Set[str] = frozenset()
     ) -> None:
         super().__init__(app)
         self.portal_prefix = f"{api_prefix}/identity/portal"
-        self.origin_protected_paths = origin_protected_paths
+        # Chỉ dành cho request máy-máy không có Origin (ví dụ webhook SePay).
+        self.origin_exempt_paths = origin_exempt_paths
 
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
@@ -33,8 +36,8 @@ class SessionMiddleware(BaseHTTPMiddleware):
 
         # Reject before authenticating or renewing a session and before dispatching to a route.
         if (
-            request.method == "POST"
-            and path.rstrip("/") in self.origin_protected_paths
+            request.method in _WRITE_METHODS
+            and path.rstrip("/") not in self.origin_exempt_paths
             and not has_allowed_origin(request)
         ):
             return origin_rejected()

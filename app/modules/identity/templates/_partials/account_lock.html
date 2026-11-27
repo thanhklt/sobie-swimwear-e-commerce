@@ -8,7 +8,6 @@
   <details>
     <summary aria-label="{{ action }} tài khoản {{ account.code }}">{{ action }} tài khoản</summary>
     <form method="post" action="{{ request.url_for('unlock_account' if is_locked else 'lock_account', account_key=account.key).path }}">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       {% if from_account_list %}
         <input type="hidden" name="source" value="accounts">
         <input type="hidden" name="q" value="{{ q }}">

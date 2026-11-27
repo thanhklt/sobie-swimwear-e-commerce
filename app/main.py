@@ -14,14 +14,10 @@ from app.database.engine import session_factory
 from app.redis.engine import close_redis, get_redis
 from app.modules.identity.service import build_identity_services
 from app.error.handlers import register_error_handlers
-from app.modules.identity.router import (
-    origin_protected_paths,
-    router as identity_router,
-    storefront_identity_home,
-)
+from app.modules.identity.router import router as identity_router, storefront_identity_home
 from app.modules.notification import facade as notification_facade
 from app.modules.ordering.router import router as ordering_router
-from app.modules.shopping.router import cart_merge_path, router as shopping_router
+from app.modules.shopping.router import router as shopping_router
 from app.security.session import SessionMiddleware
 from app.shared.web.rendering import register_templates
 
@@ -49,10 +45,7 @@ app.state.identity = build_identity_services(
     session_factory, redis=get_redis, send_email=notification_facade.send_email
 )
 app.state.shopping_session_factory = session_factory
-app.add_middleware(
-    SessionMiddleware, api_prefix=API_PREFIX,
-    origin_protected_paths=origin_protected_paths | {cart_merge_path},
-)
+app.add_middleware(SessionMiddleware, api_prefix=API_PREFIX)
 app_dir = Path(__file__).parent
 identity_dir = app_dir / "modules" / "identity"
 register_templates("identity", identity_dir / "templates")

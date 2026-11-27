@@ -14,7 +14,6 @@ from ._web import (
     _NO_STORE,
     _ROLE_LABELS,
     _SESSION_COOKIES,
-    _check_csrf,
     _protected_page,
     _redirect,
     AccountServiceDep,
@@ -26,14 +25,13 @@ router = APIRouter()
 
 
 def storefront_identity_home(request: Request) -> Response:
-    response = _protected_page(request, "identity/account/home.html", {}, logout_form=True)
+    response = _protected_page(request, "identity/account/home.html", {})
     response.headers["Vary"] = "Accept"
     return response
 
 
 async def _profile_submission(request: Request, *, include_role: bool = False):
     form = await request.form()
-    _check_csrf(request, str(form.get("csrf_token", "")))
     fields = {key: str(form[key]) for key in PROFILE_FIELDS if key in form}
     if include_role and "role" in form:
         fields["role"] = str(form["role"])
@@ -56,7 +54,7 @@ def _account_form(request: Request, *, title: str, account: dict, values: dict, 
         "email_readonly": email_readonly,
         "saved": request.method == "GET" and error is None and request.query_params.get("saved") == "1",
         "error": error,
-    }, 400 if error else 200, logout_form=request.state.auth_portal == SessionPortal.STOREFRONT)
+    }, 400 if error else 200)
 
 
 @router.get("/account/profile", response_class=HTMLResponse)
@@ -103,7 +101,6 @@ async def _password_form(request: Request, actor: AuthenticatedSession, account_
 
 async def _save_password(request: Request, actor: AuthenticatedSession, account_service: AccountService) -> Response:
     form = await request.form()
-    _check_csrf(request, str(form.get("csrf_token", "")))
     portal = request.state.auth_portal
     try:
         await account_service.change_password(

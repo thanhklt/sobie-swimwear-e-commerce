@@ -2,6 +2,7 @@
 
 Router chỉ validate input / gọi service / render Jinja. Không gọi repository.
 Adapter tạm [GD]: identity demo + DbInventory/DbCatalog đến khi teammate sẵn service.
+Sổ địa chỉ: gọi identity.service công khai (UC-41).
 """
 
 from __future__ import annotations
@@ -10,11 +11,15 @@ from collections.abc import AsyncIterator
 from decimal import Decimal, InvalidOperation
 from typing import Annotated
 from urllib.parse import urlencode
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import RedirectResponse
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.modules.identity import service as identity_service
+from app.modules.identity.exceptions import IdentityError
+from app.modules.identity.schemas import ShippingAddressCreate, ShippingAddressView
 from app.modules.ordering import adapters, jobs, service
 from app.modules.ordering.adapters import DEMO_CUSTOMER_EMAIL, DEMO_EMPLOYEE_EMAIL
 from app.modules.ordering.exceptions import OrderingError, PriceChangedError
@@ -52,22 +57,39 @@ def _flash(request: Request) -> dict[str, str | None]:
     }
 
 
-def _shipping_from_form(
-    name: str,
-    phone: str,
-    house_number: str,
-    ward: str,
-    city: str,
-    country: str,
-) -> ShippingInfo:
+def _shipping_from_address(addr: ShippingAddressView) -> ShippingInfo:
     return ShippingInfo(
-        name=name.strip(),
-        phone=phone.strip(),
-        house_number=house_number.strip(),
-        ward=ward.strip(),
-        city=city.strip(),
-        country=country.strip(),
+        name=addr.name,
+        phone=addr.phone,
+        house_number=addr.house_number,
+        ward=addr.ward,
+        city=addr.city,
+        country=addr.country,
     )
+
+
+async def _selected_shipping_address(
+    db: AsyncSession,
+    *,
+    account_key: UUID,
+    selected_raw: str | None,
+) -> ShippingAddressView | None:
+    addresses = await identity_service.list_shipping_addresses(db, account_key)
+    if not addresses:
+        return None
+    if selected_raw:
+        try:
+            key = UUID(selected_raw)
+        except ValueError:
+            key = None
+        if key is not None:
+            for addr in addresses:
+                if addr.shipping_address_key == key:
+                    return addr
+    for addr in addresses:
+        if addr.is_default:
+            return addr
+    return addresses[0]
 
 
 def _parse_expected_total(raw: str | None) -> Decimal | None:
@@ -121,6 +143,18 @@ async def checkout_page(request: Request, db: DbSession):
         quote_error = getattr(exc, "message", str(exc))
         cart_empty = True
 
+    addresses = await identity_service.list_shipping_addresses(db, account_key)
+    selected = await _selected_shipping_address(
+        db,
+        account_key=account_key,
+        selected_raw=request.query_params.get("selected"),
+    )
+    address_view = request.query_params.get("view") or ""
+    if address_view not in {"", "list", "add"}:
+        address_view = ""
+    if not addresses and address_view != "add":
+        address_view = "add"
+
     new_total = request.query_params.get("new_total")
     return templates.TemplateResponse(
         request,
@@ -133,39 +167,89 @@ async def checkout_page(request: Request, db: DbSession):
             "quote_error": quote_error,
             "cart_empty": cart_empty,
             "new_total": new_total,
-            "default_shipping": {
-                "name": "Khách Hàng Demo",
-                "phone": "0900000003",
-                "house_number": "273 An Dương Vương",
-                "ward": "Phường Chợ Quán",
-                "city": "TP. Hồ Chí Minh",
-                "country": "Việt Nam",
-            },
+            "addresses": addresses,
+            "selected_address": selected,
+            "address_view": address_view,
             "nav_active": "checkout",
             **_flash(request),
         },
     )
 
 
-@router.post("/checkout/cod")
-async def checkout_cod(
+@router.post("/checkout/addresses")
+async def checkout_add_address(
     db: DbSession,
     name: Annotated[str, Form()],
     phone: Annotated[str, Form()],
     house_number: Annotated[str, Form()],
     ward: Annotated[str, Form()],
     city: Annotated[str, Form()],
-    country: Annotated[str, Form()],
+    country: Annotated[str, Form()] = "Việt Nam",
+):
+    """UC-41 / UC-19: thêm địa chỉ tại checkout → lưu sổ, chọn cho đơn đang đặt."""
+    try:
+        account_key = await adapters.get_account_key_by_email(db, DEMO_CUSTOMER_EMAIL)
+        created = await identity_service.add_shipping_address(
+            db,
+            account_key=account_key,
+            data=ShippingAddressCreate(
+                name=name,
+                phone=phone,
+                house_number=house_number,
+                ward=ward,
+                city=city,
+                country=country,
+            ),
+        )
+        return _redirect(
+            "/dev/ordering/checkout",
+            ok="Đã thêm địa chỉ vào sổ",
+            selected=str(created.shipping_address_key),
+        )
+    except IdentityError as exc:
+        return _redirect("/dev/ordering/checkout", error=exc.message, view="add")
+
+
+@router.post("/checkout/addresses/default")
+async def checkout_set_default_address(
+    db: DbSession,
+    address_key: Annotated[str, Form()],
+):
+    try:
+        account_key = await adapters.get_account_key_by_email(db, DEMO_CUSTOMER_EMAIL)
+        updated = await identity_service.set_default_shipping_address(
+            db,
+            account_key=account_key,
+            address_key=UUID(address_key.strip()),
+        )
+        return _redirect(
+            "/dev/ordering/checkout",
+            ok="Đã đặt địa chỉ mặc định",
+            selected=str(updated.shipping_address_key),
+            view="list",
+        )
+    except (IdentityError, ValueError) as exc:
+        msg = getattr(exc, "message", "Địa chỉ không hợp lệ")
+        return _redirect("/dev/ordering/checkout", error=msg, view="list")
+
+
+@router.post("/checkout/cod")
+async def checkout_cod(
+    db: DbSession,
+    shipping_address_key: Annotated[str, Form()],
     expected_total: Annotated[str | None, Form()] = None,
 ):
     try:
         account_key = await adapters.get_account_key_by_email(db, DEMO_CUSTOMER_EMAIL)
+        addr = await identity_service.get_shipping_address(
+            db,
+            account_key=account_key,
+            address_key=UUID(shipping_address_key.strip()),
+        )
         order = await service.place_cod_order(
             db,
             account_key=account_key,
-            shipping=_shipping_from_form(
-                name, phone, house_number, ward, city, country
-            ),
+            shipping=_shipping_from_address(addr),
             inventory=adapters.DbInventoryGateway(db),
             pricing=adapters.DbCatalogPricing(db),
             expected_total=_parse_expected_total(expected_total),
@@ -179,30 +263,34 @@ async def checkout_cod(
             "/dev/ordering/checkout",
             error=exc.message,
             new_total=str(exc.new_total),
+            selected=shipping_address_key.strip(),
         )
-    except OrderingError as exc:
-        return _redirect("/dev/ordering/checkout", error=exc.message)
+    except (OrderingError, IdentityError, ValueError) as exc:
+        msg = getattr(exc, "message", "Thiếu hoặc không hợp lệ địa chỉ giao hàng")
+        return _redirect(
+            "/dev/ordering/checkout",
+            error=msg,
+            selected=shipping_address_key.strip() if shipping_address_key else "",
+        )
 
 
 @router.post("/checkout/qr")
 async def checkout_qr(
     db: DbSession,
-    name: Annotated[str, Form()],
-    phone: Annotated[str, Form()],
-    house_number: Annotated[str, Form()],
-    ward: Annotated[str, Form()],
-    city: Annotated[str, Form()],
-    country: Annotated[str, Form()],
+    shipping_address_key: Annotated[str, Form()],
     expected_total: Annotated[str | None, Form()] = None,
 ):
     try:
         account_key = await adapters.get_account_key_by_email(db, DEMO_CUSTOMER_EMAIL)
+        addr = await identity_service.get_shipping_address(
+            db,
+            account_key=account_key,
+            address_key=UUID(shipping_address_key.strip()),
+        )
         order = await service.place_qr_order(
             db,
             account_key=account_key,
-            shipping=_shipping_from_form(
-                name, phone, house_number, ward, city, country
-            ),
+            shipping=_shipping_from_address(addr),
             inventory=adapters.DbInventoryGateway(db),
             pricing=adapters.DbCatalogPricing(db),
             expected_total=_parse_expected_total(expected_total),
@@ -216,9 +304,15 @@ async def checkout_qr(
             "/dev/ordering/checkout",
             error=exc.message,
             new_total=str(exc.new_total),
+            selected=shipping_address_key.strip(),
         )
-    except OrderingError as exc:
-        return _redirect("/dev/ordering/checkout", error=exc.message)
+    except (OrderingError, IdentityError, ValueError) as exc:
+        msg = getattr(exc, "message", "Thiếu hoặc không hợp lệ địa chỉ giao hàng")
+        return _redirect(
+            "/dev/ordering/checkout",
+            error=msg,
+            selected=shipping_address_key.strip() if shipping_address_key else "",
+        )
 
 
 @router.get("/orders")

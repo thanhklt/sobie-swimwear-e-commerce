@@ -26,6 +26,7 @@ from tests.shopping.conftest import (
 async def test_uc18_ac1_add_item_to_cart(
     db: AsyncSession, demo: DemoIds, clean_cart: None
 ) -> None:
+    """UC-18 AC-1: thêm biến thể còn hàng → 1 dòng đúng SL; không trừ tồn."""
     await set_stock(db, demo.variant_do_m, 5)
     stock_before = await db_stock(db, demo.variant_do_m)
 
@@ -55,6 +56,7 @@ async def test_uc18_ac1_add_item_to_cart(
 async def test_uc18_ac2_add_existing_variant(
     db: AsyncSession, demo: DemoIds, clean_cart: None
 ) -> None:
+    """UC-18 AC-2: thêm biến thể đã có → cộng dồn số lượng trên 1 dòng."""
     await set_stock(db, demo.variant_do_m, 5)
     await service.add_item_to_cart(
         db,
@@ -78,6 +80,7 @@ async def test_uc18_ac2_add_existing_variant(
 async def test_uc18_ac3_reject_quantity_over_stock(
     db: AsyncSession, demo: DemoIds, clean_cart: None
 ) -> None:
+    """UC-18 AC-3: sửa SL vượt tồn → từ chối, giữ SL cũ."""
     await set_stock(db, demo.variant_do_m, 3)
     await service.add_item_to_cart(
         db,
@@ -102,6 +105,7 @@ async def test_uc18_ac3_reject_quantity_over_stock(
 async def test_uc18_ac4_remove_cart_line(
     db: AsyncSession, demo: DemoIds, clean_cart: None
 ) -> None:
+    """UC-18 AC-4: xóa 1 dòng → giỏ còn dòng kia, tạm tính cập nhật."""
     await service.add_item_to_cart(
         db,
         account_key=demo.account_key,
@@ -140,6 +144,7 @@ async def test_uc18_ac4_remove_cart_line(
 async def test_uc18_ac7_out_of_stock_line_excluded_from_subtotal(
     db: AsyncSession, demo: DemoIds, clean_cart: None
 ) -> None:
+    """UC-18 AC-7 / E2: hết hàng → giữ dòng, gắn nhãn, không tính tạm tính."""
     await service.add_item_to_cart(
         db,
         account_key=demo.account_key,
@@ -164,6 +169,7 @@ async def test_uc18_ac7_out_of_stock_line_excluded_from_subtotal(
 async def test_uc18_ac8_cart_persisted_on_account(
     db: AsyncSession, demo: DemoIds, clean_cart: None
 ) -> None:
+    """UC-18 AC-8: giỏ KH lưu theo tài khoản (đọc lại bằng session khác)."""
     await service.add_item_to_cart(
         db,
         account_key=demo.account_key,
@@ -186,6 +192,7 @@ async def test_uc18_ac8_cart_persisted_on_account(
 async def test_uc18_e3_invalid_quantity(
     db: AsyncSession, demo: DemoIds, clean_cart: None
 ) -> None:
+    """UC-18 E3: số lượng không hợp lệ (≤ 0) → từ chối."""
     with pytest.raises(InvalidQuantityError):
         await service.add_item_to_cart(
             db,

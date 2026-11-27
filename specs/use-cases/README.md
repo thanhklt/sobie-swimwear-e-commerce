@@ -27,7 +27,7 @@ Dự án là modular monolith gồm 9 module. Một module dùng chung một tê
 
 | Module | BR | Phạm vi | Bảng (schema cùng tên) |
 |---|---|---|---|
-| [identity](identity/) | BR-001 | Vai trò, tài khoản (gồm thông tin cá nhân), đăng nhập, phiên đăng nhập, quản lý tài khoản | role, account, session |
+| [identity](identity/) | BR-001 | Vai trò, tài khoản (gồm thông tin cá nhân), sổ địa chỉ giao hàng, đăng nhập, phiên đăng nhập, quản lý tài khoản | role, account, shipping_address, session |
 | [catalog](catalog/) | BR-002 | Trang bán hàng, sản phẩm, biến thể, giá bán theo size, phân loại, ảnh | category, collection, gender, size, color, product, product_collection, variant, gallery |
 | [shopping](shopping/) | BR-002, BR-003 | Giỏ hàng, danh sách yêu thích | cart, cart_item, wishlist, wishlist_item |
 | [ordering](ordering/) | BR-003 | Đặt hàng COD/QR, vòng đời đơn, hủy đơn, tự hủy đơn QR quá hạn, hóa đơn | payment (phương thức), order, order_detail, order_status_history, invoice |
@@ -51,6 +51,7 @@ Module giao tiếp qua service công khai; không đọc / ghi bảng hoặc g�
 | [UC-06](identity/UC-06-create-account.md) | Admin tạo tài khoản (mọi vai trò) | identity | BR-001 | Admin |
 | [UC-07](identity/UC-07-edit-account.md) | Sửa tài khoản | identity | BR-001 | Admin |
 | [UC-08](identity/UC-08-lock-unlock-account.md) | Khóa và mở khóa tài khoản | identity | BR-001 | Admin |
+| [UC-41](identity/UC-41-manage-shipping-addresses.md) | Quản lý sổ địa chỉ giao hàng | identity | BR-001, BR-003 | Khách hàng |
 | [UC-09](catalog/UC-09-view-home-page.md) | Xem trang chủ | catalog | BR-002 | Khách vãng lai, Khách hàng |
 | [UC-10](catalog/UC-10-browse-category.md) | Xem sản phẩm theo danh mục | catalog | BR-002 | Khách vãng lai, Khách hàng |
 | [UC-11](catalog/UC-11-search-products.md) | Tìm kiếm sản phẩm | catalog | BR-002 | Khách vãng lai, Khách hàng |
@@ -105,7 +106,8 @@ Chưa xử lý ──(UC-23 xác nhận)──► Đã xác nhận ──(UC-40 
 | Hủy đơn | Cộng lại tồn kho và hoàn lượt voucher. Khách hủy khi "Chưa xử lý"; Nhân viên hủy đến trước khi vận chuyển nhận hàng, bắt buộc nhập lý do, khách không thấy lý do; không còn "Từ chối" (cập nhật 20/11/2026) | UC-22, UC-23, UC-24, UC-31 |
 | Phân quyền | Admin chỉ quản lý tài khoản (tạo được tài khoản mọi vai trò, dùng ngay không bắt buộc đổi mật khẩu — 20/11/2026) và đổi vai trò giữa Nhân viên và Admin; Nhân viên vận hành cửa hàng; Admin không xem hóa đơn, dashboard | UC-02, UC-06, UC-07, UC-14, UC-23, UC-27, UC-37 |
 | Đổi vai trò | Chỉ đổi qua lại giữa Nhân viên và Admin; không đổi Khách hàng ↔ Nhân viên/Admin (chốt lại 20/11/2026); có hiệu lực ngay; tài khoản đang đăng nhập bị đăng xuất; tài khoản được cấp mã mới (`NV-` ↔ `AD-`) | UC-07 |
-| Tài khoản | Account gồm email, SĐT (unique), mật khẩu, vai trò, trạng thái và họ tên, ngày sinh, địa chỉ; không có username; không còn hồ sơ riêng theo vai trò (21/11/2026). Mã `KH-` / `NV-` / `AD-` do hệ thống cấp, bộ đếm riêng từng loại; ngày sinh bắt buộc với Nhân viên, Admin | UC-01, UC-02, UC-04, UC-06, UC-07 |
+| Tài khoản | Account gồm email, SĐT (unique), mật khẩu, vai trò, trạng thái và họ tên, ngày sinh; không có username; không còn hồ sơ riêng theo vai trò (21/11/2026). Mã `KH-` / `NV-` / `AD-` do hệ thống cấp, bộ đếm riêng từng loại; ngày sinh bắt buộc với Nhân viên, Admin | UC-01, UC-02, UC-04, UC-06, UC-07 |
+| Sổ địa chỉ giao hàng | Khách hàng có nhiều địa chỉ (`identity.shipping_address`); đúng 1 mặc định; form tỉnh + phường + số nhà; `account_*` địa chỉ = mirror mặc định; checkout prefill / chọn / thêm (lưu sổ), snapshot vào đơn (27/11/2026; đưa vào GĐ1) | UC-41, UC-19, UC-20, UC-04 |
 | Mật khẩu | Băm bằng bcrypt (21/11/2026) | UC-01, UC-05, UC-06 |
 | Mã khách hàng | Ngày đăng ký trong mã `KH-` lấy theo giờ `Asia/Ho_Chi_Minh` (21/11/2026) | UC-01, UC-06 |
 | Giỏ hàng, danh sách yêu thích | Mỗi Khách hàng có 1 giỏ và 1 danh sách yêu thích, tạo cùng transaction tạo tài khoản Khách hàng; identity gọi service công khai của shopping (21/11/2026, Q39) | UC-01, UC-06, UC-18, UC-38 |
@@ -173,8 +175,11 @@ Mỗi dòng là một giả định đang có trong mục *Notes* của UC, ch�
 | UC-03 | Toàn bộ UC này là giả định: BR-001 chỉ nêu đăng ký và đăng nhập, không nêu đăng xuất. |
 | UC-03 | Đăng xuất chỉ kết thúc phiên trên thiết bị hiện tại. |
 | UC-03 | Sau đăng xuất chuyển về trang chủ. |
-| UC-04 | Địa chỉ trong tài khoản được điền sẵn khi đặt hàng. |
 | UC-04 | Đổi email hoặc số điện thoại không cần xác minh lại. |
+| UC-04 | Địa chỉ giao hàng quản lý qua UC-41 (sổ nhiều địa chỉ); hồ sơ chỉ tóm tắt mặc định. |
+| UC-41 | Địa chỉ đầu tiên tự là mặc định; đặt B làm mặc định thì gỡ A. |
+| UC-41 | Form địa chỉ: tỉnh + phường + số nhà (+ tên, SĐT, quốc gia); không có quận/huyện. |
+| UC-41 | `account_*` địa chỉ là mirror của địa chỉ mặc định. |
 | UC-05 | Nhân viên và Admin cũng tự đổi được mật khẩu của mình. |
 | UC-05 | Mật khẩu mới tối thiểu 6 ký tự và phải khác mật khẩu hiện tại. |
 | UC-06 | Cấp mã và tạo account trong cùng một transaction. |
@@ -213,7 +218,7 @@ Mỗi dòng là một giả định đang có trong mục *Notes* của UC, ch�
 | UC-17 | Không xóa danh mục, bộ sưu tập, giới tính, màu hoặc size đang được sử dụng. |
 | UC-18 | Khi đăng nhập, giỏ trong `localStorage` gộp vào giỏ tài khoản; dòng trùng cộng dồn nhưng không vượt tồn kho. |
 | UC-18 | Dòng hết hàng/ngừng bán vẫn nằm trong giỏ nhưng không tính tiền và không đặt được. |
-| UC-19 | Thông tin nhận hàng được điền sẵn từ hồ sơ khách, khách sửa được cho riêng đơn này. |
+| UC-19 | Prefill địa chỉ mặc định từ sổ (UC-41); chọn / thêm địa chỉ (thêm thì lưu sổ); snapshot vào đơn. |
 | UC-19 | Lượt đã dùng của khuyến mãi được chọn (voucher hoặc khuyến mãi theo hóa đơn) tăng khi tạo đơn. |
 | UC-19 | Các dòng đã đặt được xóa khỏi giỏ sau khi đặt thành công. |
 | UC-19 | Giá hoặc mức giảm thay đổi trước khi xác nhận thì tính lại và yêu cầu khách xác nhận lại. |

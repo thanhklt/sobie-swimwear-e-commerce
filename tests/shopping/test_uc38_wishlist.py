@@ -36,6 +36,7 @@ def _card(
 async def test_uc38_ac1_add_product_to_wishlist(
     db: AsyncSession, demo: DemoIds, clean_wishlist: None
 ) -> None:
+    """UC-38 AC-1: thêm sản phẩm vào wishlist thành công."""
     catalog = catalog_for(_card(demo.product_sp1, "SP-0001", name="Demo"))
     added = await service.add_to_wishlist(
         db,
@@ -56,6 +57,7 @@ async def test_uc38_ac1_add_product_to_wishlist(
 async def test_uc38_ac2_remove_product_from_wishlist(
     db: AsyncSession, demo: DemoIds, clean_wishlist: None
 ) -> None:
+    """UC-38 AC-2: bỏ tim → xóa khỏi wishlist."""
     catalog = catalog_for(_card(demo.product_sp1, "SP-0001"))
     await service.add_to_wishlist(
         db,
@@ -78,6 +80,7 @@ async def test_uc38_ac2_remove_product_from_wishlist(
 async def test_uc38_ac3_wishlist_newest_first(
     db: AsyncSession, demo: DemoIds, clean_wishlist: None
 ) -> None:
+    """UC-38 AC-3: danh sách sắp xếp mới nhất trước."""
     catalog = catalog_for(
         _card(demo.product_sp1, "SP-0001", name="A"),
         _card(demo.product_sp2, "SP-0002", name="B"),
@@ -104,6 +107,7 @@ async def test_uc38_ac3_wishlist_newest_first(
 async def test_uc38_ac4_no_duplicate_product(
     db: AsyncSession, demo: DemoIds, clean_wishlist: None
 ) -> None:
+    """UC-38 AC-4: thêm trùng sản phẩm → không tạo dòng thứ hai."""
     catalog = catalog_for(_card(demo.product_sp1, "SP-0001"))
     assert (
         await service.add_to_wishlist(
@@ -131,7 +135,7 @@ async def test_uc38_ac4_no_duplicate_product(
 
 @pytest.mark.asyncio
 async def test_uc38_ac5_guest_must_login_not_saved() -> None:
-    """AC-5: không có API ghi wishlist ẩn danh — cần account_key."""
+    """UC-38 AC-5: không có API ghi wishlist ẩn danh — cần account_key."""
     assert callable(service.add_to_wishlist)
 
 
@@ -139,6 +143,7 @@ async def test_uc38_ac5_guest_must_login_not_saved() -> None:
 async def test_uc38_ac6_empty_wishlist_message_data(
     db: AsyncSession, demo: DemoIds, clean_wishlist: None
 ) -> None:
+    """UC-38 AC-6: wishlist trống → total_items = 0, items rỗng."""
     catalog = catalog_for(_card(demo.product_sp1, "SP-0001"))
     view = await service.get_wishlist(
         db, account_key=demo.account_key, catalog=catalog
@@ -151,6 +156,7 @@ async def test_uc38_ac6_empty_wishlist_message_data(
 async def test_uc38_ac7_discontinued_product_still_listed(
     db: AsyncSession, demo: DemoIds, clean_wishlist: None
 ) -> None:
+    """UC-38 AC-7: SP ngừng bán vẫn nằm trong list, không mở detail."""
     catalog = catalog_for(
         _card(demo.product_sp1, "SP-0001", name="Ngừng", active=False)
     )
@@ -174,6 +180,7 @@ async def test_uc38_ac7_discontinued_product_still_listed(
 async def test_uc38_ac8_wishlist_isolated_by_account(
     db: AsyncSession, demo: DemoIds, clean_wishlist: None
 ) -> None:
+    """UC-38 AC-8: wishlist theo tài khoản — account lạ → không đọc được."""
     catalog = catalog_for(_card(demo.product_sp1, "SP-0001"))
     await service.add_to_wishlist(
         db,
@@ -189,6 +196,7 @@ async def test_uc38_ac8_wishlist_isolated_by_account(
 async def test_uc38_e2_product_not_found(
     db: AsyncSession, demo: DemoIds, clean_wishlist: None
 ) -> None:
+    """UC-38 E2: product_key không tồn tại → từ chối thêm."""
     with pytest.raises(ProductNotFoundError):
         await service.add_to_wishlist(
             db,

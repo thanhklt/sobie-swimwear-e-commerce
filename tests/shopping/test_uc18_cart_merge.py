@@ -20,6 +20,7 @@ from tests.shopping.fakes import FakeAvailability
 async def test_uc18_ac6_merge_cart_capped_by_stock(
     db: AsyncSession, demo: DemoIds, clean_cart: None
 ) -> None:
+    """UC-18 AC-6: gộp giỏ guest + account — cộng dồn không vượt tồn."""
     await set_stock(db, demo.variant_do_m, 3)
     await service.add_item_to_cart(
         db,
@@ -43,6 +44,7 @@ async def test_uc18_ac6_merge_cart_capped_by_stock(
 async def test_uc18_ac9_merge_when_stock_lower_than_guest(
     db: AsyncSession, demo: DemoIds, clean_cart: None
 ) -> None:
+    """UC-18 AC-9: gộp khi tồn < SL guest → SL cuối = tồn hiện tại."""
     await set_stock(db, demo.variant_do_m, 1)
     result = await service.merge_guest_cart(
         db,
@@ -59,6 +61,7 @@ async def test_uc18_ac9_merge_when_stock_lower_than_guest(
 async def test_uc18_ac10_merge_retry_same_id_no_double_count(
     db: AsyncSession, demo: DemoIds, clean_cart: None
 ) -> None:
+    """UC-18 AC-10: gửi lại cùng merge_id + payload → không cộng lặp."""
     await set_stock(db, demo.variant_do_m, 10)
     await service.add_item_to_cart(
         db,
@@ -95,6 +98,7 @@ async def test_uc18_ac10_merge_retry_same_id_no_double_count(
 async def test_uc18_ac10_merge_same_id_different_payload_rejected(
     db: AsyncSession, demo: DemoIds, clean_cart: None
 ) -> None:
+    """UC-18 AC-10 / E6: cùng merge_id khác payload → từ chối, không đổi giỏ."""
     await set_stock(db, demo.variant_do_m, 10)
     merge_id = "merge-M-conflict"
     await service.merge_guest_cart(
@@ -118,6 +122,7 @@ async def test_uc18_ac10_merge_same_id_different_payload_rejected(
 async def test_uc18_ac11_concurrent_same_merge_applied_once(
     demo: DemoIds, clean_cart: None
 ) -> None:
+    """UC-18 AC-11: hai request đồng thời cùng merge_id → áp dụng một lần."""
     async with session_factory() as setup:
         await set_stock(setup, demo.variant_do_m, 10)
         await service.add_item_to_cart(

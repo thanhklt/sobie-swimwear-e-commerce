@@ -15,6 +15,7 @@ from tests.ordering.conftest import DemoIds, get_stock, prepare_cart, sample_shi
 async def test_uc24_ac1_cancel_overdue_qr(
     db: AsyncSession, demo: DemoIds, clean_cart: None
 ) -> None:
+    """UC-24 AC-1: QR UNPAID quá 24h → tự hủy, hoàn tồn."""
     inv, pricing = await prepare_cart(db, demo, qty=1, stock=5)
     order = await service.place_qr_order(
         db,
@@ -43,6 +44,7 @@ async def test_uc24_ac1_cancel_overdue_qr(
 async def test_uc24_ac2_not_yet_overdue(
     db: AsyncSession, demo: DemoIds, clean_cart: None
 ) -> None:
+    """UC-24 AC-2: QR còn trong hạn → không tự hủy."""
     inv, pricing = await prepare_cart(db, demo, qty=1, stock=5)
     order = await service.place_qr_order(
         db,
@@ -61,6 +63,7 @@ async def test_uc24_ac2_not_yet_overdue(
 async def test_uc26_ac1_issue_invoice_on_delivered(
     db: AsyncSession, demo: DemoIds, clean_cart: None
 ) -> None:
+    """UC-26 AC-1: giao thành công → xuất HD-{code}, payment PAID."""
     inv, pricing = await prepare_cart(db, demo, qty=1, stock=5)
     order = await service.place_cod_order(
         db,
@@ -95,6 +98,7 @@ async def test_uc26_ac1_issue_invoice_on_delivered(
 async def test_uc26_ac3_invoice_idempotent(
     db: AsyncSession, demo: DemoIds, clean_cart: None
 ) -> None:
+    """UC-26 AC-3: xuất hóa đơn lặp lại → cùng invoice_id."""
     inv, pricing = await prepare_cart(db, demo, qty=1, stock=5)
     order = await service.place_cod_order(
         db,

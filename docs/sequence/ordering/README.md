@@ -5,6 +5,8 @@
 | Endpoint | Sequence |
 |---|---|
 | GET `/dev/ordering/checkout` | [dev-checkout.md](./dev-checkout.md) |
+| POST `/dev/ordering/checkout/addresses` | [dev-checkout-add-address.md](./dev-checkout-add-address.md) |
+| POST `/dev/ordering/checkout/addresses/default` | [dev-checkout-set-default.md](./dev-checkout-set-default.md) |
 | POST `/dev/ordering/checkout/cod` | [dev-place-cod.md](./dev-place-cod.md) |
 | POST `/dev/ordering/checkout/qr` | [dev-place-qr.md](./dev-place-qr.md) |
 | GET `/dev/ordering/orders` | [dev-orders-list.md](./dev-orders-list.md) |

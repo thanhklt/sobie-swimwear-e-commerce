@@ -38,7 +38,7 @@ Xây dựng website bán đồ bơi online cho một cửa hàng giả định (
 ### Out of Scope
 
 - Mega menu, bộ lọc nâng cao, thêm nhanh vào giỏ từ thẻ sản phẩm
-- Trang Outlet, sổ nhiều địa chỉ
+- Trang Outlet
 - Quên mật khẩu — làm ở giai đoạn 2. Giai đoạn 1 trang đăng nhập storefront vẫn có nút "Quên mật khẩu" cho Khách hàng, nhưng bấm vào không có hành động nào (đã chốt 21/11/2026)
 - Đánh giá sản phẩm (review) — làm ở giai đoạn 2
 - Blog, trang cộng đồng, góp ý, thanh thông báo chạy, banner tùy chỉnh
@@ -132,7 +132,8 @@ Khách hàng tự đăng ký, đăng nhập và quản lý hồ sơ của mình;
 ### Constraints
 
 - Theo *Constraints chung*.
-- Tài khoản gồm thông tin đăng nhập (email, số điện thoại, mật khẩu, vai trò, trạng thái) và thông tin cá nhân (họ tên, ngày sinh, địa chỉ) trong cùng một bản ghi, dùng chung cho cả 3 vai trò (đã chốt 21/11/2026, thay quyết định ngày 15/11/2026 tách hồ sơ riêng theo vai trò). Không có username riêng; email và số điện thoại là duy nhất (đã chốt 15/11/2026).
+- Tài khoản gồm thông tin đăng nhập (email, số điện thoại, mật khẩu, vai trò, trạng thái) và thông tin cá nhân (họ tên, ngày sinh) trong cùng một bản ghi, dùng chung cho cả 3 vai trò (đã chốt 21/11/2026, thay quyết định ngày 15/11/2026 tách hồ sơ riêng theo vai trò). Không có username riêng; email và số điện thoại là duy nhất (đã chốt 15/11/2026).
+- **Sổ địa chỉ giao hàng (Khách hàng, đã chốt 27/11/2026):** mỗi Khách hàng có nhiều địa chỉ nhận hàng trong bảng `identity.shipping_address` (module identity). Mỗi địa chỉ gồm họ tên người nhận, số điện thoại, số nhà/đường, phường/xã, tỉnh/thành phố, quốc gia. Đúng một địa chỉ được đánh dấu mặc định (`is_default`); địa chỉ đầu tiên tự là mặc định; khi đặt địa chỉ B làm mặc định thì gỡ mặc định khỏi A. Các cột địa chỉ trên `account` (`account_house_number` / `ward` / `city` / `country`) là **bản mirror của địa chỉ mặc định** (đồng bộ khi đổi mặc định). Nhân viên / Admin không dùng sổ địa chỉ giao hàng.
 - Mỗi tài khoản có mã do hệ thống cấp: Khách hàng `KH-<ngày đăng ký>-<4 số>`, Nhân viên `NV-<họ tên>-<ngày sinh>-<4 số>`, Admin `AD-<họ tên>-<ngày sinh>-<4 số>`; bộ đếm 4 số riêng cho từng loại; ngày sinh bắt buộc với Nhân viên và Admin. Mã không sửa được, trừ khi đổi vai trò Nhân viên ↔ Admin thì cấp mã mới (đã chốt 21/11/2026).
 - Admin có toàn quyền tạo tài khoản với bất kỳ vai trò nào trong 3 vai trò cố định (Khách hàng, Nhân viên, Admin), không chỉ tài khoản nội bộ (đã chốt 20/11/2026).
 - `[GD]` Tài khoản do Admin tạo tuân theo cùng ràng buộc như khi khách tự đăng ký: bắt buộc đủ email và số điện thoại, không trùng với tài khoản khác; Admin đặt mật khẩu ban đầu.
@@ -221,6 +222,7 @@ Khách đặt được đơn với COD hoặc chuyển khoản QR và theo dõi 
 ### Constraints
 
 - Theo *Constraints chung*. Tài khoản nhận chuyển khoản lấy từ cấu hình hard-code.
+- **Địa chỉ khi đặt hàng (đã chốt 27/11/2026):** trang thanh toán điền sẵn địa chỉ **mặc định** từ sổ địa chỉ (UC-41). Khách chọn địa chỉ khác trong sổ hoặc thêm địa chỉ mới (thêm thì lưu vào sổ để lần sau còn trong danh sách). Thông tin nhận hàng được **chụp (snapshot)** vào đơn lúc xác nhận; không còn quy tắc «sửa chỉ cho đơn / không cập nhật hồ sơ».
 - Phí vận chuyển: 1 mức cố định áp cho mọi đơn, không phụ thuộc sản phẩm; nạp từ biến môi trường, mặc định 12.000đ (đã chốt 20/11/2026).
 - Đơn chuyển khoản quá 24 giờ kể từ lúc đặt mà chưa thanh toán thì hệ thống tự hủy.
 - Đơn chuyển khoản tự chuyển sang "Đã thanh toán" khi hệ thống nhận được giao dịch khớp từ dịch vụ theo dõi biến động số dư (xem BR-006) (đã chốt 20/11/2026).
@@ -464,3 +466,4 @@ Xem được các chỉ số kinh doanh chính của cửa hàng trên một das
 - v21 (2026-11-21): website là SSR nên đổi xác thực sang phiên phía server: bảng `identity.session`, cookie `HttpOnly` + `Secure` + `SameSite=Lax`, kiểm tra `Origin` ở mọi request ghi; hạn phiên Khách hàng 30 phút, Nhân viên / Admin 1 giờ; bỏ access token JWT, refresh token Redis, `account_token_version` và rate limit làm mới token
 - v22 (2026-11-21): constraint cache cập nhật cho SSR — không phải danh sách nào cũng cache: chỉ dữ liệu công khai cache ở Redis (cache dữ liệu, không cache HTML); kết quả tìm kiếm, mọi trang cần đăng nhập (kể cả portal quản trị) và dashboard không cache; không trang HTML nào `public`: trang công khai `private, no-cache` + `ETag` `[GD]`, trang cần đăng nhập `no-store`, `Vary: HX-Request`, file tĩnh cache 1 năm; hạn phiên tính từ lần thao tác cuối (đã chốt)
 - v23 (2026-11-21): bỏ `ETag` cho trang HTML công khai; không còn response nào dùng `ETag`
+- v24 (2026-11-27): đưa **sổ nhiều địa chỉ** vào Giai đoạn 1 (bỏ khỏi Out of Scope, tách khỏi Outlet); BR-001 thêm `identity.shipping_address` + đúng 1 mặc định / khách, `account_*` địa chỉ = mirror mặc định; BR-003 checkout dùng mặc định / chọn / thêm địa chỉ (lưu sổ), snapshot vào đơn (bỏ «sửa chỉ cho đơn»)

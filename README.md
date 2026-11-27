@@ -13,6 +13,7 @@ Hiện repo **chỉ có khung thư mục / file** (mỗi file chỉ có docstrin
 | Data model hiện hành | [specs/entity-model/data_model_v2.dbml](specs/entity-model/data_model_v2.dbml) (bản vẽ Mermaid: [data_model_v2.md](specs/entity-model/data_model_v2.md)) |
 | Entity diagram (SDD Tầng 3) | [specs/entity-model/entity_diagram_v2.md](specs/entity-model/entity_diagram_v2.md) |
 | Schema và dữ liệu mẫu PostgreSQL | [infra/postgres/init.sql](infra/postgres/init.sql), [infra/postgres/seed.sql](infra/postgres/seed.sql) |
+| Migration DB đã init (team) | [infra/postgres/migrations/](infra/postgres/migrations/) — máy mới chỉ cần `compose up`; máy cũ chạy file SQL một lần qua `docker exec … psql` |
 | Quy tắc cho agent | [AGENTS.md](AGENTS.md) |
 
 ## Module
@@ -85,3 +86,4 @@ Luồng bắt buộc: `Route → Service → Repository → Database`. Module ch
 - Chưa chọn framework web, ORM, công cụ migration; `pyproject.toml` chưa khai báo thư viện.
 - `init.sql` và `seed.sql` đã chạy thử trên PostgreSQL 16 (21/11/2026).
 - Docker Compose chạy PostgreSQL 16 và tự nạp `init.sql` rồi `seed.sql` khi volume còn trống (`docker compose -f infra/docker-compose.yml up -d`).
+- DB volume đã có sẵn: đừng `down -v` bắt buộc cả team — chạy migration trong `infra/postgres/migrations/` (vd. `002_shipping_address.sql`) một lần bằng `docker exec -i postgres psql -U sobie -d sobieDB`.

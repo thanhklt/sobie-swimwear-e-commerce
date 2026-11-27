@@ -16,6 +16,7 @@ from tests.ordering.conftest import DemoIds, get_stock, prepare_cart, sample_shi
 async def test_uc20_ac1_create_qr_order(
     db: AsyncSession, demo: DemoIds, clean_cart: None
 ) -> None:
+    """UC-20 AC-1 (+ AC-2): đặt QR — PENDING/UNPAID, hạn 24h, VietQR/SOBIE."""
     inv, pricing = await prepare_cart(db, demo, qty=1, stock=5)
     order = await service.place_qr_order(
         db,
@@ -46,6 +47,7 @@ async def test_uc20_ac1_create_qr_order(
 async def test_uc20_ac3_order_code_format(
     db: AsyncSession, demo: DemoIds, clean_cart: None
 ) -> None:
+    """UC-20 AC-3: mã đơn 8 ký tự Crockford Base32."""
     inv, pricing = await prepare_cart(db, demo, qty=1, stock=5)
     order = await service.place_qr_order(
         db,
@@ -62,6 +64,7 @@ async def test_uc20_ac3_order_code_format(
 async def test_uc20_ac5_hide_qr_when_paid(
     db: AsyncSession, demo: DemoIds, clean_cart: None
 ) -> None:
+    """UC-20 AC-5: đã PAID → không hiện QR / transfer_content."""
     inv, pricing = await prepare_cart(db, demo, qty=1, stock=5)
     order = await service.place_qr_order(
         db,
@@ -84,7 +87,7 @@ async def test_uc20_ac5_hide_qr_when_paid(
 async def test_uc25_e3_reject_mark_paid_on_cod(
     db: AsyncSession, demo: DemoIds, clean_cart: None
 ) -> None:
-    """UC-25 E3: đơn không phải QR → không đổi payment_status."""
+    """UC-25 E3: mark PAID trên đơn COD → từ chối, payment_status không đổi."""
     inv, pricing = await prepare_cart(db, demo, qty=1, stock=5)
     order = await service.place_cod_order(
         db,

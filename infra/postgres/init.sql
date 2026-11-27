@@ -58,6 +58,29 @@ CREATE TABLE identity.account (
 );
 CREATE INDEX account_role_key_idx ON identity.account (account_role_key);
 
+-- Sổ địa chỉ giao hàng của Khách hàng (data model v2.17, 27/11/2026).
+-- account_house_number/ward/city/country = mirror địa chỉ mặc định.
+-- Partial unique: tối đa 1 is_default = true / account.
+CREATE TABLE identity.shipping_address (
+  shipping_address_key          uuid         PRIMARY KEY DEFAULT gen_random_uuid(),
+  shipping_address_account_key  uuid         NOT NULL
+    REFERENCES identity.account (account_key) ON DELETE CASCADE,
+  shipping_address_name         varchar(255) NOT NULL,
+  shipping_address_phone        varchar(20)  NOT NULL,
+  shipping_address_house_number varchar(255) NOT NULL,
+  shipping_address_ward         varchar(100) NOT NULL,
+  shipping_address_city         varchar(255) NOT NULL,
+  shipping_address_country      varchar(100) NOT NULL,
+  shipping_address_is_default   boolean      NOT NULL DEFAULT false,
+  shipping_address_created_at   timestamptz  NOT NULL DEFAULT now(),
+  shipping_address_updated_at   timestamptz  NOT NULL DEFAULT now()
+);
+CREATE INDEX shipping_address_account_key_idx
+  ON identity.shipping_address (shipping_address_account_key);
+CREATE UNIQUE INDEX shipping_address_one_default_per_account_uq
+  ON identity.shipping_address (shipping_address_account_key)
+  WHERE shipping_address_is_default;
+
 -- Phiên đăng nhập phía server (data model v2.15, Q35). Cookie chỉ chứa mã phiên gốc;
 -- bảng lưu bản băm SHA-256 (hex). Hạn: Khách hàng 30 phút, Nhân viên / Admin 1 giờ,
 -- service gia hạn expires_at khi còn thao tác. Đổi mật khẩu / đổi vai trò / khóa

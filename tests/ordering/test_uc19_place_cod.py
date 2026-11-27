@@ -29,6 +29,7 @@ from tests.ordering.conftest import (
 async def test_uc19_ac1_create_cod_order(
     db: AsyncSession, demo: DemoIds, clean_cart: None
 ) -> None:
+    """UC-19 AC-1: đặt COD thành công — PENDING, trừ tồn, xóa giỏ, history."""
     inv, pricing = await prepare_cart(db, demo, qty=2, stock=5)
     order = await service.place_cod_order(
         db,
@@ -56,7 +57,7 @@ async def test_uc19_ac1_create_cod_order(
 async def test_uc19_ac2_total_formula(
     db: AsyncSession, demo: DemoIds, clean_cart: None
 ) -> None:
-    """Tạm tính 2 × 300000 = 600000; không KM; + ship 12000 = 612000."""
+    """UC-19 AC-2: tổng = tạm tính − giảm + ship (2×300000 + 12000 = 612000)."""
     inv, pricing = await prepare_cart(db, demo, qty=2, stock=10)
     quote = await service.build_quote(
         db, account_key=demo.customer_key, inventory=inv, pricing=pricing
@@ -80,6 +81,7 @@ async def test_uc19_ac2_total_formula(
 async def test_uc19_ac5_reject_when_stock_insufficient(
     db: AsyncSession, demo: DemoIds, clean_cart: None
 ) -> None:
+    """UC-19 AC-5 / E1: hết hàng lúc xác nhận → không tạo đơn, không trừ tồn."""
     inv, pricing = await prepare_cart(db, demo, qty=2, stock=5)
     await set_stock(db, demo.variant_do_m, 1)
     with pytest.raises(InsufficientStockError):
@@ -99,6 +101,7 @@ async def test_uc19_ac5_reject_when_stock_insufficient(
 async def test_uc19_ac7_missing_phone(
     db: AsyncSession, demo: DemoIds, clean_cart: None
 ) -> None:
+    """UC-19 AC-7 / E3: thiếu thông tin nhận hàng → không tạo đơn."""
     inv, pricing = await prepare_cart(db, demo, qty=1, stock=5)
     bad = ShippingInfo(
         name="A",
@@ -123,6 +126,7 @@ async def test_uc19_ac7_missing_phone(
 async def test_uc19_ac9_price_changed_requires_reconfirm(
     db: AsyncSession, demo: DemoIds, clean_cart: None
 ) -> None:
+    """UC-19 AC-9 / E4: tổng đổi so với expected_total → yêu cầu xác nhận lại."""
     inv, pricing = await prepare_cart(db, demo, qty=1, stock=5)
     with pytest.raises(PriceChangedError):
         await service.place_cod_order(
@@ -140,6 +144,7 @@ async def test_uc19_ac9_price_changed_requires_reconfirm(
 async def test_uc19_empty_cart(
     db: AsyncSession, demo: DemoIds, clean_cart: None
 ) -> None:
+    """UC-19 Preconditions: giỏ trống → không đặt hàng."""
     from app.modules.ordering.adapters import DbCatalogPricing, DbInventoryGateway
 
     with pytest.raises(EmptyCartError):

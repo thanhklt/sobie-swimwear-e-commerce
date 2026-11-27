@@ -100,7 +100,7 @@ Then: đơn được tạo với cùng mức giảm và tổng thanh toán, khô
 And: lượt còn lại giảm từ 9 xuống 8 do đơn này, không ghi đè theo số lượt cũ
 
 ## Dependencies
-- **Upstream UC:** UC-02 Đăng nhập, UC-18 Quản lý giỏ hàng, UC-31 Tính mức giảm cho đơn hàng
+- **Upstream UC:** UC-02 Đăng nhập, UC-18 Quản lý giỏ hàng, UC-31 Tính mức giảm cho đơn hàng, UC-41 Quản lý sổ địa chỉ (qua bước nhận hàng như UC-19)
 - **Downstream UC:** UC-21 Theo dõi đơn hàng, UC-22 Hủy đơn hàng, UC-23 Xác nhận đơn hàng, UC-24 Tự hủy đơn chuyển khoản quá hạn, UC-25 Tự đối soát chuyển khoản qua webhook SePay
 - **External Systems:** SePay (nhận giao dịch qua UC-25)
 
@@ -109,6 +109,7 @@ And: lượt còn lại giảm từ 9 xuống 8 do đơn này, không ghi đè t
 - BR-GIAIDOAN1: đơn chuyển khoản quá 24 giờ kể từ lúc đặt mà chưa thanh toán thì hệ thống tự hủy.
 - Tài khoản nhận chuyển khoản lấy từ cấu hình cửa hàng hard-code; phí vận chuyển lấy từ biến môi trường, mặc định 12.000đ cho mọi đơn.
 - Kiểm tra/trừ tồn kho, áp khuyến mãi/voucher và tạo đơn trong cùng một transaction (AGENTS.md).
+- Thông tin nhận hàng: giống UC-19 (sổ địa chỉ UC-41, snapshot vào đơn).
 
 ### Quyết định đã chốt
 - Trạng thái đơn: Chưa xử lý → Đã xác nhận → Chờ lấy hàng → Đang giao → Giao thành công | Giao không thành công; Đã hủy (đã chốt 15/11/2026, cập nhật 20/11/2026).
@@ -116,6 +117,7 @@ And: lượt còn lại giảm từ 9 xuống 8 do đơn này, không ghi đè t
 - Mọi mức giảm tính theo phần trăm; tiền làm tròn `ROUND_HALF_UP` về số nguyên VND (đã chốt 15/11/2026).
 - Mỗi đơn áp tối đa 1 khuyến mãi (theo hóa đơn hoặc voucher); khuyến mãi theo sản phẩm được ghi theo từng dòng đơn (theo ERD).
 - Mỗi lần đơn đổi trạng thái (kể cả lúc tạo), hệ thống lưu lịch sử: trạng thái cũ, trạng thái mới, nguồn thay đổi, người đổi (nếu có), thời điểm (theo ERD).
+- Nhận hàng theo sổ địa chỉ (đã chốt 27/11/2026) — xem UC-19 / UC-41.
 
 ### Giả định [GD]
 - Lượt đã dùng của khuyến mãi được chọn (voucher hoặc khuyến mãi theo hóa đơn) tăng khi tạo đơn; các dòng đã đặt được xóa khỏi giỏ.
@@ -130,3 +132,4 @@ And: lượt còn lại giảm từ 9 xuống 8 do đơn này, không ghi đè t
 - v6 (2026-11-22): bổ sung kiểm tra trạng thái đơn khi xem lại QR, không hiển thị QR cho đơn đã hủy.
 - v7 (2026-11-23): đồng bộ AC-4 và giả định với luồng 4a; thêm AC-9 kiểm tra ẩn QR cho đơn đã hủy nhưng còn hạn.
 - v8 (2026-11-23): sửa điều kiện xác nhận lại trong AC-8; thêm AC-10 cho trường hợp lượt giảm nhưng voucher vẫn hợp lệ, giữ kiểm tra lượt trong transaction.
+- v9 (2026-11-27): liên kết UC-41 / sổ địa chỉ (nhận hàng như UC-19).

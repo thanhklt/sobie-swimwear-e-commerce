@@ -75,7 +75,7 @@ And: hệ thống báo đăng ký không thành công
 
 ## Dependencies
 - **Upstream UC:** —
-- **Downstream UC:** UC-02 Đăng nhập, UC-04 Cập nhật hồ sơ khách hàng
+- **Downstream UC:** UC-02 Đăng nhập, UC-04 Cập nhật hồ sơ khách hàng, UC-41 Quản lý sổ địa chỉ (khi bổ sung địa chỉ sau đăng ký)
 - **External Systems:** —
 
 ## Notes

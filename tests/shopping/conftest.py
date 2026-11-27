@@ -1,5 +1,7 @@
 """Fixture DB cho tests/shopping — dùng PostgreSQL docker (infra/docker-compose).
 
+Hỗ trợ tests UC-18 (giỏ / gộp) và UC-38 (wishlist).
+
 Lưu ý: không để nhiều async fixture cùng đọc một AsyncSession song song
 (asyncpg: another operation is in progress).
 """

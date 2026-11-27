@@ -17,8 +17,8 @@ Khách bấm "Đặt hàng" trên trang giỏ hàng.
 - Giỏ hàng có ít nhất 1 dòng còn hàng.
 
 ## Main Flow
-1. Hệ thống mở trang thanh toán, điền sẵn họ tên, số điện thoại, địa chỉ nhận hàng từ hồ sơ khách `[GD]`.
-2. Khách kiểm tra hoặc sửa thông tin nhận hàng cho riêng đơn này; thay đổi không cập nhật hồ sơ khách.
+1. Hệ thống mở trang thanh toán, điền sẵn thông tin nhận hàng từ **địa chỉ mặc định** trong sổ địa chỉ của khách (UC-41). Nếu chưa có địa chỉ trong sổ, khách phải thêm địa chỉ trước khi đặt.
+2. Khách kiểm tra địa chỉ đang chọn; có thể **Thay đổi** để chọn địa chỉ khác trong sổ, hoặc **Thêm địa chỉ** (lưu vào sổ theo UC-41, dùng cho đơn này và các lần sau).
 3. Khách chọn phương thức "Thanh toán khi nhận hàng (COD)" và có thể nhập mã voucher.
 4. Hệ thống tính và hiển thị: tạm tính (đã áp khuyến mãi theo sản phẩm trên từng dòng), mức giảm do UC-31 chọn (tối đa 1 khuyến mãi: theo hóa đơn hoặc voucher), phí vận chuyển cố định, tổng thanh toán. Mọi mức giảm tính theo phần trăm, tiền làm tròn `ROUND_HALF_UP` về số nguyên VND.
 5. Khách bấm "Xác nhận đặt hàng".
@@ -86,9 +86,21 @@ Then: hệ thống chuyển sang trang đăng nhập
 And: đăng nhập xong khách quay lại trang thanh toán
 
 ### AC-7: Thiếu thông tin nhận hàng
-Given: khách xóa trống số điện thoại nhận hàng
+Given: khách chưa chọn đủ thông tin nhận hàng (thiếu địa chỉ hoặc để trống trường bắt buộc khi thêm địa chỉ)
 When: khách xác nhận đặt hàng
-Then: hệ thống không tạo đơn và báo thiếu số điện thoại
+Then: hệ thống không tạo đơn
+And: báo trường thiếu / yêu cầu chọn hoặc thêm địa chỉ
+
+### AC-12: Prefill địa chỉ mặc định
+Given: khách có địa chỉ A mặc định và địa chỉ B trong sổ
+When: khách mở trang thanh toán
+Then: hệ thống điền sẵn thông tin nhận hàng theo A
+
+### AC-13: Thêm địa chỉ tại checkout lưu sổ
+Given: khách đang ở trang thanh toán
+When: khách thêm địa chỉ C và xác nhận dùng C cho đơn
+Then: C được lưu trong sổ địa chỉ (UC-41)
+And: lần đặt sau C vẫn xuất hiện trong danh sách địa chỉ
 
 ### AC-8: Hai khách tranh nhau sản phẩm cuối
 Given: "Đỏ / M" còn 1, hai khách cùng có 1 "Đỏ / M" trong giỏ
@@ -115,7 +127,7 @@ Then: đơn được tạo với cùng mức giảm và tổng thanh toán, khô
 And: lượt còn lại giảm từ 9 xuống 8 do đơn này, không ghi đè theo số lượt cũ
 
 ## Dependencies
-- **Upstream UC:** UC-02 Đăng nhập, UC-18 Quản lý giỏ hàng, UC-31 Tính mức giảm cho đơn hàng
+- **Upstream UC:** UC-02 Đăng nhập, UC-18 Quản lý giỏ hàng, UC-31 Tính mức giảm cho đơn hàng, UC-41 Quản lý sổ địa chỉ
 - **Downstream UC:** UC-21 Theo dõi đơn hàng, UC-22 Hủy đơn hàng, UC-23 Xác nhận đơn hàng
 - **External Systems:** Không có
 
@@ -123,15 +135,16 @@ And: lượt còn lại giảm từ 9 xuống 8 do đơn này, không ghi đè t
 - Luôn kiểm tra lượt còn lại trong transaction tạo đơn. Chỉ thay đổi số lượt còn lại, trong khi khuyến mãi vẫn hợp lệ và giá, mức giảm, điều kiện áp dụng cho đơn không đổi, không yêu cầu khách xác nhận lại.
 - Phí vận chuyển là 1 mức cho mọi đơn, lấy từ biến môi trường, mặc định 12.000đ (BR-GIAIDOAN1, Constraints chung).
 - Kiểm tra/trừ tồn kho, áp khuyến mãi/voucher và tạo đơn chạy trong cùng một transaction (AGENTS.md).
+- Thông tin nhận hàng trên đơn là snapshot lúc đặt; không FK tới `shipping_address`.
 
 ### Quyết định đã chốt
 - Trạng thái đơn: Chưa xử lý → Đã xác nhận → Chờ lấy hàng → Đang giao → Giao thành công | Giao không thành công; Đã hủy (đã chốt 15/11/2026, cập nhật 20/11/2026: thêm "Chờ lấy hàng", bỏ "Bị từ chối").
 - Mọi mức giảm tính theo phần trăm; tiền làm tròn `ROUND_HALF_UP` về số nguyên VND (đã chốt 15/11/2026).
 - Mỗi đơn áp tối đa 1 khuyến mãi (theo hóa đơn hoặc voucher); khuyến mãi theo sản phẩm được ghi theo từng dòng đơn (theo ERD).
 - Mỗi lần đơn đổi trạng thái (kể cả lúc tạo), hệ thống lưu lịch sử: trạng thái cũ, trạng thái mới, nguồn thay đổi, người đổi (nếu có), thời điểm (theo ERD).
+- Prefill / chọn / thêm địa chỉ từ sổ (UC-41); thêm địa chỉ lưu sổ (đã chốt 27/11/2026). Bỏ quy tắc «sửa chỉ cho đơn / không cập nhật hồ sơ».
 
 ### Giả định [GD]
-- Thông tin nhận hàng được điền sẵn từ hồ sơ khách, khách sửa được cho riêng đơn này.
 - Lượt đã dùng của khuyến mãi được chọn (voucher hoặc khuyến mãi theo hóa đơn) tăng khi tạo đơn.
 - Các dòng đã đặt được xóa khỏi giỏ sau khi đặt thành công.
 - Giá hoặc mức giảm thay đổi trước khi xác nhận thì tính lại và yêu cầu khách xác nhận lại.
@@ -145,3 +158,4 @@ And: lượt còn lại giảm từ 9 xuống 8 do đơn này, không ghi đè t
 - v6 (2026-11-22): đưa xóa giỏ và kiểm tra lại giá, khuyến mãi vào transaction; bổ sung rollback và AC-9, AC-10.
 - v7 (2026-11-22): làm rõ sửa thông tin nhận hàng chỉ áp dụng cho đơn đang đặt.
 - v8 (2026-11-23): sửa điều kiện xác nhận lại trong AC-9; thêm AC-11 cho trường hợp lượt giảm nhưng voucher vẫn hợp lệ, giữ kiểm tra lượt trong transaction.
+- v9 (2026-11-27): checkout dùng sổ địa chỉ (UC-41); prefill mặc định; thêm địa chỉ lưu sổ; AC-12, AC-13; bỏ «sửa chỉ cho đơn».

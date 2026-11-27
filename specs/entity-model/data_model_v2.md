@@ -33,7 +33,7 @@
      <HỌ TÊN>, <MÀU>, <SIZE>: bỏ dấu (Đ -> D), viết hoa, bỏ khoảng trắng.
    - Module (đã chốt 20/11/2026): 1 module = 1 schema PostgreSQL = 1 TableGroup
      = 1 thư mục specs/use-cases/<module>/ = 1 package app/modules/<module>/.
-       identity  : role, account, session
+       identity  : role, account, shipping_address, session
        catalog   : category, collection, gender, size, color, product,
                    product_collection, variant, gallery
        shopping  : cart, cart_item, wishlist, wishlist_item
@@ -63,7 +63,7 @@ Tên entity trong sơ đồ là tên bảng viết hoa; schema (= module) ghi �
 
 ## 0. Toàn hệ thống
 
-30 bảng, 36 quan hệ, 7 module có bảng (`shipping`, `reporting` không có bảng). Sơ đồ này chỉ vẽ khóa chính, khóa ngoại và mã tự nhiên; cột đầy đủ xem các mục theo module.
+31 bảng, 37 quan hệ, 7 module có bảng (`shipping`, `reporting` không có bảng). Sơ đồ này chỉ vẽ khóa chính, khóa ngoại và mã tự nhiên; cột đầy đủ xem các mục theo module. `identity.shipping_address` (sổ địa chỉ KH, đã chốt 27/11/2026) — xem DBML; file Mermaid chi tiết bổ sung khi sync đầy đủ.
 
 ```mermaid
 erDiagram

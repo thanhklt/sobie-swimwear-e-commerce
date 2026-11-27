@@ -1,4 +1,4 @@
-"""Fixture ordering — PostgreSQL docker."""
+"""Fixture ordering — PostgreSQL docker (hỗ trợ tests UC-19 → UC-26)."""
 
 from __future__ import annotations
 

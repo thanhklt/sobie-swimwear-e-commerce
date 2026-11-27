@@ -17,6 +17,7 @@ from tests.ordering.conftest import DemoIds, get_stock, prepare_cart, sample_shi
 async def test_uc21_ac1_list_customer_orders(
     db: AsyncSession, demo: DemoIds, clean_cart: None
 ) -> None:
+    """UC-21 AC-1: khách xem danh sách đơn của mình."""
     inv, pricing = await prepare_cart(db, demo, qty=1, stock=5)
     order = await service.place_cod_order(
         db,
@@ -34,6 +35,7 @@ async def test_uc21_ac1_list_customer_orders(
 async def test_uc22_ac1_customer_cancel_restores_stock(
     db: AsyncSession, demo: DemoIds, clean_cart: None
 ) -> None:
+    """UC-22 AC-1: khách hủy đơn PENDING → CANCELLED, hoàn tồn."""
     inv, pricing = await prepare_cart(db, demo, qty=2, stock=5)
     order = await service.place_cod_order(
         db,
@@ -60,6 +62,7 @@ async def test_uc22_ac1_customer_cancel_restores_stock(
 async def test_uc22_ac5_customer_cannot_cancel_confirmed(
     db: AsyncSession, demo: DemoIds, clean_cart: None
 ) -> None:
+    """UC-22 AC-5: khách không hủy được đơn đã CONFIRMED."""
     inv, pricing = await prepare_cart(db, demo, qty=1, stock=5)
     order = await service.place_cod_order(
         db,
@@ -84,6 +87,7 @@ async def test_uc22_ac5_customer_cannot_cancel_confirmed(
 async def test_uc23_ac1_confirm_cod(
     db: AsyncSession, demo: DemoIds, clean_cart: None
 ) -> None:
+    """UC-23 AC-1: NV xác nhận đơn COD PENDING → CONFIRMED (không đổi tồn)."""
     inv, pricing = await prepare_cart(db, demo, qty=1, stock=5)
     order = await service.place_cod_order(
         db,
@@ -104,7 +108,7 @@ async def test_uc23_ac1_confirm_cod(
 async def test_uc21_status_history_times_customer_hides_cancel_note(
     db: AsyncSession, demo: DemoIds, clean_cart: None
 ) -> None:
-    """Chi tiết đơn: timeline dưới thời gian tạo; KH không thấy note hủy."""
+    """UC-21: timeline trạng thái; KH ẩn note hủy, NV thấy note."""
     inv, pricing = await prepare_cart(db, demo, qty=1, stock=5)
     order = await service.place_cod_order(
         db,
@@ -152,6 +156,7 @@ async def test_uc21_status_history_times_customer_hides_cancel_note(
 async def test_uc23_ac3_reject_unpaid_qr_order(
     db: AsyncSession, demo: DemoIds, clean_cart: None
 ) -> None:
+    """UC-23 AC-3: không xác nhận đơn QR còn UNPAID."""
     inv, pricing = await prepare_cart(db, demo, qty=1, stock=5)
     order = await service.place_qr_order(
         db,

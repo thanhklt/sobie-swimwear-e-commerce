@@ -135,12 +135,11 @@ Then: hệ thống từ chối và không hoàn tồn kho hoặc lượt khuyế
 - Không có thao tác "Từ chối" riêng; Nhân viên chỉ có nút "Hủy đơn" (đã chốt 20/11/2026).
 - Khách chỉ hủy được đơn "Chưa xử lý"; Nhân viên hủy được đơn "Chưa xử lý", "Đã xác nhận", "Chờ lấy hàng" (đã chốt 20/11/2026).
 - Nhân viên hủy phải nhập lý do qua popup; khách không thấy lý do (đã chốt 20/11/2026).
-- Đơn bị hủy thì cộng lại tồn kho và hoàn lượt voucher (đã chốt 15/11/2026).
+- Đơn bị hủy thì cộng lại tồn kho và hoàn lượt của khuyến mãi đã áp — cả voucher lẫn khuyến mãi theo hóa đơn (đã chốt 15/11/2026; xác nhận hoàn lượt hóa đơn 23/11/2026 theo data model v2 / UC-31).
 - Mỗi lần đơn đổi trạng thái, hệ thống lưu lịch sử: trạng thái cũ, trạng thái mới, nguồn thay đổi, người đổi (nếu có), thời điểm (theo ERD).
 - Lý do hủy lưu ở cột ghi chú của lịch sử trạng thái đơn (`order_status_history_note`) (đã chốt 20/11/2026, data model v2, Q23e).
 
 ### Giả định [GD]
-- Hủy đơn cũng hoàn lượt của khuyến mãi theo hóa đơn đã áp (voucher đã chốt).
 - Lý do hủy tối đa 500 ký tự.
 
 ## History
@@ -152,3 +151,4 @@ Then: hệ thống từ chối và không hoàn tồn kho hoặc lượt khuyế
 - v6 (2026-11-22): bổ sung rollback khi hủy thất bại và chống xử lý hủy lặp; thêm AC-13, AC-14.
 - v7 (2026-11-22): làm rõ điều kiện hiển thị nút hủy theo vai trò và kiểm tra yêu cầu trực tiếp.
 - v8 (2026-11-22): đưa giới hạn lý do hủy 500 ký tự vào luồng và ngoại lệ.
+- v9 (2026-11-24): chuyển hoàn lượt khuyến mãi theo hóa đơn từ giả định sang quyết định đã chốt (đồng bộ UC-31 / data model v2)

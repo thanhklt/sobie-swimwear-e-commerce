@@ -42,7 +42,7 @@
       <div>
         <p class="order-code">{{ o.order_code }}</p>
         <div class="order-meta">
-          <span class="tag">{{ o.status }}</span>
+          <span class="tag">{{ o.status_label or o.status }}</span>
           <span class="tag {% if o.payment_status == 'PAID' %}ok{% else %}warn{% endif %}">
             {{ o.payment_name }} · {{ o.payment_status }}
           </span>

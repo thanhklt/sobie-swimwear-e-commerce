@@ -34,6 +34,7 @@ from app.modules.ordering.schemas import (
     OrderQuote,
     OrderView,
     ShippingInfo,
+    StatusHistoryView,
 )
 from app.modules.shopping import service as shopping_service
 from app.shared.config.settings import Config
@@ -47,6 +48,28 @@ _CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 _QR_PAYMENT_HOURS = 24
 _CUSTOMER_CANCEL_STATUSES = frozenset({"PENDING"})
 _EMPLOYEE_CANCEL_STATUSES = frozenset({"PENDING", "CONFIRMED", "AWAITING_PICKUP"})
+
+# Nhãn tiếng Việt theo UC / data model (PENDING = Chưa xử lý, …)
+_STATUS_LABELS: dict[str, str] = {
+    "PENDING": "Chưa xử lý",
+    "CONFIRMED": "Đã xác nhận",
+    "AWAITING_PICKUP": "Chờ lấy hàng",
+    "SHIPPING": "Đang giao",
+    "DELIVERED": "Giao thành công",
+    "DELIVERY_FAILED": "Giao không thành công",
+    "CANCELLED": "Đã hủy",
+}
+
+
+def _status_label(code: str | None) -> str:
+    if not code:
+        return ""
+    return _STATUS_LABELS.get(code, code)
+
+
+def _history_event_label(*, to_status: str) -> str:
+    """Mốc timeline: chỉ nhãn trạng thái mới (PENDING→Chưa xử lý, CONFIRMED→Đã xác nhận…)."""
+    return _status_label(to_status)
 
 
 def _shipping_fee() -> Decimal:
@@ -322,7 +345,13 @@ def _vietqr_image_url(*, amount: Decimal, transfer_content: str) -> str | None:
     return f"https://img.vietqr.io/image/{bank}-{account}-compact2.png?{query}"
 
 
-async def to_order_view(db: AsyncSession, order: Order) -> OrderView:
+async def to_order_view(
+    db: AsyncSession,
+    order: Order,
+    *,
+    include_history: bool = False,
+    include_cancel_notes: bool = False,
+) -> OrderView:
     payment_name = await repository.payment_name_of(db, order.order_payment_key)
     created = order.order_created_date or datetime.now(UTC)
     if created.tzinfo is None:
@@ -330,12 +359,40 @@ async def to_order_view(db: AsyncSession, order: Order) -> OrderView:
     show = _show_qr(order, payment_name)
     transfer = f"SOBIE{order.order_code}" if show else None
     total = to_vnd(order.order_total_price)
+    history: tuple[StatusHistoryView, ...] = ()
+    if include_history:
+        rows = await repository.list_status_history(db, order.order_key)
+        history = tuple(
+            StatusHistoryView(
+                from_status=row.order_status_history_from_value,
+                to_status=row.order_status_history_to_value,
+                source=row.order_status_history_source,
+                changed_at=(
+                    row.order_status_history_changed_time.replace(tzinfo=UTC)
+                    if row.order_status_history_changed_time
+                    and row.order_status_history_changed_time.tzinfo is None
+                    else row.order_status_history_changed_time
+                    or created
+                ),
+                note=(
+                    row.order_status_history_note
+                    if include_cancel_notes
+                    else None
+                ),
+                event_label=_history_event_label(
+                    to_status=row.order_status_history_to_value,
+                ),
+                status_label=_status_label(row.order_status_history_to_value),
+            )
+            for row in rows
+        )
     return OrderView(
         order_key=order.order_key,
         order_code=order.order_code,
         account_key=order.order_account_key,
         payment_name=payment_name,
         status=order.order_status,
+        status_label=_status_label(order.order_status),
         payment_status=order.order_payment_status,
         discount_amount=to_vnd(order.order_discount_amount),
         shipping_fee=to_vnd(order.order_shipping_fee),
@@ -358,6 +415,7 @@ async def to_order_view(db: AsyncSession, order: Order) -> OrderView:
             if show and transfer
             else None
         ),
+        status_history=history,
     )
 
 
@@ -381,7 +439,20 @@ async def get_customer_order(
     order = await repository.get_order_by_code(db, order_code)
     if order is None or order.order_account_key != account_key:
         raise OrderNotFoundError()
-    return await to_order_view(db, order)
+    # KH xem lịch sử trạng thái + thời gian; không thấy note hủy (BR / chốt NV-only)
+    return await to_order_view(
+        db, order, include_history=True, include_cancel_notes=False
+    )
+
+
+async def get_staff_order(db: AsyncSession, *, order_code: str) -> OrderView:
+    """NV xem chi tiết đơn kèm lịch sử; note hủy chỉ hiện ở view này."""
+    order = await repository.get_order_by_code(db, order_code)
+    if order is None:
+        raise OrderNotFoundError()
+    return await to_order_view(
+        db, order, include_history=True, include_cancel_notes=True
+    )
 
 
 async def cancel_order_by_customer(

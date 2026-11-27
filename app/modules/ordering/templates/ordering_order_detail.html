@@ -21,18 +21,22 @@
     margin: .35rem 0 .75rem;
   }
   .status-row { display: flex; flex-wrap: wrap; gap: .45rem; margin-bottom: .85rem; }
+  .history-list li { align-items: flex-start; }
+  .hist-src { font-size: .8em; opacity: .75; }
 </style>
 
 <div class="rise">
   <h1>Đơn {{ order.order_code }}</h1>
-  <p class="page-lead muted">{{ demo_customer }}</p>
+  <p class="page-lead muted">
+    {% if staff_mode %}{{ demo_employee }} · xem NV (có lý do hủy){% else %}{{ demo_customer }}{% endif %}
+  </p>
 </div>
 
 <div class="layout-2 rise">
   <div>
     <section class="panel">
       <div class="status-row">
-        <span class="tag">Đơn: {{ order.status }}</span>
+        <span class="tag">Đơn: {{ order.status_label or order.status }}</span>
         <span class="tag {% if order.payment_status == 'PAID' %}ok{% else %}warn{% endif %}">
           {{ order.payment_name }} ·
           {% if order.payment_status == 'PAID' %}Đã thanh toán{% else %}Chưa thanh toán{% endif %}
@@ -40,7 +44,7 @@
       </div>
       {% if order.payment_name == 'QR' and order.payment_status == 'PAID' and order.status == 'PENDING' %}
       <p class="muted" style="margin-top:0">
-        Tiền đã khớp. Đơn vẫn PENDING — NV vào trang NV → Xác nhận.
+        Tiền đã khớp. Đơn vẫn chưa xử lý — NV vào trang NV → Xác nhận.
       </p>
       {% endif %}
       <ul class="totals">
@@ -53,6 +57,23 @@
         <li><span class="muted">Hạn QR</span><span>{{ order.payment_deadline }}</span></li>
         {% endif %}
       </ul>
+      {% if order.status_history %}
+      <h2 style="margin:1.1rem 0 .55rem;font-size:1rem">Lịch sử trạng thái</h2>
+      <ul class="totals history-list">
+        {% for h in order.status_history %}
+        <li>
+          <span class="muted">
+            {{ h.event_label or h.status_label or h.to_status }}
+            {% if staff_mode %}
+            <span class="hist-src">({{ h.to_status }} · {{ h.source }})</span>
+            {% endif %}
+            {% if staff_mode and h.note %}<br><em>Lý do: {{ h.note }}</em>{% endif %}
+          </span>
+          <span>{{ h.changed_at }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
     </section>
 
     {% if order.show_qr %}
@@ -86,7 +107,7 @@
   <aside class="panel sticky-side">
     <h2>Thao tác</h2>
     <div class="row-actions" style="flex-direction:column;align-items:stretch">
-      {% if order.status == 'PENDING' %}
+      {% if not staff_mode and order.status == 'PENDING' %}
       <form method="post" action="/dev/ordering/orders/{{ order.order_code }}/cancel"
             onsubmit="return confirm('Hủy đơn này?');">
         <button type="submit" class="danger" style="width:100%">Hủy đơn (KH)</button>
@@ -95,8 +116,12 @@
       {% if invoice %}
       <a class="btn" href="/dev/ordering/orders/{{ order.order_code }}/invoice">Xem hóa đơn</a>
       {% endif %}
+      {% if staff_mode %}
+      <a class="btn secondary" href="/dev/ordering/staff">Về cổng NV</a>
+      {% else %}
       <a class="btn secondary" href="/dev/ordering/orders">Danh sách đơn</a>
       <a class="btn secondary" href="/dev/ordering/staff">Sang cổng NV</a>
+      {% endif %}
     </div>
   </aside>
 </div>

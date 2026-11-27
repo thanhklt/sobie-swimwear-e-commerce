@@ -12,6 +12,8 @@
 | POST `/dev/ordering/orders/{code}/cancel` | [dev-cancel-customer.md](./dev-cancel-customer.md) |
 | GET `/dev/ordering/orders/{code}/invoice` | [dev-invoice.md](./dev-invoice.md) |
 | POST `/dev/ordering/staff/confirm` | [dev-staff-confirm.md](./dev-staff-confirm.md) |
+| POST `/dev/ordering/staff/lookup-order` | redirect → staff order detail |
+| GET `/dev/ordering/staff/orders/{code}` | [dev-staff-order-detail.md](./dev-staff-order-detail.md) |
 | POST `/dev/ordering/staff/mark-paid` | service `mark_order_paid_by_code` |
 | POST `/dev/ordering/staff/cancel` | service `cancel_order_by_employee` |
 | POST `/dev/ordering/staff/transition` | service `transition_status_for_shipping` |

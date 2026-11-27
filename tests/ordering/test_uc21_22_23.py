@@ -101,6 +101,54 @@ async def test_uc23_ac1_confirm_cod(
 
 
 @pytest.mark.asyncio
+async def test_uc21_status_history_times_customer_hides_cancel_note(
+    db: AsyncSession, demo: DemoIds, clean_cart: None
+) -> None:
+    """Chi tiết đơn: timeline dưới thời gian tạo; KH không thấy note hủy."""
+    inv, pricing = await prepare_cart(db, demo, qty=1, stock=5)
+    order = await service.place_cod_order(
+        db,
+        account_key=demo.customer_key,
+        shipping=sample_shipping(),
+        inventory=inv,
+        pricing=pricing,
+    )
+    await service.confirm_order(
+        db, employee_key=demo.employee_key, order_code=order.order_code
+    )
+    reason = "Khách gọi điện đổi ý"
+    await service.cancel_order_by_employee(
+        db,
+        employee_key=demo.employee_key,
+        order_code=order.order_code,
+        reason=reason,
+        inventory=inv,
+    )
+
+    customer = await service.get_customer_order(
+        db, account_key=demo.customer_key, order_code=order.order_code
+    )
+    assert len(customer.status_history) >= 3
+    assert customer.status_label == "Đã hủy"
+    assert customer.status_history[0].to_status == "PENDING"
+    assert customer.status_history[0].event_label == "Chưa xử lý"
+    assert customer.status_history[0].changed_at is not None
+    confirmed_rows = [h for h in customer.status_history if h.to_status == "CONFIRMED"]
+    assert confirmed_rows
+    assert confirmed_rows[0].event_label == "Đã xác nhận"
+    cancel_rows = [h for h in customer.status_history if h.to_status == "CANCELLED"]
+    assert cancel_rows
+    assert cancel_rows[-1].event_label == "Đã hủy"
+    assert all(h.note is None for h in customer.status_history)
+
+    staff = await service.get_staff_order(db, order_code=order.order_code)
+    staff_cancel = [h for h in staff.status_history if h.to_status == "CANCELLED"]
+    assert staff_cancel
+    assert staff_cancel[-1].event_label == "Đã hủy"
+    assert staff_cancel[-1].note == reason
+
+
+@pytest.mark.asyncio
 async def test_uc23_ac3_reject_unpaid_qr_order(
     db: AsyncSession, demo: DemoIds, clean_cart: None
 ) -> None:

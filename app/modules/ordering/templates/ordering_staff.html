@@ -49,15 +49,15 @@
   <section class="panel">
     <h2>Chuyển trạng thái giao</h2>
     <p class="muted" style="margin-top:0;font-size:.85rem">
-      CONFIRMED → AWAITING_PICKUP → SHIPPING → DELIVERED (xuất HĐ)
+      Đã xác nhận → Chờ lấy hàng → Đang giao → Giao thành công (xuất HĐ)
     </p>
     <form method="post" action="/dev/ordering/staff/transition" class="row-actions">
       <input name="order_code" placeholder="Mã đơn" required style="max-width:11rem">
       <select name="to_status" style="max-width:13rem">
-        <option value="AWAITING_PICKUP">AWAITING_PICKUP</option>
-        <option value="SHIPPING">SHIPPING</option>
-        <option value="DELIVERED">DELIVERED</option>
-        <option value="DELIVERY_FAILED">DELIVERY_FAILED</option>
+        <option value="AWAITING_PICKUP">Chờ lấy hàng</option>
+        <option value="SHIPPING">Đang giao</option>
+        <option value="DELIVERED">Giao thành công</option>
+        <option value="DELIVERY_FAILED">Giao không thành công</option>
       </select>
       <button type="submit">Chuyển</button>
     </form>
@@ -68,6 +68,17 @@
     <p class="muted" style="margin-top:0;font-size:.85rem">UC-24 · chạy job ngay</p>
     <form method="post" action="/dev/ordering/staff/auto-cancel">
       <button type="submit">Chạy job</button>
+    </form>
+  </section>
+
+  <section class="panel">
+    <h2>Xem đơn + lịch sử</h2>
+    <p class="muted" style="margin-top:0;font-size:.85rem">
+      Timeline trạng thái + thời gian; NV thấy lý do hủy (KH không thấy).
+    </p>
+    <form method="post" action="/dev/ordering/staff/lookup-order" class="row-actions">
+      <input name="order_code" placeholder="Mã đơn" required style="max-width:12rem">
+      <button type="submit">Mở</button>
     </form>
   </section>
 

@@ -14,19 +14,15 @@ sequenceDiagram
   U->>R: GET /dev/ordering/orders/{code}
   R->>A: get_account_key_by_email
   R->>S: get_customer_order
-  S->>Repo: load order (+ payment name)
+  S->>Repo: load order + list_status_history
   Repo->>DB: ordering.*
-  S->>S: to_order_view (_show_qr, transfer SOBIE+code, VietQR URL từ VIETQR_*)
+  S->>S: to_order_view (VietQR + status_history, note=None)
   S-->>R: OrderView
-  alt show_qr
-    R-->>U: HTML + ảnh VietQR + TK + nội dung CK
-  else đã PAID / hủy / quá hạn
-    R-->>U: HTML không hiện QR
-  end
+  R-->>U: HTML — Tạo + timeline trạng thái (không lý do hủy) + QR nếu còn
 ```
 
 Ghi chú:
 
-- Quét VietQR **không** gọi app — chỉ giúp KH CK đúng TK/số tiền/nội dung.
-- Production: SePay webhook (UC-25) → `mark_order_paid_by_code` → PAID, ẩn QR; đơn vẫn PENDING tới UC-23.
-- `/dev`: POST staff «Đánh dấu PAID» giả webhook; chưa implement endpoint SePay.
+- Timeline dưới thời gian tạo; mỗi lần NV/hệ thống đổi status → thêm mốc `changed_at`.
+- KH không thấy `order_status_history_note`; NV xem qua `get_staff_order`.
+- Quét VietQR không gọi app. PAID qua SePay (UC-25) /dev giả webhook.

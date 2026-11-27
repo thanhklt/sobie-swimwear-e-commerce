@@ -141,7 +141,10 @@ async def list_status_history(
     result = await db.exec(
         select(OrderStatusHistory)
         .where(OrderStatusHistory.order_status_history_order_key == order_key)
-        .order_by(col(OrderStatusHistory.order_status_history_changed_time))
+        .order_by(
+            col(OrderStatusHistory.order_status_history_changed_time),
+            col(OrderStatusHistory.order_status_history_key),
+        )
     )
     return list(result.all())
 

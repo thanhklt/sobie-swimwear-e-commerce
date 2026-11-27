@@ -264,6 +264,7 @@ async def order_detail(request: Request, db: DbSession, order_code: str):
             "demo_customer": DEMO_CUSTOMER_EMAIL,
             "order": view,
             "invoice": invoice,
+            "staff_mode": False,
             "nav_active": "orders",
             **_flash(request),
         },
@@ -326,6 +327,32 @@ async def staff_page(request: Request):
         {
             "title": "NV — ordering",
             "demo_employee": DEMO_EMPLOYEE_EMAIL,
+            "nav_active": "staff",
+            **_flash(request),
+        },
+    )
+
+
+@router.post("/staff/lookup-order")
+async def staff_lookup_order(order_code: Annotated[str, Form()]):
+    return _redirect(f"/dev/ordering/staff/orders/{order_code.strip().upper()}")
+
+
+@router.get("/staff/orders/{order_code}")
+async def staff_order_detail(request: Request, db: DbSession, order_code: str):
+    try:
+        view = await service.get_staff_order(db, order_code=order_code.upper())
+    except OrderingError as exc:
+        return _redirect("/dev/ordering/staff", error=exc.message)
+    return templates.TemplateResponse(
+        request,
+        "ordering_order_detail.html",
+        {
+            "title": f"NV · Đơn {view.order_code}",
+            "demo_employee": DEMO_EMPLOYEE_EMAIL,
+            "order": view,
+            "invoice": None,
+            "staff_mode": True,
             "nav_active": "staff",
             **_flash(request),
         },

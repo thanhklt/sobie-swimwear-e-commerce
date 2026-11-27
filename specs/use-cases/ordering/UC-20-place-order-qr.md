@@ -16,14 +16,19 @@ Khách chọn phương thức "Chuyển khoản qua mã QR" trên trang thanh to
 - Khách đã đăng nhập.
 - Giỏ hàng có ít nhất 1 dòng còn hàng.
 
+## Hiện trạng triển khai
+
+`GET /api/v1/ordering/checkout` hiện hiển thị giỏ và hỗ trợ gộp giỏ sau đăng nhập. Biểu mẫu thông tin nhận hàng và nút “Sử dụng thông tin hồ sơ” cho đơn QR còn chờ triển khai, theo cùng quy tắc hồ sơ của UC-19.
+
 ## Main Flow
-1. Khách thực hiện bước 1–4 như UC-19, chọn phương thức "Chuyển khoản qua mã QR".
+1. Khách thực hiện bước 1–4 và luồng 2a của UC-19 để nhập tay hoặc bấm "Sử dụng thông tin hồ sơ". Khi hồ sơ chưa đầy đủ, khách có thể lưu thông tin còn thiếu ngay tại checkout để tự điền. Khách chọn phương thức "Chuyển khoản qua mã QR".
 2. Khách bấm "Xác nhận đặt hàng".
 3. Trong cùng một transaction, hệ thống gọi Service công khai của `catalog` để khóa sản phẩm cha `FOR UPDATE` dùng chung với UC-14/15 như bước 6 UC-19 (khóa theo `product_key` tăng dần, giữ từ trước kiểm tra đến commit/rollback), rồi kiểm tra từ Database đồng thời sản phẩm cha có `product_status = ACTIVE` và từng biến thể có `variant_status = ACTIVE`; không dùng cache storefront. Nếu sản phẩm hoặc biến thể không còn được bán thì áp dụng E6. Sau đó, hệ thống kiểm tra lại tồn kho qua Service công khai inventory, giá hiện tại, điều kiện và lượt còn lại của khuyến mãi được chọn; trừ tồn kho, tăng lượt đã dùng của khuyến mãi được chọn (voucher hoặc khuyến mãi theo hóa đơn) `[GD]`, sinh mã đơn 8 ký tự Crockford Base32 không trùng, tạo đơn trạng thái "Chưa xử lý", thanh toán "Chưa thanh toán", hạn thanh toán = thời điểm đặt + 24 giờ, lưu lịch sử trạng thái đơn và xóa các dòng đã đặt khỏi giỏ `[GD]`.
 4. Sau khi transaction thành công, hệ thống hiển thị mã VietQR gồm: tài khoản nhận chuyển khoản (hard-code), số tiền = tổng thanh toán, nội dung chuyển khoản = `SOBIE` + mã đơn; kèm số tài khoản, nội dung chuyển khoản dạng chữ để khách chuyển tay, và hạn thanh toán.
 5. Khách chuyển khoản; SePay báo giao dịch qua webhook và hệ thống tự đối soát (UC-25), không cần ai bấm xác nhận.
 
 ## Alternative Flows
+- **1a. Hồ sơ chưa đủ thông tin để tự điền:** áp dụng UC-19 luồng 2a và UC-04. Khách có thể lưu hồ sơ hợp lệ để tự điền hoặc đóng biểu mẫu hồ sơ để nhập tay.
 - **0a. Khách chưa đăng nhập:** như UC-19 (chuyển sang UC-02).
 - **4a. Khách xem lại mã QR sau:** khách mở chi tiết đơn (UC-21) để xem lại mã QR khi đơn ở "Chưa xử lý", "Chưa thanh toán" và chưa quá hạn; ẩn QR khi đơn đã hủy `[GD]`.
 
@@ -31,12 +36,14 @@ Khách chọn phương thức "Chuyển khoản qua mã QR" trên trang thanh to
 - **E1. Hết hàng khi xác nhận:** như UC-19 E1 — không tạo đơn, rollback toàn bộ.
 - **E2. Voucher không hợp lệ:** như UC-19 E2.
 - **E3. Quá 24 giờ chưa thanh toán:** Hệ thống tự hủy đơn (UC-24); mã QR không còn hiển thị `[GD]`.
-- **E4. Giá hoặc mức giảm thay đổi khi xác nhận:** hệ thống tính lại theo giá và khuyến mãi hiện tại, chưa tạo đơn và yêu cầu khách xác nhận lại `[GD]`.
+- **E4. Giá, mức giảm hoặc nguồn mức giảm thay đổi trước khi xác nhận:** hệ thống tính lại và yêu cầu khách xác nhận kết quả mới trước khi tạo đơn QR (UC-31 E5).
 - **E5. Lỗi tạo đơn hoặc cập nhật giỏ:** rollback toàn bộ transaction; không tạo đơn, không trừ tồn kho, không tăng lượt khuyến mãi và các dòng giỏ vẫn giữ nguyên.
 - **E6. Sản phẩm hoặc biến thể đã ngừng bán khi xác nhận:** như UC-19 E7 — kiểm tra cả sản phẩm cha và biến thể từ DB qua Service catalog sau khi giữ khóa trong transaction; rollback toàn bộ, báo dòng không còn được bán, không tạo đơn/thanh toán/lịch sử, không trừ kho hoặc tăng lượt dùng khuyến mãi, giữ nguyên giỏ và không hiển thị mã QR cho yêu cầu bị từ chối.
+- **E7. Thiếu thông tin nhận hàng:** như UC-19 E3. Hệ thống báo trường thiếu trước khi tạo đơn QR.
 
 ## Postconditions
 - Đơn QR ở trạng thái "Chưa xử lý", "Chưa thanh toán", có hạn thanh toán; tồn kho đã bị trừ.
+- Đơn QR lưu tên người nhận, số điện thoại và địa chỉ nhận hàng theo biểu mẫu lúc xác nhận. Hồ sơ tài khoản giữ nguyên khi đặt hàng.
 - Đơn lưu khuyến mãi theo sản phẩm của từng dòng (nếu có), khuyến mãi được áp cho đơn (tối đa 1), tiền giảm, phí vận chuyển và tổng thanh toán tại thời điểm đặt.
 - Lịch sử trạng thái đơn có dòng đầu tiên: trạng thái mới "Chưa xử lý", nguồn là Khách hàng, thời điểm tạo đơn.
 
@@ -44,7 +51,7 @@ Khách chọn phương thức "Chuyển khoản qua mã QR" trên trang thanh to
 
 ### AC-1: Đặt hàng QR thành công
 Given: khách đã đăng nhập, giỏ có "Đỏ / M" số lượng 1, tồn kho 5
-When: khách chọn chuyển khoản QR và xác nhận đặt hàng lúc 10:00 ngày 20/11/2026
+When: khách điền đủ thông tin nhận hàng, chọn chuyển khoản QR và xác nhận đặt hàng lúc 10:00 ngày 20/11/2026
 Then: hệ thống tạo đơn "Chưa xử lý", "Chưa thanh toán"
 And: hạn thanh toán là 10:00 ngày 21/11/2026
 And: tồn kho "Đỏ / M" còn 4
@@ -118,8 +125,10 @@ When: khách xác nhận đặt QR
 Then: sau khi có khóa, Service catalog đọc trạng thái hiện hành của cả sản phẩm và biến thể; hệ thống từ chối theo E6 vì sản phẩm cha INACTIVE
 And: transaction tạo đơn rollback toàn bộ; không tạo đơn/thanh toán/lịch sử hoặc hiển thị QR, tồn kho vẫn là 5, lượt dùng khuyến mãi và giỏ hàng giữ nguyên
 
+Các tiêu chí UC-19 AC-7 và AC-15–AC-19 về nhập và sử dụng thông tin nhận hàng cũng áp dụng cho đơn QR.
+
 ## Dependencies
-- **Upstream UC:** UC-02 Đăng nhập, UC-14 Quản lý sản phẩm, UC-15 Quản lý biến thể màu × size, UC-18 Quản lý giỏ hàng, UC-31 Tính mức giảm cho đơn hàng
+- **Upstream UC:** UC-02 Đăng nhập, UC-04 Cập nhật hồ sơ khách hàng, UC-14 Quản lý sản phẩm, UC-15 Quản lý biến thể màu × size, UC-18 Quản lý giỏ hàng, UC-31 Tính mức giảm cho đơn hàng
 - **Downstream UC:** UC-21 Theo dõi đơn hàng, UC-22 Hủy đơn hàng, UC-23 Xác nhận đơn hàng, UC-24 Tự hủy đơn chuyển khoản quá hạn, UC-25 Tự đối soát chuyển khoản qua webhook SePay
 - **Internal Services:** `catalog` kiểm tra trạng thái sản phẩm cha và biến thể sau khi giữ khóa sản phẩm cha trong cùng transaction; `inventory` kiểm tra/trừ tồn kho. Module ordering không truy cập trực tiếp Repository hoặc bảng của catalog/inventory.
 - **External Systems:** SePay (nhận giao dịch qua UC-25)
@@ -158,3 +167,5 @@ And: transaction tạo đơn rollback toàn bộ; không tạo đơn/thanh toán
 
 - v12 (2026-11-23): merge main, giữ kiểm tra Catalog dưới khóa cha (E6, AC-11..13), kiểm tra giá/khuyến mãi và xóa giỏ trong transaction; chỉ hiển thị QR sau commit và theo trạng thái/hạn thanh toán.
 - v13 (2026-11-23): sửa AC liên UC theo quy tắc chỉ sửa Mô tả sau CONFIRMED: trạng thái INACTIVE trong fixture được đặt trước xác nhận nhập; thao tác ngừng bán sau CONFIRMED bị từ chối, đặt hàng chờ khóa rồi đọc lại ACTIVE và tiếp tục khi đủ điều kiện. Không đổi luồng nghiệp vụ hoặc các giả định khác.
+- v14 (2026-11-23): áp dụng quy tắc thông tin nhận hàng và nút "Sử dụng thông tin hồ sơ" của UC-19 cho đơn QR.
+- v15 (2026-11-27): áp dụng nhánh bổ sung hồ sơ tại checkout và tiêu chí tự điền của UC-19 cho QR; đồng bộ với điều kiện xác nhận lại tại UC-31.

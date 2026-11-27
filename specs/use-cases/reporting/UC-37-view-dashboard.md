@@ -22,7 +22,7 @@ Nhân viên mở trang dashboard trong khu vực quản trị.
    1. **Doanh thu:** tổng tiền hàng sau giảm của các đơn có ngày chuyển sang "Giao thành công" nằm trong kỳ, không gồm phí vận chuyển.
    2. **Lợi nhuận gộp:** doanh thu − giá vốn hàng bán (tổng số lượng bán × giá vốn) của cùng các đơn đó.
    3. **Số đơn theo trạng thái:** số đơn tạo trong kỳ theo từng trạng thái (Chưa xử lý, Đã xác nhận, Chờ lấy hàng, Đang giao, Giao thành công, Giao không thành công, Đã hủy).
-   4. **Sản phẩm bán chạy:** top 10 sản phẩm theo số lượng bán của cùng nhóm đơn dùng để tính doanh thu.
+   4. **Sản phẩm bán chạy:** top 10 sản phẩm theo số lượng bán của cùng nhóm đơn dùng để tính doanh thu. Tính cả biến thể đã ngừng bán.
    5. **Tồn kho thấp:** các biến thể có tồn kho ≤ ngưỡng tồn kho thấp (hard-code) tại thời điểm xem.
    6. **Tiền nhập hàng theo nhà cung cấp:** tổng tiền các phiếu nhập có ngày tạo (`goods_receipt_created_date`) thuộc kỳ báo cáo theo múi giờ `Asia/Ho_Chi_Minh` và ở trạng thái "Đã xác nhận" tại thời điểm xem, nhóm theo nhà cung cấp. Xác nhận muộn có thể làm tăng số liệu kỳ cũ.
 4. Ngày giao thành công dùng để xác định kỳ báo cáo và thời gian hiển thị đều theo múi giờ `Asia/Ho_Chi_Minh`.
@@ -54,7 +54,7 @@ Then: số đơn hiển thị đúng 3, 2, 1 cho từng trạng thái, các tr�
 
 **Có dưới 10 sản phẩm bán chạy**
 
-Given: các đơn "Giao thành công" trong kỳ bán 6 đơn vị A, 8 đơn vị B và 2 đơn vị C
+Given: các đơn "Giao thành công" trong kỳ bán 6 đơn vị A, 8 đơn vị B và 2 đơn vị C. Biến thể đã bán của B hiện ở trạng thái "Ngừng bán".
 When: Nhân viên xem dashboard của kỳ đó
 Then: danh sách hiển thị lần lượt B (8), A (6), C (2)
 
@@ -112,6 +112,7 @@ And: tiền nhập tháng 12 của X = 0đ
 - Cách lấy giá vốn tại thời điểm bán: Giá vốn dùng để tính lợi nhuận gộp là giá vốn bình quân gia quyền của từng biến thể, được ghi vào `order_detail_cost_price` khi khách đặt đơn. Giá vốn hàng bán trong kỳ bằng tổng `(số lượng × order_detail_cost_price)` của các dòng hàng thuộc các đơn giao thành công được tính trong kỳ.
 - Tiền tính bằng số nguyên VND; thời gian lưu UTC, hiển thị `Asia/Ho_Chi_Minh` (AGENTS.md).
 - Theo constraint cache (BR-GIAIDOAN1, Constraints chung — Cache): dashboard không cache — truy vấn trực tiếp Database và trả `Cache-Control: no-store` như mọi trang của portal quản trị (đã chốt 21/11/2026).
+- [Sơ đồ sequence của `GET /admin/dashboard`](../../../docs/sequence/uc-37-get-dashboard.md).
 - "Sản phẩm bán chạy" ở đây khác khối bán chạy trên trang chủ (UC-09): dashboard tính theo kỳ báo cáo, chỉ đơn "Giao thành công", top 10.
 
 **Quyết định đã chốt**

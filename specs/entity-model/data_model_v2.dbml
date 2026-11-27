@@ -107,10 +107,11 @@ Table identity.account {
   account_id            varchar(100) [not null, unique, note: '[KEY][MOI] mã tự nhiên theo vai trò, hệ thống cấp (chuyển từ customer_id / employee_id / admin_id). KH-<YYYYMMDD ngày đăng ký>-<4 số>; NV- / AD-<HỌ TÊN>-<YYYYMMDD ngày sinh>-<4 số>. Bộ đếm 4 số riêng cho từng tiền tố KH, NV, AD. Không sửa, trừ khi đổi vai trò NV <-> AD thì cấp mã mới (Q16, Q32). Ngày đăng ký lấy theo giờ Asia/Ho_Chi_Minh (đã chốt 21/11/2026).']
   account_role_key      uuid [not null, note: '[RBAC] mỗi tài khoản đúng 1 vai trò (đã chốt Q17)']
   account_email         varchar(255) [not null, unique, note: '[MOI] đăng nhập bằng email']
-  account_phone_number  varchar(20)  [not null, unique, note: '[MOI] đăng nhập bằng SĐT; là SĐT của người dùng (Q5)']
-  account_hash_password varchar(255) [not null, note: 'Băm bcrypt (đã chốt 21/11/2026)']
+  account_phone_number  varchar(20)  [unique, note: 'Khách hàng có thể bổ sung ở UC-04. Bắt buộc với Nhân viên và Admin.']
+  account_hash_password varchar(255) [note: 'Mật khẩu Sobie băm bằng bcrypt. Có thể NULL với tài khoản chỉ dùng Google.']
+  account_google_sub    varchar(255) [unique, note: 'Định danh Google cho Khách hàng. Có thể NULL khi chưa liên kết. Lưu khi tạo tài khoản qua Google hoặc liên kết qua email đã được Google xác minh (UC-01, UC-02).']
   account_status        varchar(20)  [not null, default: 'ACTIVE', note: '[MOI] khóa / mở khóa. CHECK IN (ACTIVE, LOCKED)']
-  account_name          varchar(255) [not null, note: '[MOI] họ tên (chuyển từ customer_name / employee_name / admin_name)']
+  account_name          varchar(255) [note: 'Khách hàng có thể bổ sung ở UC-04. Bắt buộc với Nhân viên và Admin.']
   account_date_of_birth date [note: '[MOI] ngày sinh. Bắt buộc với Nhân viên / Admin (mã dùng ngày sinh), không bắt buộc với Khách hàng — service kiểm tra theo vai trò']
   account_house_number  varchar(255) [note: '[MOI] số nhà, đường']
   account_ward          varchar(100) [note: '[MOI] phường / xã']
@@ -126,7 +127,9 @@ Table identity.account {
   [BO] 3 bảng hồ sơ identity.customer, identity.employee, identity.admin vì có cùng
   các trường; thay quyết định BR-001 ngày 15/11 "tài khoản tách khỏi hồ sơ".
   [BO] account_username — BR: không có username riêng.
-  Địa chỉ: với Khách hàng là địa chỉ nhận hàng mặc định (chụp vào order khi đặt).
+  Mỗi tài khoản phải có hash mật khẩu Sobie hoặc định danh Google. Chỉ tài khoản
+  Khách hàng có thể có định danh Google và định danh phải khác rỗng.
+  Địa chỉ: với Khách hàng là địa chỉ hồ sơ để sao chép vào biểu mẫu đặt hàng khi khách yêu cầu.
   [RBAC] Vai trò lấy từ identity.role qua account_role_key.
   Đổi vai trò: chỉ giữa employee và admin (BR-001, chốt 20/11/2026); không đổi
   customer <-> employee / admin. Cập nhật account_role_key và cấp account_id mới
@@ -304,6 +307,7 @@ Table shopping.wishlist_item {
   wishlist_item_key          uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
   wishlist_item_wishlist_key uuid [not null, note: '[SUA] trỏ tới wishlist (đã chốt Q11)']
   wishlist_item_product_key  uuid [not null]
+  wishlist_item_added_at     timestamptz [not null, default: `now()`, note: '[GD] UC-38 AC-3 sắp xếp mới thêm trước; ERD trước đó không có cột thời gian']
 
   indexes {
     (wishlist_item_wishlist_key, wishlist_item_product_key) [unique, note: '[MOI] mỗi sản phẩm 1 lần / danh sách yêu thích (BR-002)']
@@ -498,6 +502,21 @@ Table shopping.cart_item {
 
 Ref: shopping.cart_item.cart_item_cart_key > shopping.cart.cart_key [delete: cascade]
 Ref: shopping.cart_item.cart_item_variant_key > catalog.variant.variant_key [delete: cascade]
+
+Table shopping.cart_merge_request {
+  cart_merge_request_key          uuid [pk, default: `gen_random_uuid()`, note: '[GD] UC-18 AC-10/11']
+  cart_merge_request_account_key  uuid [not null]
+  cart_merge_request_id           varchar(64) [not null, note: 'Mã gộp do trình duyệt sinh, cố định cho một lần gộp']
+  cart_merge_request_payload_hash char(64) [not null, note: 'SHA-256 payload gộp']
+  cart_merge_request_created_at   timestamptz [not null, default: `now()`]
+
+  indexes {
+    (cart_merge_request_account_key, cart_merge_request_id) [unique]
+  }
+  Note: '[GD] Chống cộng trùng khi gộp giỏ localStorage (UC-18 AC-10, AC-11). Nhánh feature/shopping.'
+}
+
+Ref: shopping.cart_merge_request.cart_merge_request_account_key > identity.account.account_key [delete: cascade]
 
 Table ordering.payment {
   payment_key  uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
@@ -863,6 +882,9 @@ TableGroup inventory {
 // v2.17 — Đồng bộ UC-14-Q8/Q9 (developer duyệt tại Codex 23/11/2026)
 // 100 | catalog.product                                  | Unique index LOWER(TRIM(product_name));
 //     |                                                  | ghi bất biến ACTIVE và khóa chung UC-14/15/16.
+//
+// v2.18 — Đồng bộ UC-01/02/04 (27/11/2026)
+// 101 | identity.account | Thêm định danh Google duy nhất và đồng bộ tính tùy chọn của mật khẩu, họ tên và số điện thoại.
 //
 // OPEN QUESTIONS [GD]
 //  Q1. [ĐÃ CHỐT] Bỏ product_supplier_id.

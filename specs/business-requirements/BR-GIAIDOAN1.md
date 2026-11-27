@@ -20,8 +20,9 @@ Xây dựng website bán đồ bơi online cho một cửa hàng giả định (
 
 ### In Scope (MVP – hạn chót 06/12/2026)
 
-- Tài khoản và phân quyền: đăng ký bắt buộc nhập đủ email và số điện thoại; đăng nhập bằng email hoặc số điện thoại đều được. Có 3 vai trò cố định: Khách hàng, Nhân viên, Admin. Admin chỉ quản lý tài khoản và gán vai trò cho tài khoản; Nhân viên thực hiện mọi thao tác vận hành cửa hàng. Khách hàng đăng nhập ở trang bán hàng (storefront); Nhân viên và Admin đăng nhập ở portal quản trị riêng (đã chốt 21/11/2026)
-- Hồ sơ khách hàng: sửa thông tin cá nhân, đổi mật khẩu
+- Tài khoản và phân quyền: Khách hàng tự đăng ký ở trang bán hàng (storefront) bằng email OTP rồi tạo mật khẩu Sobie, hoặc đăng ký với Google mà không cần mật khẩu Sobie. Thông tin hồ sơ được bổ sung sau khi đăng ký. Khách hàng đăng nhập ở storefront bằng mật khẩu Sobie hoặc dùng luồng Google chung cho cả đăng ký và đăng nhập. Nhân viên và Admin đăng nhập ở portal quản trị riêng. Có 3 vai trò cố định. Admin quản lý tài khoản và gán vai trò, còn Nhân viên vận hành cửa hàng.
+- Hồ sơ khách hàng: Khách hàng tự bổ sung hoặc sửa thông tin cá nhân. Admin cũng có thể cập nhật hồ sơ Khách hàng từ portal quản trị.
+- Đổi mật khẩu Sobie: Khách hàng, Nhân viên và Admin có thể tự đổi mật khẩu của mình.
 - Trang bán hàng: trang chủ (gồm khối 5 sản phẩm bán chạy nhất 7 ngày gần nhất, bổ sung 21/11/2026), trang danh mục có phân trang, sắp xếp (mặc định sản phẩm mới nhất) và lọc theo giới tính, size, danh mục, bộ sưu tập, tìm kiếm theo tên hoặc từ khóa, chi tiết sản phẩm (chọn màu và size, ảnh, bảng size, tình trạng còn/hết hàng), các trang giới thiệu, chính sách, FAQ. Khách hàng thả tim để lưu sản phẩm vào danh sách yêu thích (wishlist)
 - Sản phẩm: quản lý sản phẩm, biến thể theo màu × size, giá bán theo size, danh mục, bộ sưu tập và các thuộc tính
 - Giỏ hàng và đặt hàng: khách chưa đăng nhập vẫn dùng được giỏ hàng, nhưng phải đăng nhập mới đặt hàng được. Thanh toán bằng COD hoặc chuyển khoản qua mã QR. Mọi đơn chuyển khoản dùng chung 1 tài khoản ngân hàng của cửa hàng; hệ thống tự đối soát qua webhook của dịch vụ bên thứ 3 theo dõi biến động số dư, không cần ai bấm xác nhận đã thanh toán
@@ -34,6 +35,7 @@ Xây dựng website bán đồ bơi online cho một cửa hàng giả định (
 - Cấu hình cửa hàng (hard-code hoặc biến môi trường, không chỉnh sửa trên hệ thống): phí vận chuyển cố định cho mọi đơn (biến môi trường, mặc định 12.000đ), hotline, link Zalo, thông tin người gửi, tài khoản nhận chuyển khoản, ngưỡng tồn kho thấp
 - Dashboard: doanh thu, lợi nhuận gộp, số đơn theo trạng thái, sản phẩm bán chạy, tồn kho thấp, tiền nhập hàng theo nhà cung cấp
 - Admin quản lý tài khoản: toàn quyền tạo tài khoản với mọi vai trò (Khách hàng, Nhân viên, Admin), sửa, khóa và mở khóa
+- Nhân viên có chức năng Quản lý khách hàng để xem thông tin và khóa tài khoản Khách hàng.
 
 ### Out of Scope
 
@@ -79,15 +81,15 @@ Xây dựng website bán đồ bơi online cho một cửa hàng giả định (
     - Route trả cả trang đầy đủ lẫn mảnh HTMX: thêm `Vary: HX-Request`, để trình duyệt không lẫn mảnh HTML với trang đầy đủ khi bấm Back.
     - File tĩnh `/static` (CSS, JS, ảnh giao diện): `Cache-Control: public, max-age=31536000, immutable`; tên file kèm mã phiên bản để đổi nội dung là đổi URL.
     - Webhook SePay (JSON, BR-006): `Cache-Control: no-store`.
-- **Technical — Xác thực (đã chốt 21/11/2026, thay cơ chế access / refresh token của v20):** website render phía server (FastAPI + Jinja + HTMX) nên dùng **phiên đăng nhập phía server** (session), không dùng JWT.
+- **Technical — Xác thực (đã chốt 21/11/2026, thay cơ chế access / refresh token của v20):** website render phía server (FastAPI + Jinja + HTMX) và duy trì trạng thái đăng nhập Sobie bằng **phiên phía server** (session).
   - Đăng nhập thành công thì tạo 1 dòng trong bảng `identity.session`: hệ thống sinh mã phiên ngẫu nhiên, chỉ lưu bản băm SHA-256 trong DB, gửi mã gốc trong cookie `HttpOnly`, `Secure`, `SameSite=Lax`. Một tài khoản có thể có nhiều phiên (nhiều thiết bị).
-  - Storefront và portal quản trị dùng 2 cookie phiên khác tên, nên một trình duyệt có thể đăng nhập cùng lúc vào cả hai cổng `[GD]`.
+  - Storefront và portal quản trị dùng 2 cookie phiên khác tên, nên một trình duyệt có thể đăng nhập cùng lúc vào cả hai cổng (đã chốt 23/11/2026).
   - Hạn phiên: **Khách hàng 30 phút**, **Nhân viên / Admin 1 giờ**, tính từ lần thao tác cuối; mỗi request hợp lệ gia hạn phiên (đã chốt 21/11/2026). Hết hạn thì coi như chưa đăng nhập.
   - Mỗi request: tìm phiên theo bản băm của mã trong cookie, còn hạn thì đọc vai trò và trạng thái từ `identity.account`. Phiên không lưu vai trò.
   - **Quay lại sau đăng nhập:** Khách hàng đăng nhập storefront từ checkout hoặc nút tim trên trang chi tiết UC-12 được quay lại theo `return_url` nội bộ hợp lệ thuộc đúng hai luồng này. Server kiểm tra đích sau chuẩn hóa, không chấp nhận scheme/host, dạng `//`, gạch chéo ngược, ký tự điều khiển hoặc biến thể mã hóa dẫn tới đích bị cấm; đích khác phạm vi bị bỏ qua và dùng nhánh mặc định của UC-02. Không dùng `return_url` để bỏ qua kiểm tra vai trò/cổng hoặc tự thích/bỏ thích; portal quản trị không dùng đích quay lại storefront (UC-12-Q8, developer yêu cầu đồng bộ UC-02/38 tại Codex 23/11/2026).
   - Kết thúc phiên: đăng xuất (UC-03) xóa phiên hiện tại, có hiệu lực ngay. Đổi vai trò (UC-07), khóa tài khoản (UC-08), đổi mật khẩu (UC-05) xóa mọi phiên của tài khoản trong cùng transaction với thao tác đó.
   - Chống giả mạo request (CSRF): cookie `SameSite=Lax` cộng kiểm tra header `Origin` ở mọi request ghi (POST, PUT, PATCH, DELETE, kể cả request HTMX); `Origin` khác domain của website thì từ chối. Không dùng CSRF token. Frontend và backend chạy cùng domain.
-  - Giới hạn tần suất (rate limit) theo IP, đếm ở Redis: đăng nhập 5 lần/phút. Vượt giới hạn thì từ chối với HTTP 429 `[GD]`.
+  - Giới hạn tần suất (rate limit) theo IP, đếm ở Redis, áp dụng cho đăng nhập bằng mật khẩu. Yêu cầu vượt 5 lần/phút nhận HTTP 429. Đăng nhập Google không tính vào và không chịu giới hạn của bộ đếm này (đã chốt 23/11/2026).
 - **Technical — Cấu hình cửa hàng:** không có chức năng chỉnh sửa trên hệ thống và không có BR riêng. Gồm: hotline, link Zalo, thông tin người gửi, tài khoản nhận chuyển khoản, ngưỡng tồn kho thấp (hard-code); phí vận chuyển cố định cho mọi đơn nạp từ biến môi trường, mặc định 12.000đ (chốt 20/11/2026).
 - **Technical — Webhook thanh toán:** website phải có địa chỉ công khai để dịch vụ bên thứ 3 gửi webhook tới. Giai đoạn demo dùng ngrok forward cổng local ra internet (đã chốt 20/11/2026); mỗi khi địa chỉ ngrok thay đổi phải cập nhật lại URL webhook trên trang quản trị của dịch vụ. Khóa xác thực webhook (API key) nạp qua biến môi trường, không hard-code trong mã nguồn.
 - **Timeline:** demo hằng tuần thứ Hai 16/11, 23/11, 30/11/2026; hoàn thành và nghiệm thu hết ngày 06/12/2026; 07/12/2026 báo cáo kết quả.
@@ -136,17 +138,25 @@ Khách hàng tự đăng ký, đăng nhập và quản lý hồ sơ của mình;
 ### Constraints
 
 - Theo *Constraints chung*.
-- Tài khoản gồm thông tin đăng nhập (email, số điện thoại, mật khẩu, vai trò, trạng thái) và thông tin cá nhân (họ tên, ngày sinh, địa chỉ) trong cùng một bản ghi, dùng chung cho cả 3 vai trò (đã chốt 21/11/2026, thay quyết định ngày 15/11/2026 tách hồ sơ riêng theo vai trò). Không có username riêng; email và số điện thoại là duy nhất (đã chốt 15/11/2026).
+- Email, vai trò, trạng thái và thông tin hồ sơ của cả 3 vai trò dùng chung bản ghi tài khoản (đã chốt 21/11/2026, thay quyết định ngày 15/11/2026 tách hồ sơ riêng theo vai trò). Không có username riêng. Email là duy nhất. Nếu tài khoản có số điện thoại, số đó cũng phải duy nhất.
+- Khách tự đăng ký bằng email phải dùng email chưa có tài khoản Sobie, xác minh qua OTP rồi tạo mật khẩu Sobie. OTP có hiệu lực 5 phút và chỉ có thể yêu cầu gửi lại khi đủ 5 phút từ lần gửi gần nhất. Sau khi tạo tài khoản thành công, Sobie chuyển khách đến màn hình đăng nhập theo [UC-01](../use-cases/identity/UC-01-register-account.md).
+- Trang đăng ký và đăng nhập dùng chung nút “Đăng nhập với Google”. Sau khi xác thực thành công và nhận email đã được Google xác minh, Sobie ưu tiên tìm tài khoản theo định danh Google (`sub`). Nếu chưa tìm thấy theo `sub`, Sobie dùng email đã xác minh để liên kết tài khoản Khách hàng đang Hoạt động chưa có liên kết Google, không gửi OTP. Nếu chưa có tài khoản theo email, Sobie tạo tài khoản Khách hàng kèm giỏ hàng và danh sách yêu thích trống theo [UC-01](../use-cases/identity/UC-01-register-account.md). Việc tạo hoặc liên kết tài khoản và cấp phiên storefront diễn ra trong cùng một transaction. Khách được đưa tới trang chủ hoặc quay lại checkout theo [UC-02](../use-cases/identity/UC-02-login.md).
+- Đăng ký qua Google lưu email đã xác minh và định danh Google (`sub`); đăng ký trực tiếp lưu email đã xác minh và mật khẩu đã băm. Họ tên, ngày sinh, số điện thoại và địa chỉ nhận hàng được khách bổ sung qua UC-04.
+- Tài khoản có mật khẩu Sobie đăng nhập bằng email hoặc số điện thoại đã lưu kèm mật khẩu. Khách hàng có liên kết Google có thể đăng nhập ở storefront bằng Google mà không cần nhập hoặc tạo mật khẩu Sobie. Khi tài khoản chỉ dùng Google, đăng nhập qua biểu mẫu mật khẩu trả thông báo "Thông tin đăng nhập không đúng".
 - Mỗi tài khoản có mã do hệ thống cấp: Khách hàng `KH-<ngày đăng ký>-<4 số>`, Nhân viên `NV-<họ tên>-<ngày sinh>-<4 số>`, Admin `AD-<họ tên>-<ngày sinh>-<4 số>`; bộ đếm 4 số riêng cho từng loại; ngày sinh bắt buộc với Nhân viên và Admin. Mã không sửa được, trừ khi đổi vai trò Nhân viên ↔ Admin thì cấp mã mới (đã chốt 21/11/2026).
 - Admin có toàn quyền tạo tài khoản với bất kỳ vai trò nào trong 3 vai trò cố định (Khách hàng, Nhân viên, Admin), không chỉ tài khoản nội bộ (đã chốt 20/11/2026).
-- `[GD]` Tài khoản do Admin tạo tuân theo cùng ràng buộc như khi khách tự đăng ký: bắt buộc đủ email và số điện thoại, không trùng với tài khoản khác; Admin đặt mật khẩu ban đầu.
+- Khi tạo tài khoản qua [UC-06](../use-cases/identity/UC-06-create-account.md), Admin nhập email và số điện thoại chưa được tài khoản khác sử dụng, đặt mật khẩu ban đầu có ít nhất 6 ký tự và chọn vai trò từ danh sách 3 vai trò cố định. Hệ thống cấp mã và tạo tài khoản trong cùng một transaction. Hệ thống có sẵn một tài khoản Admin ở trạng thái Hoạt động khi khởi tạo lần đầu (đã chốt 23/11/2026).
 - Tài khoản do Admin tạo dùng được ngay, không bắt buộc đổi mật khẩu ở lần đăng nhập đầu (đã chốt 20/11/2026).
 - Admin chỉ đổi được vai trò qua lại giữa Nhân viên và Admin. Không đổi Khách hàng sang Nhân viên / Admin và không đổi Nhân viên / Admin sang Khách hàng. Vai trò mới có hiệu lực ngay, tài khoản đang đăng nhập bị đăng xuất; thông tin cá nhân và thông tin đăng nhập giữ nguyên (đã chốt 20/11/2026, thay quyết định cho đổi sang mọi vai trò cùng ngày).
 - `[GD]` Đổi vai trò giữ nguyên lịch sử thao tác của tài khoản.
-- Admin được tự đổi vai trò và tự khóa tài khoản của mình. Hệ thống luôn có ít nhất 1 Admin đang hoạt động: không cho đổi vai trò hoặc khóa Admin đang hoạt động cuối cùng (đã chốt 20/11/2026).
-- Hai cổng đăng nhập (đã chốt 21/11/2026): storefront chỉ cho tài khoản Khách hàng đăng nhập; tài khoản Nhân viên / Admin đăng nhập ở storefront bị báo "Thông tin đăng nhập không đúng" như sai mật khẩu. Nhân viên và Admin đăng nhập ở portal quản trị riêng; tài khoản Khách hàng đăng nhập ở portal cũng bị báo như vậy `[GD]`.
-- Quên mật khẩu làm ở giai đoạn 2. Giai đoạn 1 trang đăng nhập storefront có nút "Quên mật khẩu" nhưng không có hành động; portal quản trị không có nút này `[GD]` (đã chốt 21/11/2026).
+- Từ khi khởi tạo, hệ thống luôn phải có ít nhất một tài khoản vai trò Admin ở trạng thái Hoạt động. Admin được tự đổi vai trò hoặc tự khóa nếu sau thao tác vẫn còn một Admin Hoạt động. UC-07 và UC-08 phải kiểm tra ràng buộc trong cùng transaction với cập nhật tài khoản và bảo đảm ràng buộc khi hai thao tác diễn ra đồng thời (xác nhận lại 23/11/2026).
+- Admin được khóa và mở khóa tài khoản của cả ba vai trò, tuân theo ràng buộc trên. Hồ sơ, đơn hàng và dữ liệu nghiệp vụ gắn với tài khoản giữ nguyên khi khóa hoặc mở khóa (đã chốt 23/11/2026).
+- Storefront chỉ cho tài khoản Khách hàng đăng nhập. Nhân viên và Admin đăng nhập ở portal quản trị riêng. Tài khoản đăng nhập sai cổng chỉ nhận thông báo "Thông tin đăng nhập không đúng", giống trường hợp tài khoản không tồn tại hoặc sai mật khẩu (thông báo hai cổng đã chốt 23/11/2026).
+- Quên mật khẩu làm ở giai đoạn 2. Giai đoạn 1 storefront hiển thị nút "Quên mật khẩu" và giữ khách ở trang đăng nhập khi bấm nút (đã chốt 21/11/2026). Portal quản trị không hiển thị nút trong giai đoạn 1 (đã chốt 23/11/2026).
 - Cơ chế phiên đăng nhập theo *Constraints chung — Xác thực* (phiên phía server lưu ở `identity.session`). Đổi vai trò, khóa tài khoản và đổi mật khẩu đều kết thúc ngay mọi phiên của tài khoản, kể cả phiên đang dùng để đổi mật khẩu (đã chốt 21/11/2026).
+- Khách hàng tự sửa họ tên, ngày sinh, địa chỉ và số điện thoại qua UC-04. Email trên hồ sơ storefront chỉ xem. Admin có thể cập nhật hồ sơ Khách hàng, gồm email, qua UC-07 (đã chốt 26/11/2026).
+- Trong portal quản trị, Nhân viên được xem thông tin tài khoản Khách hàng qua UC-07 và khóa tài khoản Khách hàng qua UC-08. Quyền sửa và mở khóa tài khoản trong portal thuộc Admin (đã chốt 23/11/2026).
+- Cả ba vai trò được tự đổi mật khẩu Sobie qua UC-05 nếu tài khoản đã có mật khẩu Sobie. Mật khẩu mới có ít nhất 6 ký tự và phải khác mật khẩu hiện tại (đã chốt 23/11/2026).
 
 ### Open Questions
 
@@ -154,8 +164,8 @@ Khách hàng tự đăng ký, đăng nhập và quản lý hồ sơ của mình;
 - [X]  Admin có được tự khóa chính mình không? → Được, khi hệ thống còn Admin khác đang hoạt động (đã chốt 20/11/2026).
 - [X]  Tài khoản Khách hàng do Admin tạo có bắt buộc đổi mật khẩu ở lần đăng nhập đầu không? → Không, dùng được ngay như tài khoản khách tự đăng ký (đã chốt 20/11/2026).
 - [X]  Admin được tạo tài khoản với vai trò nào? → Mọi vai trò: Khách hàng, Nhân viên, Admin (đã chốt 20/11/2026).
-- [X]  Khi đăng ký, khách phải nhập cả email và số điện thoại, hay chỉ cần một trong hai? → Đăng ký bắt buộc nhập đủ cả hai; đăng nhập bằng một trong hai (đã chốt 15/11/2026).
-- [X]  Nhân viên và Admin khác nhau về quyền thế nào? → Admin chỉ quản lý tài khoản và gán vai trò cho tài khoản; Nhân viên vận hành cửa hàng (đã chốt 15/11/2026).
+- [X]  Khi tự đăng ký, khách cần cung cấp những thông tin nào? → Xác minh email bằng OTP rồi tạo mật khẩu Sobie, hoặc xác thực qua Google. Khách bổ sung thông tin hồ sơ, gồm số điện thoại, ở UC-04 (đã chốt 23/11/2026, thay yêu cầu nhập cả email và số điện thoại khi đăng ký ngày 15/11/2026).
+- [X]  Nhân viên và Admin khác nhau về quyền thế nào? → Admin quản trị tài khoản và gán vai trò. Nhân viên vận hành cửa hàng, được xem thông tin và khóa tài khoản Khách hàng (cập nhật 23/11/2026).
 
 ---
 
@@ -235,6 +245,7 @@ Khách đặt được đơn với COD hoặc chuyển khoản QR và theo dõi 
 ### Constraints
 
 - Theo *Constraints chung*. Tài khoản nhận chuyển khoản lấy từ cấu hình hard-code.
+- Khi đặt hàng COD hoặc QR, khách có thể nhập tay tên người nhận, số điện thoại nhận hàng và địa chỉ nhận hàng. Khi khách bấm "Sử dụng thông tin hồ sơ", hệ thống tự điền ba thông tin nhận hàng nếu hồ sơ đã có đủ họ tên, ngày sinh, số điện thoại và địa chỉ hợp lệ. Nếu hồ sơ còn thiếu hoặc có dữ liệu không hợp lệ, hệ thống mở biểu mẫu cập nhật hồ sơ ngay trong checkout theo UC-04. Sau khi lưu hồ sơ hợp lệ, hệ thống tự điền thông tin nhận hàng và đưa khách về biểu mẫu đặt hàng. Khách có thể sửa các giá trị trước khi xác nhận. Đơn lưu thông tin nhận hàng cuối cùng tại thời điểm đặt. (đã chốt 27/11/2026).
 - Phí vận chuyển: 1 mức cố định áp cho mọi đơn, không phụ thuộc sản phẩm; nạp từ biến môi trường, mặc định 12.000đ (đã chốt 20/11/2026).
 - Đơn chuyển khoản quá 24 giờ kể từ lúc đặt mà chưa thanh toán thì hệ thống tự hủy.
 - Đơn chuyển khoản tự chuyển sang "Đã thanh toán" khi hệ thống nhận được giao dịch khớp từ dịch vụ theo dõi biến động số dư (xem BR-006) (đã chốt 20/11/2026).
@@ -288,7 +299,7 @@ Nhân viên tạo được 3 loại khuyến mãi; khi đặt hàng, hệ thốn
 - Mọi loại khuyến mãi giảm theo phần trăm; không có mức giảm tối đa (đã chốt 15/11/2026, theo ERD).
 - Mỗi khuyến mãi có số lượng được áp dụng và số lượng thực tế đã dùng. Khuyến mãi theo sản phẩm không áp dụng giới hạn số lượng; có hiệu lực cho đến khi Nhân viên bấm kết thúc chương trình (đã chốt 15/11/2026).
 - Khuyến mãi theo sản phẩm chỉ có tạo rồi kết thúc: không có ngày bắt đầu, ngày kết thúc; có hiệu lực ngay khi tạo và hết hiệu lực khi Nhân viên bấm kết thúc chương trình. Mỗi khuyến mãi theo sản phẩm gắn đúng 1 sản phẩm (đã chốt 20/11/2026).
-- Khuyến mãi theo hóa đơn và voucher có thời điểm bắt đầu và thời điểm kết thúc do Nhân viên chọn khi tạo. Hết hiệu lực khi tới thời điểm kết thúc, hoặc khi Nhân viên bấm kết thúc trước hạn; kết thúc trước hạn vẫn giữ nguyên thời điểm kết thúc đã chọn (đã chốt 20/11/2026).
+- Khuyến mãi theo hóa đơn và voucher có thời điểm bắt đầu và thời điểm kết thúc do Nhân viên chọn khi tạo theo lịch `Asia/Ho_Chi_Minh`. Ngày bắt đầu có hiệu lực từ 00:00:00 ngày đó; ngày kết thúc áp dụng đến hết ngày đã chọn — hết hiệu lực tại 00:00:00 của ngày kế tiếp (`Asia/Ho_Chi_Minh`, lưu UTC). Hết hiệu lực khi tới mốc đó, hoặc khi Nhân viên bấm kết thúc trước hạn; kết thúc trước hạn vẫn giữ nguyên thời điểm kết thúc đã chọn (đã chốt 20/11/2026; làm rõ mốc hết ngày 24/11/2026).
 - Trạng thái hiển thị của khuyến mãi: Sắp diễn ra (chỉ hóa đơn và voucher, chưa tới thời điểm bắt đầu), Đang hiệu lực, Đã kết thúc (đã chốt 20/11/2026).
 - Khuyến mãi đã kết thúc không bật lại được; muốn áp lại thì tạo khuyến mãi mới (đã chốt 20/11/2026).
 - Khuyến mãi theo hóa đơn và voucher có giá trị đơn tối thiểu; voucher chỉ giới hạn tổng lượt dùng, không giới hạn số lần mỗi khách (theo ERD).
@@ -486,3 +497,13 @@ Xem được các chỉ số kinh doanh chính của cửa hàng trên một das
 - v29 (2026-11-23): theo yêu cầu tại Codex, đồng bộ UC-02/38 về return_url nội bộ an toàn từ checkout/trang chi tiết và không tự thay đổi wishlist; ghi quyết định UC-12-Q9b giữ trang HTTP 200 nhưng khóa mua khi không còn biến thể hợp lệ, cùng contract 404 HTMX UC-13-Q5. Không thay các giả định ngoài phạm vi.
 - v30 (2026-11-23): theo quyết định developer tại Codex cho review PR #7, ghi quy tắc sản phẩm chỉ sửa Mô tả sau phiếu CONFIRMED; đồng bộ khóa giá/trạng thái/biến thể/taxonomy và ưu tiên hơn quyền sửa cũ, giữ nguyên nghiệp vụ tồn kho ngoài Catalog.
 - v31 (2026-11-23): xử lý hai phát hiện rà soát Catalog: đồng bộ thứ tự taxonomy trước sản phẩm giữa UC-14/15/17 và khóa phiếu/sản phẩm/biến thể tại UC-34, tránh khóa phiếu ngược khi Catalog kiểm tra CONFIRMED; giữ nguyên quy tắc chỉ sửa Mô tả sau nhập.
+- v32 (2026-11-23): đồng bộ BR-001 với luồng tự đăng ký bằng email OTP hoặc Google, bổ sung hồ sơ qua UC-04 và đăng nhập Google theo UC-02.
+- v33 (2026-11-23): đồng bộ BR-001 với quyết định của UC-02 về thông báo đăng nhập sai, nút quên mật khẩu, cookie hai cổng và giới hạn đăng nhập bằng mật khẩu.
+- v34 (2026-11-23): chốt xác minh OTP qua email Sobie khi liên kết Google lần đầu với tài khoản hiện có.
+- v35 (2026-11-23): chốt nút "Sử dụng thông tin hồ sơ" và quy tắc điền thông tin nhận hàng ở BR-003.
+- v36 (2026-11-23): đồng bộ BR-001 với quyền cập nhật hồ sơ Khách hàng và quy tắc tự đổi mật khẩu của UC-05.
+- v37 (2026-11-23): đồng bộ BR-001 với các quyết định về tạo tài khoản qua UC-06.
+- v38 (2026-11-23): bổ sung quyền Nhân viên xem thông tin và khóa tài khoản Khách hàng qua UC-07 và UC-08.
+- v39 (2026-11-23): chốt các giả định của UC-08 và xác nhận hệ thống luôn có ít nhất một Admin Hoạt động, kể cả khi khóa và đổi vai trò đồng thời.
+- v40 (2026-11-26): hợp nhất đăng ký và đăng nhập Google, cấp phiên ngay khi tạo tài khoản, liên kết theo email đã xác minh không qua OTP, và chuyển email hồ sơ storefront sang chỉ xem.
+- v41 (2026-11-27): đồng bộ dữ liệu xác thực khi tạo tài khoản và luồng bổ sung hồ sơ để tự điền tại checkout COD/QR.

@@ -6,40 +6,9 @@
 
 ## 1. Đặt hàng và thanh toán
 
-```mermaid
-flowchart TD
-    Start((Bắt đầu)) --> Login{"Đã đăng nhập?"}
-    Login -->|Chưa| Auth["Đăng nhập hoặc đăng ký qua UC-01 / UC-02"]
-    Auth --> Open["Mở checkout"]
-    Login -->|Rồi| Open
-    Open --> Entry{"Khách chọn cách nhập"}
-    Entry -->|Nhập tay| Manual["Nhập tên người nhận, điện thoại và địa chỉ"]
-    Entry -->|Sử dụng thông tin hồ sơ| Complete{"Hồ sơ đã đủ và hợp lệ?"}
-    Complete -->|Có| Autofill["Tự điền tên người nhận, điện thoại và địa chỉ"]
-    Complete -->|Chưa| Profile["Mở biểu mẫu bổ sung hồ sơ tại checkout"]
-    Profile -->|Đóng| Manual
-    Profile -->|Lưu| ValidateProfile{"Hồ sơ hợp lệ theo UC-04?"}
-    ValidateProfile -->|Không| ProfileError["Báo lỗi tại trường cần sửa"]
-    ProfileError --> Profile
-    ValidateProfile -->|Có| SaveProfile["Lưu hồ sơ và quay lại checkout"]
-    SaveProfile --> Autofill
-    Manual --> Review["Kiểm tra hoặc sửa thông tin nhận hàng"]
-    Autofill --> Review
-    Review --> Quote["Chọn COD hoặc QR, xem tổng tiền và xác nhận"]
-    Quote --> ValidateOrder{"Đủ thông tin nhận hàng, còn hàng và giá / ưu đãi khớp?"}
-    ValidateOrder -->|Không| OrderError["Báo lỗi hoặc cập nhật báo giá để khách xác nhận lại"]
-    OrderError --> Review
-    ValidateOrder -->|Có| CreateOrder["Tạo đơn, lưu thông tin nhận hàng cuối cùng"]
-    CreateOrder --> Method{"Phương thức thanh toán"}
-    Method -->|COD| COD["Báo đặt hàng thành công, thu tiền khi giao"]
-    Method -->|QR| QR["Hiển thị VietQR và hạn thanh toán 24 giờ"]
-    QR --> Sepay{"SePay báo giao dịch khớp trong hạn?"}
-    Sepay -->|Có| Paid["Ghi nhận đã thanh toán"]
-    Sepay -->|Hết hạn mà chưa thanh toán| Expired["Tự hủy theo UC-24"]
-    COD --> End((Kết thúc))
-    Paid --> End
-    Expired --> End
-```
+Làn trách nhiệm gồm Khách hàng, Checkout Sobie, Tài khoản và hồ sơ Sobie, và SePay.
+
+![Sơ đồ activity đặt hàng và thanh toán với bốn swimlane](activity-dat-hang-thanh-toan.svg)
 
 - Đăng ký Google lưu email đã xác minh và định danh Google (`sub`). Đăng ký trực tiếp lưu email đã xác minh và mật khẩu đã băm. Khách có thể bổ sung hồ sơ từ checkout hoặc nhập thông tin riêng cho đơn. Xem [UC-01](../use-cases/identity/UC-01-register-account.md) và [UC-04](../use-cases/identity/UC-04-update-customer-profile.md).
 

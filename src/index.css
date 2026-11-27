@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Cormorant Garamond", Georgia, Cambria, serif;
+  --font-sans: "Be Vietnam Pro", -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* Sea-Salt Cream Surfaces (Kem muối biển) */
+  --color-cream-50: #FAF7F2;
+  --color-cream-100: #F3EFE6;
+  --color-cream-200: #E4DDD0;
+  --color-cream-300: #D4CBB8;
+
+  /* Botanical Charcoal & Stone Ink */
+  --color-ink-900: #22261E;
+  --color-ink-700: #3E4539;
+  --color-ink-500: #5E6658;
+  --color-ink-400: #878E80;
+
+  /* Olive Green Primary Buttons & Accents (Xanh ô-liu) */
+  --color-olive-800: #2F3D2A;
+  --color-olive-700: #3B4B35;
+  --color-olive-600: #4A5D43;
+  --color-olive-500: #607558;
+  --color-olive-200: #C5D1BE;
+  --color-olive-100: #E5ECE0;
+  --color-olive-50: #F1F5EE;
+
+  /* Warm Terracotta & Amber Status Tones */
+  --color-terracotta-700: #8E3B2E;
+  --color-terracotta-600: #A84A3B;
+  --color-terracotta-100: #FBECE9;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    scroll-behavior: smooth;
+    background-color: #FAF7F2;
+    color: #22261E;
+  }
+
+  h1, h2, h3, .font-editorial {
+    font-family: var(--font-serif);
+  }
+}
+
+.tabular-price {
+  font-variant-numeric: tabular-nums;
+}
+
+.gsap-will-transform {
+  will-change: transform, opacity;
+}
+
+.atelier-card {
+  background-color: rgba(255, 253, 249, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid #E4DDD0;
+}
+
+.atelier-subtle {
+  background-color: rgba(243, 239, 230, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid #E4DDD0;
+}
+
+/* Subtle Sea-Salt & Olive vertical scrollbar */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: #FAF7F2;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D4CBB8;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #607558;
+}

@@ -14,7 +14,7 @@ Người dùng bấm "Đăng nhập", hoặc bị yêu cầu đăng nhập khi t
 
 ## Preconditions
 - Người dùng chưa đăng nhập.
-- Tài khoản đã tồn tại (UC-01 hoặc UC-06).
+- Khi đăng nhập bằng mật khẩu Sobie, tài khoản đã tồn tại (UC-01 hoặc UC-06). Luồng Google ở storefront có thể tạo tài khoản trong lần đăng nhập đầu tiên.
 
 ## Main Flow
 1. Người dùng mở trang đăng nhập: Khách hàng ở storefront, Nhân viên và Admin ở portal quản trị riêng.
@@ -23,13 +23,15 @@ Người dùng bấm "Đăng nhập", hoặc bị yêu cầu đăng nhập khi t
 4. Hệ thống kiểm tra vai trò của tài khoản thuộc cổng đang đăng nhập: storefront chỉ nhận Khách hàng; portal chỉ nhận Nhân viên và Admin.
 5. Hệ thống kiểm tra tài khoản đang ở trạng thái Hoạt động.
 6. Hệ thống tạo phiên đăng nhập (một dòng `identity.session`; hạn 30 phút với Khách hàng, 1 giờ với Nhân viên / Admin, tính từ lần thao tác cuối) và gửi mã phiên trong cookie `HttpOnly`, `Secure`, `SameSite=Lax` của cổng đang đăng nhập. Hai cổng dùng cookie phiên khác tên để một trình duyệt có thể đăng nhập đồng thời vào cả hai cổng.
-7. Nếu khách bắt đầu đăng nhập từ bước đặt hàng, hệ thống chuyển khách về trang thanh toán theo 1a. Khi người dùng mở trang đăng nhập trực tiếp, Khách hàng được chuyển đến trang chủ storefront, Nhân viên và Admin được chuyển đến trang đầu của portal quản trị.
+7. Sau khi xác thực đúng vai trò/cổng và tạo phiên thành công, Khách hàng đăng nhập storefront từ checkout hoặc nút tim trên trang chi tiết được quay lại theo `return_url` nội bộ hợp lệ (1a, 1e). Nếu thiếu hoặc không hợp lệ, bỏ qua `return_url` và áp dụng chuyển hướng mặc định theo vai trò: Khách hàng về trang bán hàng; Nhân viên và Admin về trang đầu của portal quản trị. `return_url` không thay thế kiểm tra vai trò/cổng ở bước 4.
 
 ## Alternative Flows
-- **1a. Đăng nhập khi đang đặt hàng:** khách bị yêu cầu đăng nhập từ bước đặt hàng. Sau khi đăng nhập thành công bằng mật khẩu Sobie hoặc Google, khách quay lại trang thanh toán với giỏ đã gộp theo UC-19 và UC-20.
+- **1a. Đăng nhập khi đang đặt hàng:** khách chưa có phiên truy cập `GET /api/v1/ordering/checkout` được chuyển đến `GET /api/v1/identity/login` kèm `return_url` nội bộ trỏ về checkout. Sau khi khách đăng nhập bằng mật khẩu Sobie hoặc Google, server kiểm tra lại đích rồi chuyển về checkout nếu hợp lệ. Trình duyệt gửi giỏ trong `localStorage` để gộp theo UC-18 2b và AC-6 rồi hiển thị giỏ tài khoản cho UC-19 và UC-20.
 - **1b. Bấm "Quên mật khẩu":** trong giai đoạn 1, storefront hiển thị nút "Quên mật khẩu" và giữ khách ở trang đăng nhập khi bấm nút. Chức năng khôi phục mật khẩu làm ở giai đoạn 2. Portal quản trị không hiển thị nút này trong giai đoạn 1.
-- **1c. Đăng nhập với Google (storefront):** Khách chọn “Đăng nhập với Google” và xác thực với Google qua OpenID Connect (OAuth 2.0), hoặc tiếp tục từ E1 của UC-01 với kết quả xác thực Google vừa nhận. Sobie kiểm tra phản hồi và tìm tài khoản hiện có theo định danh Google (`sub`). Nếu đã có liên kết, chuyển thẳng đến bước 4. Nếu chưa có liên kết nhưng email đã xác minh trùng với tài khoản Sobie hiện có, chuyển đến 1d. Các trường hợp khác xử lý theo E6. Khách không phải nhập hoặc tạo mật khẩu Sobie.
-- **1d. Dùng Google lần đầu với tài khoản Sobie hiện có:** Sobie gửi OTP đến email đang lưu trên tài khoản Sobie có email trùng. Khách nhập mã và Sobie kiểm tra mã hợp lệ cho lượt liên kết này. Sau khi xác minh OTP thành công và kiểm tra vai trò, trạng thái theo bước 4 và 5, Sobie lưu liên kết Google vào tài khoản hiện có rồi tiếp tục bước 6 để cấp phiên. Nếu xác minh OTP thất bại, xử lý theo E6.
+- **1c. Đăng nhập với Google (storefront):** Khách chọn “Đăng nhập với Google” và xác thực với Google qua OpenID Connect (OAuth 2.0), hoặc tiếp tục từ E1 của UC-01 với kết quả xác thực Google vừa nhận. Sobie kiểm tra phản hồi và xác nhận email đã được Google xác minh. Nếu đã có tài khoản liên kết với định danh Google (`sub`), chuyển đến bước 4. Nếu chưa có liên kết nhưng email đã xác minh trùng với tài khoản Sobie hiện có, chuyển đến 1d. Nếu chưa có tài khoản, Sobie tạo tài khoản theo UC-01 nhánh 1b rồi đăng nhập. Khách không phải nhập hoặc tạo mật khẩu Sobie.
+- **1d. Dùng Google lần đầu với tài khoản Sobie hiện có:** Sau khi kiểm tra vai trò và trạng thái theo bước 4 và 5, Sobie cập nhật định danh Google vào tài khoản có email trùng rồi cấp phiên trong cùng một transaction, không gửi OTP. Nếu tài khoản đã liên kết với định danh Google khác thì xử lý theo E6.
+- **1e. Đăng nhập từ nút tim trên trang chi tiết (UC-12):** khách vãng lai bấm tim được chuyển tới đăng nhập storefront kèm `return_url` trỏ về trang chi tiết đang xem. Sau khi đăng nhập đúng cổng thành công, hệ thống kiểm tra lại đích nội bộ hợp lệ rồi quay lại đúng trang đó; không tự thích hoặc bỏ thích. Nút tim phản ánh wishlist hiện có của tài khoản theo UC-12/UC-38; khách chủ động bấm tim sau khi quay lại nếu muốn thay đổi.
+- **1f. Đích quay lại không hợp lệ hoặc không đúng phạm vi:** bỏ qua `return_url` và dùng chuyển hướng mặc định ở bước 7, không chuyển tới đích bị từ chối. Chỉ chấp nhận đường dẫn nội bộ đã chuẩn hóa thuộc checkout hoặc trang chi tiết storefront, không có scheme/host và bắt đầu bằng đúng một dấu `/`. Từ chối URL tuyệt đối, dạng `//`, dấu gạch chéo ngược, ký tự điều khiển, đường dẫn khác phạm vi và các biến thể mã hóa dẫn tới đích bị cấm. Chỉ kiểm tra tiền tố `/` là không đủ. Đăng nhập portal quản trị không sử dụng `return_url` của storefront.
 - **6a. Gia hạn phiên:** mỗi request có phiên còn hạn thì hệ thống lùi thời điểm hết hạn thêm 30 phút (Khách hàng) hoặc 1 giờ (Nhân viên / Admin) tính từ lúc đó.
 - **6b. Phiên hết hạn:** người dùng không thao tác quá hạn phiên; request tiếp theo coi như chưa đăng nhập, trang cần đăng nhập chuyển người dùng tới trang đăng nhập của cổng tương ứng.
 
@@ -39,7 +41,7 @@ Người dùng bấm "Đăng nhập", hoặc bị yêu cầu đăng nhập khi t
 - **E3. Thiếu dữ liệu trong luồng dùng mật khẩu:** bỏ trống email/số điện thoại hoặc mật khẩu — hệ thống báo lỗi tại trường tương ứng.
 - **E4. Sai cổng đăng nhập:** nếu tài khoản Nhân viên / Admin đăng nhập ở storefront hoặc tài khoản Khách hàng đăng nhập ở portal, hệ thống chỉ báo "Thông tin đăng nhập không đúng" và không tạo phiên.
 - **E5. Vượt giới hạn tần suất đăng nhập bằng mật khẩu:** khi cùng một IP gửi quá 5 yêu cầu đăng nhập bằng mật khẩu trong 1 phút, hệ thống từ chối yêu cầu vượt ngưỡng với HTTP 429 trước khi kiểm tra mật khẩu. Đăng nhập Google không tính vào và không chịu giới hạn của bộ đếm này.
-- **E6. Đăng nhập Google không thành công:** nếu khách hủy, phản hồi xác thực không hợp lệ, Sobie không tìm thấy tài khoản hiện có hoặc OTP liên kết không hợp lệ, hệ thống không tạo phiên hoặc liên kết mới. Việc đăng ký tài khoản mới thực hiện theo UC-01.
+- **E6. Đăng nhập Google không thành công:** nếu khách hủy, phản hồi xác thực không hợp lệ, Google chưa xác minh email hoặc tài khoản trùng email đã liên kết với định danh Google khác, hệ thống không tạo phiên hoặc liên kết mới.
 
 ## Postconditions
 - Người dùng có phiên đăng nhập hợp lệ ở cổng đã đăng nhập; chỉ truy cập được chức năng của vai trò hiện tại của tài khoản.
@@ -61,7 +63,7 @@ Then: hệ thống tạo phiên đăng nhập vai trò Khách hàng
 Given: Nhân viên hoặc Admin có tài khoản Hoạt động và mở trực tiếp trang đăng nhập portal quản trị
 When: người dùng đăng nhập đúng thông tin ở portal quản trị
 Then: hệ thống tạo phiên đăng nhập với đúng vai trò
-And: người dùng được chuyển đến trang đầu của portal quản trị
+And: người dùng được chuyển đến tab Tổng quan tương ứng với vai trò trong portal quản trị
 
 ### AC-4: Sai mật khẩu
 Given: tài khoản với email "a@example.com" tồn tại
@@ -81,9 +83,10 @@ Then: hệ thống báo "Tài khoản đã bị khóa"
 And: không có phiên đăng nhập nào được tạo
 
 ### AC-7: Quay lại trang đặt hàng sau đăng nhập
-Given: khách vãng lai bấm đặt hàng và bị chuyển tới trang đăng nhập
+Given: khách vãng lai bấm đặt hàng và bị chuyển tới trang đăng nhập storefront với return_url nội bộ hợp lệ trỏ về checkout
 When: khách đăng nhập thành công bằng mật khẩu Sobie hoặc Google
-Then: khách quay lại trang thanh toán với giỏ đã gộp theo UC-19 và UC-20
+Then: khách quay lại trang thanh toán với giỏ đã gộp theo UC-18 2b và AC-6
+And: biến thể trùng được cộng dồn tối đa bằng tồn kho, giỏ trình duyệt đã gửi được làm trống sau khi gộp thành công và gửi lại cùng yêu cầu không cộng thêm lần nữa
 
 ### AC-8: Tài khoản nội bộ đăng nhập ở storefront
 Given: tài khoản Nhân viên "nv1@example.com" trạng thái Hoạt động
@@ -132,13 +135,13 @@ Then: hệ thống báo "Tài khoản đã bị khóa" và không tạo phiên
 
 ### AC-16: Đăng nhập Google không thành công
 Given: khách đã chọn “Đăng nhập với Google” ở storefront
-When: khách hủy, Sobie không xác thực được phản hồi Google, không tìm thấy tài khoản hiện có hoặc không xác minh được quyền truy cập khi liên kết lần đầu
+When: khách hủy, Sobie không xác thực được phản hồi Google, Google chưa xác minh email hoặc tài khoản trùng email đã liên kết với định danh Google khác
 Then: hệ thống không tạo phiên đăng nhập hoặc liên kết Google mới
 
 ### AC-17: Đăng nhập Google lần đầu vào tài khoản Sobie hiện có
-Given: tài khoản Khách hàng đang Hoạt động có email trùng với email đã xác minh từ Google và chưa có liên kết với định danh Google này
-When: Sobie xác thực phản hồi Google, gửi OTP đến email đang lưu trên tài khoản Sobie và khách nhập đúng mã còn hiệu lực cho lượt liên kết đó
-Then: hệ thống liên kết định danh Google với tài khoản hiện có và cấp phiên storefront cho tài khoản đó
+Given: tài khoản Khách hàng đang Hoạt động có email trùng với email đã xác minh từ Google và chưa liên kết Google
+When: Sobie xác thực phản hồi Google
+Then: hệ thống liên kết định danh Google với tài khoản hiện có và cấp phiên storefront cho tài khoản đó, không gửi OTP
 And: khách không phải tạo hoặc nhập mật khẩu Sobie, và hệ thống không tạo tài khoản mới
 
 ### AC-18: Tài khoản chỉ dùng Google gửi biểu mẫu mật khẩu
@@ -156,25 +159,44 @@ Given: một trình duyệt đã có phiên Khách hàng hợp lệ tại storef
 When: Nhân viên hoặc Admin đăng nhập thành công vào portal trên cùng trình duyệt
 Then: portal có phiên riêng và storefront vẫn truy cập được bằng phiên Khách hàng hiện tại
 
-### AC-21: OTP liên kết Google không hợp lệ
-Given: Sobie đã gửi OTP đến email của tài khoản hiện có để xác minh lần liên kết Google đầu tiên
-When: khách nhập mã sai, mã hết hạn hoặc mã của lượt khác
-Then: hệ thống báo lỗi xác minh và không lưu liên kết Google hoặc cấp phiên
+### AC-23: Quay lại trang chi tiết từ nút tim, không tự thay đổi wishlist
+Given: khách vãng lai đang xem sản phẩm A tại UC-12, bấm tim và được chuyển tới đăng nhập storefront với return_url nội bộ hợp lệ của trang chi tiết A
+When: khách đăng nhập thành công bằng tài khoản Khách hàng đang Hoạt động
+Then: hệ thống tạo phiên đúng cổng và chuyển khách về đúng trang chi tiết A
+And: riêng việc đăng nhập không tạo hoặc xóa wishlist_item; trạng thái tim được tải theo wishlist hiện có, khách chủ động bấm tim nếu muốn thay đổi
+
+### AC-24: Bỏ qua đích quay lại không an toàn hoặc ngoài phạm vi
+Given: Khách hàng gửi đăng nhập storefront kèm return_url là URL ngoài như https://example.org, //example.org, dạng mã hóa /%2fexample.org hoặc /%5cexample.org, hoặc đường dẫn nội bộ không thuộc checkout/trang chi tiết
+When: khách đăng nhập đúng thông tin và server kiểm tra đích sau chuẩn hóa nhất quán với định tuyến
+Then: đăng nhập vẫn thành công nhưng return_url bị bỏ qua, không chuyển tới đích bị cấm
+And: hệ thống dùng chuyển hướng mặc định ở bước 7; không thực hiện hành động wishlist từ tham số quay lại
+
+### AC-25: Tham số quay lại không vượt ranh giới cổng đăng nhập
+Given: tài khoản Nhân viên đang Hoạt động gửi đăng nhập kèm return_url trỏ tới trang chi tiết storefront
+When: người dùng đăng nhập đúng thông tin tại portal quản trị
+Then: hệ thống tạo phiên portal, bỏ qua return_url storefront và dùng đích mặc định của portal theo bước 7
+When: tài khoản Nhân viên dùng cùng thông tin và return_url tại trang đăng nhập storefront
+Then: hệ thống từ chối theo E4, không tạo phiên; return_url hợp lệ không cho phép vượt kiểm tra vai trò/cổng
 
 ## Dependencies
 - **Upstream UC:** UC-01 Đăng ký tài khoản, UC-06 Admin tạo tài khoản, UC-08 Khóa và mở khóa tài khoản
-- **Downstream UC:** UC-03 Đăng xuất, UC-04, UC-05, UC-18 Quản lý giỏ hàng, UC-19, UC-20 (đặt hàng cần đăng nhập)
-- **External Systems:** Redis (bộ đếm rate limit), Google (OpenID Connect), dịch vụ gửi email OTP.
+- **Downstream UC:** UC-03 Đăng xuất, UC-04, UC-05, UC-12 Xem chi tiết sản phẩm, UC-18 Quản lý giỏ hàng, UC-19, UC-20 (đặt hàng cần đăng nhập), UC-38 Quản lý danh sách yêu thích
+- **External Systems:** Redis (bộ đếm rate limit), Google (OpenID Connect).
 
 ## Notes
 - Quên mật khẩu làm ở giai đoạn 2; giai đoạn 1 chỉ có nút trên storefront, chưa có hành động (BR-GIAIDOAN1, đã chốt 21/11/2026).
 - Cơ chế phiên, thời hạn và rate limit theo BR-GIAIDOAN1, Constraints chung — Xác thực; bảng `identity.session` theo data model v2.15 (Q35).
+- Hợp đồng quay lại sau đăng nhập chỉ chốt cho checkout và trang chi tiết từ thao tác tim. Server kiểm tra `return_url` trước khi dùng, không tin giá trị giữ trên form/query; áp dụng danh sách loại route được phép sau chuẩn hóa, không mở chuyển hướng tùy ý trong hoặc ngoài website. Tài nguyên đích được render theo UC tương ứng, không được dùng `return_url` để bỏ qua phân quyền hoặc tự thực hiện hành động ghi.
 
 ### Quyết định đã chốt
+- Tham số duy nhất để chuyển đích quay lại trong storefront là `return_url`, áp dụng cho cả checkout và trang chi tiết sản phẩm (đã chốt 27/11/2026).
+- Khách hàng đăng nhập storefront từ checkout hoặc nút tim trên trang chi tiết được quay lại theo return_url nội bộ hợp lệ; đích không an toàn/khác phạm vi bị bỏ qua, giữ phân quyền theo cổng và nhánh mặc định hiện có. Đăng nhập không tự thích/bỏ thích (UC-12-Q8, developer yêu cầu đồng bộ tại Codex 23/11/2026).
+- Hai POST mật khẩu tại `/api/v1/identity/login` và `/api/v1/identity/portal/login` nhận `identifier` và `password`. Thiếu `Origin`, `Origin: null` hoặc origin ngoài danh sách cho phép trả HTTP 403 trước khi gia hạn phiên hoặc truy cập Redis. Trang đăng nhập gửi `Referrer-Policy: strict-origin`.
+- Khi đã có phiên portal hợp lệ, mở lại trang đăng nhập đưa người dùng về tab Tổng quan của vai trò hiện tại. Tab Tổng quan Admin phục vụ quản trị tài khoản. Dashboard báo cáo UC-37 thuộc quyền Nhân viên.
 - Admin chỉ quản lý tài khoản và gán vai trò cho tài khoản; mọi thao tác vận hành cửa hàng do Nhân viên thực hiện (đã chốt 15/11/2026).
 - Email và số điện thoại dùng để đăng nhập nằm trên account (unique); không có username riêng. Vai trò và trạng thái cũng nằm trên account (theo ERD, đã chốt 15/11/2026).
 - Khách hàng có liên kết Google đăng nhập ở storefront bằng định danh Google đã liên kết, không cần nhập hoặc tạo mật khẩu Sobie (đã chốt 23/11/2026).
-- Khi khách dùng Google lần đầu để đăng nhập vào tài khoản Sobie có email trùng, Sobie xác minh OTP qua email đã lưu rồi liên kết. Các lần đăng nhập sau sử dụng liên kết Google hiện có (đã chốt 23/11/2026).
+- Khi khách dùng Google lần đầu và email đã xác minh trùng với tài khoản Khách hàng đủ điều kiện, Sobie liên kết định danh Google và cấp phiên ngay. Các lần đăng nhập sau dùng định danh đã liên kết (đã chốt 26/11/2026).
 - Phiên đăng nhập phía server lưu ở `identity.session`, cookie `HttpOnly`, `Secure`, `SameSite=Lax`; hạn phiên Khách hàng 30 phút, Nhân viên / Admin 1 giờ; không dùng JWT (đã chốt 21/11/2026, thay quyết định access / refresh token cùng ngày).
 - Storefront chỉ cho Khách hàng đăng nhập; tài khoản Nhân viên / Admin đăng nhập ở storefront bị báo "Thông tin đăng nhập không đúng". Nhân viên và Admin dùng portal quản trị riêng (đã chốt 21/11/2026).
 - Rate limit theo IP là 5 lần/phút cho đăng nhập bằng mật khẩu. Yêu cầu vượt ngưỡng nhận HTTP 429. Google không tính vào bộ đếm này (đã chốt phạm vi và mã phản hồi 23/11/2026).
@@ -192,3 +214,5 @@ Then: hệ thống báo lỗi xác minh và không lưu liên kết Google hoặ
 - v8 (2026-11-23): bổ sung đăng nhập Google lần đầu vào tài khoản Sobie hiện có và đồng bộ E1 của UC-01.
 - v9 (2026-11-23): chốt chuyển trang, thông báo lỗi, nút quên mật khẩu ở portal, phiên riêng từng cổng và HTTP 429 cho đăng nhập bằng mật khẩu. Google không tính vào bộ đếm mật khẩu.
 - v10 (2026-11-23): chốt gửi OTP đến email đã lưu trên tài khoản Sobie trong lần liên kết Google đầu tiên.
+- v11 (2026-11-26): tạo tài khoản khi chưa có, liên kết Google theo email không cần OTP và bỏ AC-21, AC-22.
+- v12 (2026-11-27): gộp quyết định ngày 23/11 về đích quay lại nội bộ an toàn cho checkout và trang chi tiết, kiểm tra ranh giới cổng và bảo toàn wishlist. Giữ 1c/1d và AC-14–AC-20 của luồng Google và phiên; bổ sung 1e/1f và AC-23–AC-25 cho đích quay lại. Chuẩn hóa tham số thành return_url.

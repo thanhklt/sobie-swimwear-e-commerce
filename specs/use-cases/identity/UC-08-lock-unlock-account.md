@@ -11,7 +11,7 @@
 - Nhân viên khóa tài khoản Khách hàng.
 
 ## Trigger
-Admin bấm "Khóa" hoặc "Mở khóa" trong danh sách tài khoản. Nhân viên bấm "Khóa" trên tài khoản Khách hàng trong chức năng "Quản lý khách hàng" (UC-07).
+Admin bấm nút đổi trạng thái "Khóa tài khoản" hoặc "Mở khóa tài khoản" trên danh sách tài khoản hoặc trong trang sửa thông tin của tài khoản. Nhân viên bấm "Khóa" trên tài khoản Khách hàng trong chức năng "Quản lý khách hàng" (UC-07).
 
 ## Preconditions
 - Admin hoặc Nhân viên đang đăng nhập ở portal quản trị.

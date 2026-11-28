@@ -98,11 +98,6 @@ CREATE TABLE catalog.size (
   size_name varchar(50) NOT NULL UNIQUE
 );
 
-CREATE TABLE catalog.color (
-  color_key  uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  color_name varchar(50) NOT NULL UNIQUE
-);
-
 CREATE TABLE catalog.product (
   product_key                uuid         PRIMARY KEY DEFAULT gen_random_uuid(),
   product_id                 varchar(10)  NOT NULL UNIQUE CHECK (product_id ~ '^SP-[0-9]{4}$'),
@@ -125,15 +120,13 @@ CREATE TABLE catalog.product_collection (
 
 CREATE TABLE catalog.variant (
   variant_key         uuid          PRIMARY KEY DEFAULT gen_random_uuid(),
-  variant_id          varchar(60)   NOT NULL UNIQUE CHECK (variant_id ~ '^SP-[0-9]{4}-[A-Z0-9]+-[A-Z0-9]+$'),
+  variant_id          varchar(60)   NOT NULL UNIQUE CHECK (variant_id ~ '^SP-[0-9]{4}-[A-Z0-9]+$'),
   variant_product_key uuid          NOT NULL REFERENCES catalog.product (product_key) ON DELETE RESTRICT,
   variant_size_key    uuid          NOT NULL REFERENCES catalog.size (size_key) ON DELETE RESTRICT,
-  variant_color_key   uuid          NOT NULL REFERENCES catalog.color (color_key) ON DELETE RESTRICT,
   variant_sell_price  numeric(12,0) CHECK (variant_sell_price > 0),  -- NULL = size chưa có giá
   variant_status      varchar(20)   NOT NULL DEFAULT 'ACTIVE' CHECK (variant_status IN ('ACTIVE', 'INACTIVE')),
-  CONSTRAINT variant_product_size_color_uq UNIQUE (variant_product_key, variant_size_key, variant_color_key)
+  CONSTRAINT variant_product_size_uq UNIQUE (variant_product_key, variant_size_key)
 );
-CREATE INDEX variant_product_size_idx ON catalog.variant (variant_product_key, variant_size_key);
 
 CREATE TABLE catalog.gallery (
   gallery_key         uuid         PRIMARY KEY DEFAULT gen_random_uuid(),

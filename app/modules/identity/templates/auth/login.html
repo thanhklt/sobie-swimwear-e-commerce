@@ -1,0 +1,29 @@
+{% extends "identity/_layouts/storefront_auth.html" %}
+{% from "identity/_partials/auth_fields.html" import credentials, login_notices, password_toggles %}
+{% from "identity/_partials/icons.html" import google %}
+{% from "_storefront/icons.html" import icon %}
+
+{% block title %}Đăng nhập · Sobie{% endblock %}
+{% block auth_content %}
+  <header class="identity-intro">
+    <h1 id="identity-title">ĐĂNG NHẬP</h1>
+    <p>Chào mừng bạn trở lại với SOBIE.</p>
+  </header>
+
+  {{ login_notices(result, registered, password_changed, self_locked, role_changed) }}
+
+  <form class="identity-form" method="post" action="{{ form_action }}">
+    {{ credentials(identifier, result, "Tài khoản") }}
+    <button class="identity-forgot" type="button">Quên mật khẩu?</button>
+    <button class="identity-button" type="submit">Đăng nhập {{ icon("arrow") }}</button>
+  </form>
+
+  <div class="identity-divider">hoặc</div>
+  <a class="identity-button identity-button--secondary"
+     href="{{ request.url_for('start_google_registration').path }}?{{ google_query }}">{{ google() }} Đăng nhập với Google</a>
+  <p class="identity-alternative">Chưa có tài khoản?
+    <a href="{{ request.url_for('registration_form').path }}">Đăng ký</a>
+  </p>
+
+  {{ password_toggles() }}
+{% endblock %}

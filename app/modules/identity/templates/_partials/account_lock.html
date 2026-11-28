@@ -1,0 +1,21 @@
+{% set is_locked = account.status == "LOCKED" %}
+{% set action = "Mở khóa" if is_locked else "Khóa" %}
+{% if not from_account_list %}
+  {% if request.query_params.get('lock') == 'locked' %}<p role="status">Đã khóa tài khoản.</p>{% endif %}
+  {% if request.query_params.get('lock') == 'unlocked' %}<p role="status">Đã mở khóa tài khoản.</p>{% endif %}
+{% endif %}
+{% if not is_locked or request.state.auth_session.role.value == "admin" %}
+  <details>
+    <summary aria-label="{{ action }} tài khoản {{ account.code }}">{{ action }} tài khoản</summary>
+    <form method="post" action="{{ request.url_for('unlock_account' if is_locked else 'lock_account', account_key=account.key).path }}">
+      {% if from_account_list %}
+        <input type="hidden" name="source" value="accounts">
+        <input type="hidden" name="q" value="{{ q }}">
+        <input type="hidden" name="page" value="{{ page }}">
+      {% endif %}
+      <p>Xác nhận {{ action | lower }} tài khoản {{ account.code }}?</p>
+      <button type="submit" name="confirm" value="yes">Xác nhận</button>
+      <button type="submit" name="confirm" value="no">Hủy</button>
+    </form>
+  </details>
+{% endif %}

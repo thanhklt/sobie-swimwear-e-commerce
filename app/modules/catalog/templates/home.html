@@ -1,0 +1,93 @@
+{% extends "storefront.html" %}
+{% from "_storefront/icons.html" import icon %}
+{% set active_nav = "home" %}
+
+{% block title %}Sobie Swimwear{% endblock %}
+
+{% block storefront_content %}
+  <section class="home-hero" aria-labelledby="home-title">
+    <img class="home-hero__image" src="/static/images/home/hero.jpg" width="1942" height="809"
+         alt="Người mẫu đeo kính bơi trên trán bên hồ bơi" fetchpriority="high">
+    <div class="store-wrap home-hero__content">
+      <h1 id="home-title">Bơi theo<br>cách của bạn.</h1>
+      <p>Đồ bơi cho hiệu suất, phong cách<br>và sự tự tin trong mọi chuyển động.</p>
+      <a class="store-button" href="#danh-muc">Khám phá sản phẩm {{ icon("arrow") }}</a>
+    </div>
+  </section>
+
+  <ul class="home-benefits" aria-label="Giao hàng, thanh toán và tư vấn">
+    <li>{{ icon("truck") }} <span>Giao hàng {{ store.shipping_fee | vnd }}</span></li>
+    <li>{{ icon("card") }} <span>Thanh toán COD / QR</span></li>
+    <li><a href="{{ store.zalo_url }}">{{ icon("chat") }} <span>Tư vấn Zalo</span></a></li>
+  </ul>
+
+  <div class="store-wrap home-sections">
+    {% if home.categories %}
+      <nav id="danh-muc" class="home-categories" aria-label="Danh mục sản phẩm">
+        {% for category in home.categories %}
+          <a class="home-category" href="{{ category.url }}" aria-label="{{ category.name }}">
+            <img src="{{ category.image_url }}" alt="{{ category.image_alt }}" width="1086" height="1448" loading="lazy">
+            <span class="home-category__label">
+              <span class="home-category__name">
+                {% for line in category.label_lines %}<span>{{ line }}</span>{% endfor %}
+              </span>
+              {{ icon("arrow") }}
+            </span>
+          </a>
+        {% endfor %}
+      </nav>
+    {% endif %}
+
+    {% if home.best_sellers %}
+      <section class="home-products" aria-labelledby="ban-chay">
+        <div class="home-products__heading">
+          <h2 id="ban-chay">Bán chạy trong tuần</h2>
+          <a href="#danh-muc">Xem tất cả sản phẩm {{ icon("arrow") }}</a>
+        </div>
+        <div class="home-product-grid home-product-grid--best">
+          {% set card_size = "large" %}
+          {% for product in home.best_sellers[:5] %}
+            {% include "catalog/_partials/product_card.html" %}
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
+
+    {% if home.new_arrivals %}
+      <section class="home-products" aria-labelledby="moi-cap-ben">
+        <div class="home-products__heading">
+          <h2 id="moi-cap-ben">Mới cập bến</h2>
+          <a href="#danh-muc">Xem tất cả sản phẩm {{ icon("arrow") }}</a>
+        </div>
+        <div class="home-product-grid home-product-grid--new">
+          {% set card_size = "small" %}
+          {% for product in home.new_arrivals[:8] %}
+            {% include "catalog/_partials/product_card.html" %}
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
+
+    {% if home.collection %}
+      <section id="bo-suu-tap" class="home-collection" aria-labelledby="collection-title">
+        <div class="home-collection__visual">
+          <img src="{{ home.collection.image_url }}" alt="{{ home.collection.image_alt }}"
+               width="1536" height="1024" loading="lazy">
+        </div>
+        <div class="home-collection__content">
+          <p class="home-collection__eyebrow">Bộ sưu tập</p>
+          <h2 id="collection-title">{{ home.collection.name }}</h2>
+          <p>{{ home.collection.description }}</p>
+          <a class="store-button" href="{{ home.collection.url }}">Khám phá bộ sưu tập {{ icon("arrow") }}</a>
+        </div>
+      </section>
+    {% endif %}
+
+    {% if home.coupon %}
+      <aside class="home-coupon" aria-label="Mã giảm giá">
+        {{ icon("ticket") }}
+        <p><strong>{{ home.coupon.code }}</strong> · Giảm {{ home.coupon.discount_percent }}% cho đơn từ {{ home.coupon.minimum_order | vnd }}</p>
+      </aside>
+    {% endif %}
+  </div>
+{% endblock %}

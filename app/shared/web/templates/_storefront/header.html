@@ -1,0 +1,40 @@
+{% from "_storefront/icons.html" import icon %}
+
+<header class="store-header" role="banner">
+  <div class="store-contact">
+    <div class="store-wrap store-contact__links">
+      <a href="tel:{{ store.hotline }}">Hotline {{ store.hotline }}</a>
+      <a href="{{ store.zalo_url }}">Zalo</a>
+    </div>
+  </div>
+  <div class="store-wrap store-header__row">
+    <a class="store-logo" href="{{ request.url_for('root').path }}" aria-label="Sobie – Trang chủ">SOBIE</a>
+    <nav class="store-nav" aria-label="Điều hướng chính">
+      <a href="{{ request.url_for('root').path }}"{% if active_nav == "home" %} aria-current="page"{% endif %}>Trang chủ</a>
+      <a href="#danh-muc">Sản phẩm</a>
+      <a href="#bo-suu-tap">Bộ sưu tập</a>
+      <a href="#">Bảng size</a>
+      <a href="#">Giới thiệu</a>
+    </nav>
+    <form class="store-search" method="get" action="/search" role="search">
+      <button type="submit" aria-label="Tìm kiếm">{{ icon("search") }}</button>
+      <input type="search" name="q" placeholder="Tìm sản phẩm" aria-label="Tìm sản phẩm">
+    </form>
+    <div class="store-header__actions">
+      <a class="store-icon-link" href="#" aria-label="Danh sách yêu thích">{{ icon("heart") }}</a>
+      <details class="store-account">
+        <summary class="store-icon-link" aria-label="Tài khoản">{{ icon("user") }}</summary>
+        <div class="store-account__panel">
+          {% if request.state.auth_session and request.state.auth_session.role.value == "customer" %}
+            <a href="{{ request.url_for('customer_profile').path }}">Tài khoản</a>
+            {% include "identity/_partials/logout.html" %}
+          {% else %}
+            <a href="{{ request.url_for('storefront_login').path }}">Đăng nhập</a>
+            <a href="{{ request.url_for('registration_form').path }}">Đăng ký</a>
+          {% endif %}
+        </div>
+      </details>
+      <a class="store-icon-link" href="#" aria-label="Giỏ hàng">{{ icon("bag") }}</a>
+    </div>
+  </div>
+</header>

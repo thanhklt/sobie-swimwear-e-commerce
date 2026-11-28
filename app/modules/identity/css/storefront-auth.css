@@ -1,0 +1,338 @@
+.storefront-auth {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-height: clamp(640px, 60vw, 720px);
+  background: #fff;
+  color: var(--store-navy);
+}
+
+.storefront-auth__visual {
+  --auth-cut: 73%;
+  --auth-stripe: 3px;
+  position: relative;
+  background: var(--store-lime);
+  clip-path: polygon(0 0, 100% 0, var(--auth-cut) 100%, 0 100%);
+}
+
+.storefront-auth__photo,
+.storefront-auth__photo::after,
+.storefront-auth__photo img {
+  position: absolute;
+  inset: 0;
+}
+
+.storefront-auth__photo {
+  clip-path: polygon(0 0, calc(100% - var(--auth-stripe)) 0,
+    calc(var(--auth-cut) - var(--auth-stripe)) 100%, 0 100%);
+}
+
+.storefront-auth__photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+.storefront-auth__photo::after {
+  background: linear-gradient(0deg, #071c29 0%, #071c29ae 15%, transparent 43%);
+  content: "";
+}
+
+.storefront-auth__caption {
+  position: absolute;
+  bottom: clamp(27px, 4vw, 54px);
+  left: clamp(21px, 3.5vw, 50px);
+  color: #fff;
+  font: italic 800 clamp(2.9rem, 6vw, 4.75rem)/.92 var(--store-display);
+  font-stretch: condensed;
+  letter-spacing: -.018em;
+}
+
+.storefront-auth__caption::after {
+  display: block;
+  width: 76px;
+  height: 5px;
+  margin-top: 22px;
+  background: var(--store-lime);
+  content: "";
+}
+
+.storefront-auth__panel {
+  align-self: center;
+  width: min(480px, 86%);
+  min-width: 0;
+  margin-inline: auto;
+  padding-block: 40px;
+}
+
+.storefront-auth .identity-intro { margin-bottom: 24px; }
+
+.storefront-auth .identity-intro h1 {
+  font: italic 800 clamp(2.625rem, 5.5vw, 4.5rem)/1.02 var(--store-display);
+  font-stretch: condensed;
+  letter-spacing: -.015em;
+}
+
+.storefront-auth .identity-intro p {
+  margin-top: 8px;
+  font-size: 1.125rem;
+}
+
+.storefront-auth .identity-intro .identity-context {
+  color: var(--store-muted);
+  font-size: .85rem;
+  overflow-wrap: anywhere;
+}
+
+.identity-steps {
+  --step-size: 32px;
+  --step-column: min(33.333%, 100px);
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, var(--step-column));
+  justify-content: space-between;
+  margin: 24px 0 22px;
+  padding: 0;
+  list-style: none;
+  text-align: center;
+  font-size: 1rem;
+  line-height: 1.3;
+}
+
+.identity-steps::before {
+  position: absolute;
+  top: calc(var(--step-size) / 2);
+  inset-inline: calc(var(--step-column) / 2);
+  height: 1px;
+  background: #c9cfd2;
+  content: "";
+}
+
+.identity-steps li {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+}
+
+.identity-steps__marker {
+  display: grid;
+  place-items: center;
+  width: var(--step-size);
+  height: var(--step-size);
+  border: 1px solid var(--store-navy);
+  border-radius: 50%;
+  background: #fff;
+  font-weight: 600;
+}
+
+.identity-steps [aria-current="step"] { font-weight: 700; }
+
+.identity-steps [aria-current="step"] .identity-steps__marker,
+.identity-steps__marker--done {
+  border-color: var(--store-lime);
+  background: var(--store-lime);
+  font-weight: 700;
+}
+
+.storefront-auth .identity-form,
+.storefront-auth .identity-field {
+  display: grid;
+  min-width: 0;
+  gap: 17px;
+}
+
+.storefront-auth .identity-form + .identity-form { margin-top: 14px; }
+.storefront-auth [data-otp-request] .identity-field + .identity-button { margin-top: 20px; }
+.storefront-auth .identity-field { gap: 5px; }
+.storefront-auth .identity-field label {
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+
+.storefront-auth .identity-field input {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 8px 13px;
+  border: 1px solid var(--store-navy);
+  border-radius: 4px;
+  background: #fff;
+  font-size: 1rem;
+}
+
+.storefront-auth .identity-field input::placeholder { color: #49535e; }
+.storefront-auth .identity-field input[aria-invalid="true"] { border-color: var(--store-red); }
+
+.storefront-auth .identity-password { position: relative; }
+.storefront-auth .identity-password input { padding-inline-end: 48px; }
+
+.storefront-auth .identity-password-toggle {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 2px;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.storefront-auth .identity-password-toggle[aria-pressed="false"] .identity-eye-slash { display: none; }
+.storefront-auth .identity-field-hint { font-size: .9375rem; }
+
+.storefront-auth .identity-forgot {
+  justify-self: start;
+  margin-top: -5px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #35647a;
+  font-size: .9375rem;
+  cursor: pointer;
+}
+
+.storefront-auth .identity-forgot:hover { text-decoration: underline; }
+
+.storefront-auth .identity-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  width: 100%;
+  min-height: 52px;
+  padding: 9px 12px;
+  border: 1px solid var(--store-lime);
+  border-radius: 5px;
+  background: var(--store-lime);
+  color: var(--store-ink);
+  font: 700 1.375rem/1.15 var(--store-display);
+  text-align: center;
+  cursor: pointer;
+}
+
+.storefront-auth .identity-button:hover { background: #e4f675; }
+
+.storefront-auth .identity-button--secondary {
+  min-height: 48px;
+  border-color: var(--store-navy);
+  background: #fff;
+  color: var(--store-navy);
+  font-size: 1.1875rem;
+}
+
+.storefront-auth button.identity-button--secondary { font-size: 1.25rem; }
+.storefront-auth .identity-button .store-icon { width: 24px; height: 24px; }
+
+.storefront-auth .identity-button--secondary:hover { background: var(--store-cream); }
+
+.storefront-auth .identity-button:disabled {
+  display: block;
+  border-color: #e7e8e9;
+  background: #e7e8e9;
+  color: #535b63;
+  cursor: not-allowed;
+}
+
+.storefront-auth [role="timer"] span { font-variant-numeric: tabular-nums; }
+
+.storefront-auth .identity-divider {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-block: 14px;
+  font-size: .9375rem;
+}
+
+.storefront-auth .identity-divider::before,
+.storefront-auth .identity-divider::after {
+  flex: 1;
+  height: 1px;
+  background: #c9cfd2;
+  content: "";
+}
+
+.storefront-auth .identity-alternative {
+  margin-top: 16px;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.storefront-auth .identity-alternative a {
+  margin-inline-start: .2em;
+  color: var(--store-navy);
+  font: 700 1.25rem/1.2 var(--store-display);
+  text-decoration: underline;
+  text-underline-offset: .15em;
+  white-space: nowrap;
+}
+
+.storefront-auth .identity-alternative .identity-restart {
+  margin-inline-start: .65em;
+  color: #35647a;
+  font-size: 1rem;
+}
+
+.storefront-auth .identity-notice {
+  margin-bottom: 15px;
+  padding: 10px 12px;
+  border-radius: 5px;
+  background: #e8f5ee;
+  color: #1b563a;
+  font-size: .875rem;
+  overflow-wrap: anywhere;
+}
+
+.storefront-auth .identity-notice[role="alert"] { background: #fff0f2; }
+.storefront-auth .identity-notice[role="alert"],
+.storefront-auth .identity-field-error { color: #8c2035; }
+.storefront-auth .identity-field-error { font-size: .875rem; }
+
+@media (min-width: 1024px) {
+  .storefront-auth .identity-intro h1 { white-space: nowrap; }
+}
+
+@media (min-width: 900px) {
+  .storefront-auth .identity-intro h1:has(+ .identity-steps) { text-align: center; }
+}
+
+@media (max-width: 899px) {
+  .storefront-auth {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+  }
+
+  .storefront-auth__visual {
+    --auth-cut: 95%;
+    height: clamp(170px, 32vw, 260px);
+  }
+
+  .storefront-auth__photo img { object-position: center 13%; }
+
+  .storefront-auth__photo::after {
+    background: linear-gradient(90deg, #071c29b3, transparent 65%),
+      linear-gradient(0deg, #071c29b3, transparent 65%);
+  }
+
+  .storefront-auth__caption {
+    bottom: 19px;
+    font-size: clamp(2rem, 6vw, 3.5rem);
+  }
+
+  .storefront-auth__caption::after {
+    width: 48px;
+    height: 4px;
+    margin-top: 10px;
+  }
+
+  .storefront-auth__panel {
+    width: min(480px, 100% - 24px);
+    padding-block: 27px 33px;
+  }
+
+  .storefront-auth .identity-intro { margin-bottom: 21px; }
+  .storefront-auth .identity-intro > p:not(.identity-context) { font-size: 1rem; }
+}

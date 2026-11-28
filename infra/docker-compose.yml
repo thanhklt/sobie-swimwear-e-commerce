@@ -5,9 +5,10 @@ services:
     image: postgres:16-alpine
     container_name: postgres
     hostname: postgres
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-sobie}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      POSTGRES_USER: ${POSTGRES_USER:-sobie_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sobie_admin}
       POSTGRES_DB: ${POSTGRES_DB:-sobieDB}
     ports:
       - "5432:5432"
@@ -18,9 +19,28 @@ services:
       - ./postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
       - ./postgres/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
 
+  redis:
+    image: redis:7.4-alpine
+    container_name: redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: >
+      redis-server
+      --appendonly yes
+      --requirepass ${REDDIS_PASSWORD:-my_redis_password}
+    volumes:
+      - redisdb:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDDIS_PASSWORD:-my_redis_password}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
 
 networks:
   sobie_network:
 
 volumes:
   postgresdb:
+  redisdb:

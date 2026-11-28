@@ -1,0 +1,11 @@
+{% extends "identity/_layouts/account.html" %}
+{% block title %}Tổng quan {{ role_label }} · Sobie{% endblock %}
+{% block account_content %}
+  <h1 id="identity-title">Tổng quan {{ role_label }}</h1>
+  <p>Tab tổng quan đang được triển khai.</p>
+  <nav aria-label="Portal {{ role_label }}">
+    <a href="{{ request.url_for(management_route).path }}">{{ management_label }}</a>
+    <a href="{{ request.url_for('portal_password_form').path }}">Đổi mật khẩu</a>
+  </nav>
+  {% include "identity/_partials/logout.html" %}
+{% endblock %}

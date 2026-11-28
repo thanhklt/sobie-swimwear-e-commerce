@@ -11,3 +11,17 @@
 
 Không truy vấn bảng của module khác. Chưa triển khai.
 """
+
+from sqlalchemy import text
+
+
+async def find_cart_variants(db, variant_keys):
+    rows = await db.execute(text("""
+        SELECT v.variant_key, v.variant_id, p.product_name,
+               (v.variant_status = 'ACTIVE' AND p.product_status = 'ACTIVE'
+                AND v.variant_sell_price IS NOT NULL) AS sellable
+        FROM catalog.variant v
+        JOIN catalog.product p ON p.product_key = v.variant_product_key
+        WHERE v.variant_key = ANY(:variant_keys)
+    """), {"variant_keys": list(variant_keys)})
+    return {row.variant_key: row for row in rows}

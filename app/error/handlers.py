@@ -12,7 +12,7 @@ from starlette.responses import RedirectResponse, Response
 from starlette.routing import NoMatchFound
 
 from app.error.exceptions import SessionAccessError
-from app.modules.identity.session import SessionPortal
+from app.modules.identity.facade import SessionPortal
 from app.shared.web.rendering import templates
 
 # [GD] Tên route; module identity (UC-02) và trang chủ (UC-09) đặt đúng các tên này.

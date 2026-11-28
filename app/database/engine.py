@@ -10,8 +10,8 @@ from app.config.settings import Config
 database_url = make_url(Config.DATABASE_URL)
 
 sync_engine = create_engine(
-    url=database_url, 
-    echo=True
+    url=database_url,
+    hide_parameters=True,
 )
 engine = AsyncEngine(sync_engine)
 session_factory = async_sessionmaker(engine, class_=AsyncSession)

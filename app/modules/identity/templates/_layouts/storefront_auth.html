@@ -1,0 +1,21 @@
+{% extends "storefront.html" %}
+
+{% block head %}
+  {{ super() }}
+  <link rel="stylesheet" href="{{ request.url_for('identity_css', path='/storefront-auth.css').path }}">
+{% endblock %}
+
+{% block storefront_content %}
+  <div class="store-wrap storefront-auth">
+    <div class="storefront-auth__visual">
+      <div class="storefront-auth__photo">
+        <img src="/static/images/auth/side.jpg" width="1086" height="1448"
+             alt="Người mẫu đeo kính bơi trên trán bên hồ bơi" fetchpriority="high">
+      </div>
+      <p class="storefront-auth__caption">Bơi theo<br>cách của bạn.</p>
+    </div>
+    <section class="storefront-auth__panel" aria-labelledby="identity-title">
+      {% block auth_content %}{% endblock %}
+    </section>
+  </div>
+{% endblock %}

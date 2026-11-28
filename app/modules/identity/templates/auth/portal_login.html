@@ -1,0 +1,21 @@
+{% extends "identity/_layouts/auth.html" %}
+{% from "identity/_partials/auth_fields.html" import credentials, login_notices, password_toggles %}
+{# Biểu mẫu dùng chung với storefront. Portal xác thực Origin khi nhận POST. #}
+
+{% block title %}Đăng nhập quản trị · Sobie{% endblock %}
+{% block account_content %}
+  <header class="identity-intro">
+    <p class="identity-eyebrow">Sobie / Quản trị</p>
+    <h1 id="identity-title">Khu vực quản trị</h1>
+    <p>Dành cho Nhân viên và Admin của Sobie.</p>
+  </header>
+
+  {{ login_notices(result, registered, password_changed, self_locked, role_changed) }}
+
+  <form class="identity-form" method="post" action="{{ form_action }}">
+    {{ credentials(identifier, result) }}
+    <button class="identity-button" type="submit">Đăng nhập <span aria-hidden="true">→</span></button>
+  </form>
+
+  {{ password_toggles() }}
+{% endblock %}

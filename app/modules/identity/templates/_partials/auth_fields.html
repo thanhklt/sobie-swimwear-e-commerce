@@ -1,0 +1,52 @@
+{% from "identity/_partials/icons.html" import eye %}
+
+{% macro error(field, result) %}
+  {% if result.field == field %}
+    <p id="{{ field }}-error" class="identity-field-error" role="alert">{{ result.message }}</p>
+  {% endif %}
+{% endmacro %}
+
+{% macro credentials(identifier, result, label="Email hoặc số điện thoại", placeholder="Nhập email hoặc số điện thoại") %}
+  <div class="identity-field">
+    <label for="identifier">{{ label }}</label>
+    <input id="identifier" name="identifier" type="text" autocomplete="username"
+           placeholder="{{ placeholder }}" value="{{ identifier }}" required
+           {% if result.field == "identifier" %}aria-invalid="true" aria-describedby="identifier-error"{% endif %}>
+    {{ error("identifier", result) }}
+  </div>
+  <div class="identity-field">
+    <label for="password">Mật khẩu</label>
+    <div class="identity-password">
+      <input id="password" name="password" type="password" autocomplete="current-password"
+             placeholder="Nhập mật khẩu" required
+             {% if result.field == "password" %}aria-invalid="true" aria-describedby="password-error"{% endif %}>
+      <button class="identity-password-toggle" type="button" aria-controls="password"
+              aria-label="Hiện mật khẩu" aria-pressed="false">{{ eye() }}</button>
+    </div>
+    {{ error("password", result) }}
+  </div>
+{% endmacro %}
+
+{% macro login_notices(result, registered, password_changed, self_locked, role_changed) %}
+  {% if registered %}<p class="identity-notice" role="status">Đăng ký thành công.</p>{% endif %}
+  {% if password_changed %}<p class="identity-notice" role="status">Đổi mật khẩu thành công.</p>{% endif %}
+  {% if self_locked %}<p class="identity-notice" role="status">Đã khóa tài khoản.</p>{% endif %}
+  {% if role_changed %}<p class="identity-notice" role="status">Đã đổi vai trò. Vui lòng đăng nhập lại.</p>{% endif %}
+  {% if result.message and not result.field %}
+    <p class="identity-notice" role="alert">{{ result.message }}</p>
+  {% endif %}
+{% endmacro %}
+
+{% macro password_toggles() %}
+  <script>
+    document.querySelectorAll(".identity-password-toggle").forEach((toggle) => {
+      const password = document.getElementById(toggle.getAttribute("aria-controls"));
+      toggle.addEventListener("click", () => {
+        const reveal = password.type === "password";
+        password.type = reveal ? "text" : "password";
+        toggle.setAttribute("aria-pressed", String(reveal));
+        toggle.setAttribute("aria-label", reveal ? "Ẩn mật khẩu" : "Hiện mật khẩu");
+      });
+    });
+  </script>
+{% endmacro %}

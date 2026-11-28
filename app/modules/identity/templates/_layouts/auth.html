@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ request.url_for('identity_css', path='/base.css').path }}">
+  <link rel="stylesheet" href="{{ request.url_for('identity_css', path='/auth.css').path }}">
+{% endblock %}
+
+{% block content %}
+  <div class="identity-page identity-auth">
+    {% include "identity/_partials/auth_header.html" %}
+    <div class="identity-stage">
+      {% block art_left %}{% include "identity/_partials/art_swimwear.html" %}{% endblock %}
+      <section class="identity-auth-panel" aria-labelledby="identity-title">
+        {% block account_content %}{% endblock %}
+      </section>
+      {% block art_right %}{% include "identity/_partials/art_accessories.html" %}{% endblock %}
+    </div>
+    {% include "identity/_partials/auth_footer.html" %}
+  </div>
+{% endblock %}

@@ -1,0 +1,57 @@
+# Kế hoạch triển khai Identity · UC-01 đến UC-08
+
+Ngày 24/11/2026, nhánh `feature/identity`. Astra lập kế hoạch. Sol thực thi tuần tự trong cùng chat. Nguồn nghiệp vụ là [đặc tả Identity](../../specs/use-cases/identity/) và [BR giai đoạn 1](../../specs/business-requirements/BR-GIAIDOAN1.md).
+
+## Mốc bắt đầu
+
+UC-01 đã có 9 endpoint và 9 sơ đồ sequence, gồm đăng ký email/OTP, Google, liên kết tài khoản và màn hình đăng nhập. Hai lần chạy ghi trong [plan gốc](UC-01.md) và [plan sửa](UC-01-fix.md) là kết quả lịch sử của bộ UC-01 và toàn suite, đều 30/30 trên PostgreSQL 16 với Redis, SMTP, OIDC và đồng hồ giả. Ngày rà soát, pytest thu thập đủ 30 ca ứng với 13 AC. Docker Engine chưa chạy và môi trường hiện tại chưa đặt `UC01_TEST_DATABASE_URL`. Chưa có kết quả chạy lại các assertion trên checkout này.
+
+UC-02 có trang GET /login, luồng Google cho tài khoản hiện có và middleware gia hạn phiên theo cổng. UC-03 đến UC-08 chưa có endpoint trong router. Riêng UC-06 AC-9 đã có bootstrap Admin trong init.sql. Điểm vào, cookie và hành vi hiện hành được mô tả trong [API contract](../../docs/api_contract_identity_v1.md).
+
+## Phạm vi và thứ tự thực hiện
+
+Các URL mới dưới đây là thiết kế đề xuất. Dùng tiền tố /admin theo middleware hiện có. Mỗi cặp phương thức và đường dẫn phải có sơ đồ riêng ở docs/sequence/identity/. Đặt form Jinja trong app/modules/identity/templates và nối điều hướng qua URL có tên. Dùng CSRF cho form ghi, no-store cho trang xác thực và trang cần đăng nhập. Danh sách tài khoản đọc từ PostgreSQL mỗi lần theo BR. Đặt quyền ở cả route lẫn nghiệp vụ có điều kiện theo đối tượng.
+
+| UC | Điểm vào và thay đổi | Nghiệm thu |
+|---|---|---|
+| 01 · Đăng ký | Chạy lại bộ hiện có trên database kiểm thử riêng trước và sau khi mở rộng cơ chế cấp phiên. Nếu có lỗi, sửa theo bước đăng ký bị ảnh hưởng và giữ các quyết định D1–D6. | AC 1, 2, 4–8, 11–16. Kiểm tra cấp mã, account, cart, wishlist cùng commit hoặc rollback. Đối chiếu ranh giới 299/300 giây và liên kết Google bằng OTP. |
+| 02 · Đăng nhập | Hoàn thiện GET/POST /login, GET/POST /admin/login và trang đích portal. Thêm tra email/điện thoại và kiểm tra bcrypt ở IdentityRepository. IdentityService kiểm tra mật khẩu, cổng, trạng thái, cấp phiên và chuyển hướng. Dùng chung logic cấp phiên với Google. Giữ ngữ cảnh checkout phía server qua cả callback và OTP, chỉ nhận đích nội bộ hợp lệ. | AC 1–10 cho biểu mẫu, thông báo, checkout và sai cổng. AC 11–13 cho hết hạn, gia hạn và Redis đếm nguyên tử theo IP trên cả hai cổng, yêu cầu thứ 6 trong một phút trả 429 trước khi kiểm tra mật khẩu. AC 14–21 cho Google, OTP, tài khoản chỉ có Google, bộ đếm riêng cho mật khẩu và hai cookie cùng trình duyệt. |
+| 03 · Đăng xuất | POST /logout và /admin/logout xóa đúng phiên của cookie thuộc cổng hiện tại, xóa cookie và xử lý idempotent kể cả phiên đã hết hạn. Nối nút đăng xuất từ trang có phiên. | AC 1–4. Dùng hai thiết bị và hai cổng, thử lại mã phiên cũ qua trang được bảo vệ. Đối chiếu chuyển về trang chủ theo đặc tả. |
+| 04 · Hồ sơ Khách hàng | GET/POST /account/profile đọc và cập nhật theo khóa tài khoản trong phiên. Chia sẻ nghiệp vụ cập nhật trường hồ sơ khách với UC-07. Hiển thị mã KH chỉ đọc, xử lý hồ sơ cũ còn NULL, kiểm tra dữ liệu và unique email/điện thoại cả khi cập nhật đồng thời. | AC 1–5 gồm cập nhật, đăng nhập bằng email mới, lỗi theo trường, quyền chủ tài khoản và Admin. AC-2 áp dụng email mới ngay sau khi lưu theo quyết định 24/11/2026. Kiểm thử AC-5 qua portal của UC-07. |
+| 05 · Đổi mật khẩu | GET/POST /account/password và /admin/password cho tài khoản đã có mật khẩu Sobie. Khóa account, xác minh mật khẩu hiện tại, kiểm tra tối thiểu 6 ký tự, khác mật khẩu cũ và nhập lại khớp. Ghi hash rồi xóa mọi phiên của tài khoản trong cùng transaction. Sau commit xóa cookie hiện tại và chuyển về login đúng cổng. | AC 1–7. Bao gồm Khách hàng và tài khoản nội bộ, đăng nhập bằng mật khẩu mới, vô hiệu hóa hai thiết bị, giữ mọi phiên khi xác thực hoặc lưu thất bại. |
+| 06 · Tạo tài khoản | GET/POST /admin/accounts/new chỉ dành cho Admin. Xác minh ba vai trò phía server, email và điện thoại duy nhất, ngày sinh bắt buộc với nội bộ. Cấp mã KH theo ngày Việt Nam hoặc NV/AD theo họ tên, ngày sinh và bộ đếm tiền tố theo data model. Hash bcrypt và lưu account ACTIVE trong transaction. Với KH gọi initialize_customer_shopping bằng chính DB session đó. | AC 1–9. Gồm tạo từng vai trò, chọn role, lỗi dữ liệu/quyền, rollback cả bộ đếm và dữ liệu shopping. Kiểm tra AC-9 trên database khởi tạo sạch bằng init.sql trước khi fixture UC-01 xóa account. |
+| 07 · Sửa tài khoản | GET /admin/accounts, GET/POST /admin/accounts/{key}/edit cho Admin. GET /admin/customers và /admin/customers/{key} cho phạm vi xem khách của Nhân viên. Lọc vai trò ngay trong truy vấn phía server. Khi đổi NV ↔ AD, cấp mã mới, giữ khóa account, ghi role và xóa mọi phiên trong một transaction. Cập nhật thuần thông tin giữ phiên và mã. | AC 1–6 cho danh sách, tìm kiếm, sửa, trùng email. AC 7–15 cho chuyển vai trò hợp lệ, quyền xem/sửa, tự hạ quyền, Admin cuối cùng, rollback mã, vai trò và phiên. Dùng chung bảo vệ Admin cuối với UC-08. |
+| 08 · Khóa/mở khóa | Từ trang quản lý tài khoản hoặc chi tiết khách, hiển thị xác nhận. POST /admin/accounts/{key}/lock và /unlock (cùng tiền tố tài khoản). Admin khóa hoặc mở khóa trong phạm vi spec. Nhân viên chỉ khóa Khách hàng. Khi khóa, ghi trạng thái và xóa mọi phiên trong cùng transaction. Khi mở khóa, yêu cầu đăng nhập lại. | AC 1–10 gồm hủy, tự khóa, quyền Nhân viên, đăng nhập lại và tranh chấp khóa/đổi vai trò. Sau mỗi thử nghiệm phải còn ít nhất một Admin ACTIVE. |
+
+### Các điểm tích hợp Sol cần xử lý
+
+1. App khởi tạo IdentityService và IdentityRepository ở app/main.py. Mở rộng hai lớp qua router thay vì đưa SQL vào route. Tái sử dụng helper chuẩn hóa email, kiểm tra mật khẩu, SessionMiddleware, require_roles và tên cookie trong app/security/session.py. Cookie phiên opaque chỉ lưu hash trong DB, cờ HttpOnly/Secure/SameSite=Lax. Storefront gia hạn 30 phút, portal 1 giờ tính từ lần hoạt động cuối.
+2. Đọc actor từ phiên và xác minh quyền còn hiệu lực trong transaction nếu thao tác có thể chạy đồng thời với khóa hoặc đổi vai trò. Thống nhất thứ tự khóa trước khi thay đổi tài khoản. Với UC-07/08, dùng cùng cơ chế tuần tự hóa các lệnh làm giảm số Admin ACTIVE, ví dụ khóa dòng role Admin trước khi đọc và khóa tập account Admin theo thứ tự ổn định. Đếm lại sau khi lấy khóa. Kiểm thử bằng hai connection PostgreSQL độc lập với điểm đồng bộ, kể cả khi có đúng hai Admin hoạt động. Khi đăng nhập, phối hợp khóa dòng account với đổi mật khẩu/khóa tài khoản để tránh cấp phiên dựa trên thông tin đã cũ.
+3. Kiểm tra đường vào checkout và dịch vụ gộp giỏ của shopping theo UC-19/20. app/modules/shopping/service.py hiện mới có initialize_customer_shopping. Với UC-02 AC-7, kiểm tra cả mật khẩu và Google, giữ giỏ khách qua redirect và gọi service shopping công khai. Nếu phía đặt hàng chưa có trang hoặc dữ liệu giỏ vãng lai, ghi rõ phần tích hợp còn thiếu và chỉ ghi đạt end-to-end khi kiểm tra được giỏ đã gộp ở trang thanh toán thật.
+4. Trả lỗi unique đúng trường, rollback và chỉ phát thông báo thành công sau commit. Đối chiếu schema ở infra/postgres/init.sql và quy tắc mã trong specs/entity-model trước khi mở rộng repository. Với lỗi sau cấp mã, đọc lại bằng connection độc lập để kiểm tra dữ liệu đã rollback.
+
+## Câu hỏi mở [GD]
+
+- **UC-04 · Đã chốt ngày 24/11/2026** — Đổi email hoặc số điện thoại không cần xác minh lại. Khách tự sửa và Admin sửa hộ cùng kiểm tra định dạng và trùng lặp trước khi lưu.
+- **UC-02/03** — Phiên portal hợp lệ đến tab Tổng quan theo vai trò sau khi đăng nhập thành công hoặc khi mở lại trang đăng nhập. Trong lúc chờ hai tab chính thức, GET /admin hiển thị trang tạm theo vai trò. Đăng xuất kết thúc phiên hiện tại và chuyển về / theo UC-03.
+- **UC-07** — Đặc tả còn gắn [GD] cho việc gộp xem/tìm vào UC, phân trang và tìm theo họ tên/email/điện thoại, và phạm vi tài khoản Admin được sửa. Một lần lưu hồ sơ và vai trò là quyết định đã chốt. Khi chỉ đổi vai trò, các trường hồ sơ và mật khẩu giữ giá trị hiện tại.
+
+## Kiểm thử và bàn giao
+
+- Chạy bằng môi trường Poetry của checkout trên D. Chỉ đặt UC01_TEST_DATABASE_URL trỏ đến PostgreSQL riêng tên uc01test. Fixture UC-01 TRUNCATE account CASCADE trước mỗi ca, vì vậy kiểm tra bootstrap trên DB thử nghiệm mới hoặc trước fixture. Dùng schema thật, pgcrypto thật và repository thật. Tách fixture từng UC để dữ liệu/phiên không rò giữa các ca. Không chạy các suite dùng chung DB đồng thời.
+- Lệnh baseline và hồi quy là `poetry run pytest -q -p no:cacheprovider tests/identity/test_uc01_register_account.py`. Thêm một tệp tests/identity/test_ucNN_*.py cho từng UC mới, gắn test với AC tương ứng. Chạy tệp UC vừa đổi rồi `poetry run pytest -q -p no:cacheprovider tests`. Dùng đồng hồ điều khiển được và adapter mạng giả ở biên. Các kiểm tra kỹ thuật ngoài AC đặt trong .artifact/.
+- Mỗi UC cập nhật docs/api_contract_identity_v1.md và docs/sequence/identity/ theo route thực tế. Ghi riêng số ca pass/fail/skip, số AC đã đạt, môi trường PostgreSQL, phạm vi adapter giả và phụ thuộc chưa nghiệm thu. Chạy đủ bộ sau UC-08. Trong số 84 AC của tám đặc tả, chỉ đánh dấu đạt khi có kết quả chạy và đáp ứng toàn bộ Then/And.
+
+## Kết quả thực thi ngày 24/11/2026
+
+- Mốc trước khi sửa đạt **30/30 ca UC-01** trên PostgreSQL 16. Sau triển khai, toàn suite đạt **94 ca**, gồm 30 ca hồi quy UC-01. Các test HTTP của UC-01–08 tham chiếu 83/84 AC. PostgreSQL, schema init.sql, repository, transaction và pgcrypto chạy thật. Redis, SMTP, Google OIDC và đồng hồ được thay ở biên để kiểm soát kịch bản. UC-06 AC-9 kiểm tra database sạch riêng trước mọi thao tác truncate.
+- Kiểm tra bổ sung xác nhận Lua giới hạn đăng nhập trên Redis 7.4 thật với 12 yêu cầu đồng thời, các IP tách biệt và yêu cầu cũ hơn 60 giây. OpenAPI có 31 điểm vào khớp 31 tài liệu sequence, Jinja nạp được toàn bộ template và GET / trả đúng nội dung HTML hoặc JSON theo Accept.
+- UC-02 AC-7 còn mở. Checkout hiện có router ordering và shopping ở dạng khung. Chưa có trang thanh toán hoặc dịch vụ gộp giỏ khách vãng lai để nối luồng mật khẩu và Google. Đăng nhập hiện chuyển về trang đích theo cổng. Giữ AC-7 riêng đến khi có tích hợp checkout đủ để kiểm tra trang đích và giỏ đã gộp.
+- Quyết định UC-04 đã được xác nhận trong chat và cập nhật đặc tả. Hai trường liên hệ mới có hiệu lực ngay khi lưu thành công. Test xác minh đăng nhập bằng email và số điện thoại mới, từ chối email cũ và không gửi OTP khi lưu.
+- Người dùng đã xác nhận quy tắc số điện thoại và phân trang hiện tại. Giao diện chấp nhận 8–15 chữ số và dấu `+` tùy chọn, lưu theo định dạng đã nhập sau khi bỏ khoảng trắng ngoài cùng. Danh sách dùng 20 dòng mỗi trang. Người dùng đã chốt UC-07 dùng một nút Lưu. Hồ sơ và vai trò được kiểm tra và ghi trong cùng transaction. Khi đổi vai trò, giao dịch còn cấp mã mới và thu hồi phiên của tài khoản.
+
+- Hồi quy sau khi gộp thao tác UC-07 đạt **95 ca** trên PostgreSQL 16. Các ca kiểm tra lưu cả hồ sơ và vai trò, mã mới theo hồ sơ vừa gửi, từ chối email trùng, và hoàn tác hồ sơ, vai trò, bộ đếm cùng phiên khi có lỗi.
+
+### Chạy lại
+
+Đặt `UC01_TEST_DATABASE_URL` trỏ đến PostgreSQL dành riêng với database `uc01test` và nạp `infra/postgres/init.sql`. Để kiểm tra UC-06 AC-9, đặt `UC06_BOOTSTRAP_DATABASE_URL` trỏ tới database `uc01bootstrap` vừa nạp cùng schema. Chạy `poetry run pytest -q -p no:cacheprovider tests`. Không dùng hai URL này cho database ứng dụng.

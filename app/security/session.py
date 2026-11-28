@@ -1,21 +1,31 @@
 """Xác thực phiên theo cổng và kiểm tra vai trò dành cho các route."""
 
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Set
 
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
+from starlette.types import ASGIApp
 
 from app.error.exceptions import SessionAccessError
-from app.modules.identity import service
-from app.modules.identity.session import AuthenticatedSession, Role, SessionPortal
+from app.modules.identity.facade import AuthenticatedSession, Role, SessionPortal, authenticate_session
+from app.security.origin import has_allowed_origin, origin_rejected
 
-PORTAL_PREFIX = "/admin"
 STOREFRONT_SESSION_COOKIE = "storefront_session"
 PORTAL_SESSION_COOKIE = "portal_session"
+# BR-GIAIDOAN1 — Xác thực: chống CSRF bằng SameSite=Lax + Origin, không dùng CSRF token.
+_WRITE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 
 
 class SessionMiddleware(BaseHTTPMiddleware):
+    def __init__(
+        self, app: ASGIApp, *, api_prefix: str, origin_exempt_paths: Set[str] = frozenset()
+    ) -> None:
+        super().__init__(app)
+        self.portal_prefix = f"{api_prefix}/identity/portal"
+        # Chỉ dành cho request máy-máy không có Origin (ví dụ webhook SePay).
+        self.origin_exempt_paths = origin_exempt_paths
+
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
@@ -24,7 +34,15 @@ class SessionMiddleware(BaseHTTPMiddleware):
         if root_path and (path == root_path or path.startswith(f"{root_path}/")):
             path = path[len(root_path) :] or "/"
 
-        if path == PORTAL_PREFIX or path.startswith(f"{PORTAL_PREFIX}/"):
+        # Reject before authenticating or renewing a session and before dispatching to a route.
+        if (
+            request.method in _WRITE_METHODS
+            and path.rstrip("/") not in self.origin_exempt_paths
+            and not has_allowed_origin(request)
+        ):
+            return origin_rejected()
+
+        if path == self.portal_prefix or path.startswith(f"{self.portal_prefix}/"):
             cookie_name, portal = PORTAL_SESSION_COOKIE, SessionPortal.PORTAL
         else:
             cookie_name, portal = STOREFRONT_SESSION_COOKIE, SessionPortal.STOREFRONT
@@ -32,7 +50,7 @@ class SessionMiddleware(BaseHTTPMiddleware):
         token = request.cookies.get(cookie_name)
         request.state.auth_portal = portal
         request.state.auth_session = (
-            await service.authenticate_session(token, portal) if token else None
+            await authenticate_session(request, token, portal) if token else None
         )
         return await call_next(request)
 

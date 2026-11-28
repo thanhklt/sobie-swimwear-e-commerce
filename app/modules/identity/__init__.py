@@ -14,6 +14,9 @@ Phạm vi:
 - Đổi vai trò chỉ giữa Nhân viên và Admin; luôn còn ít nhất 1 Admin đang hoạt động.
 - Cấp mã tài khoản KH- / NV- / AD- (bộ đếm 4 số riêng cho từng tiền tố); đổi vai trò NV <-> AD thì cấp mã mới.
 
-Phụ thuộc module khác (chỉ qua service công khai):
-- (không có)
+Cửa công khai: facade.py.
+
+Phụ thuộc module khác:
+- shopping: khởi tạo giỏ hàng và danh sách yêu thích khi tạo Khách hàng.
+- notification: gửi OTP qua facade.send_email.
 """

@@ -1,0 +1,14 @@
+<header class="identity-auth-header">
+  <div class="identity-auth-bar">
+    <a class="identity-auth-brand" href="{{ request.url_for('root').path }}">SOBIE<span>.</span></a>
+    {% if not portal %}
+      <nav class="identity-auth-nav" aria-label="Danh mục cửa hàng">
+        <a href="#">Bộ sưu tập</a>
+        <a href="#">Swim Pro</a>
+        <a href="#">Water Sport</a>
+        <a href="#">Phụ kiện</a>
+      </nav>
+    {% endif %}
+    <a class="identity-back" href="{{ request.url_for('root').path }}"><span aria-hidden="true">←</span> Về cửa hàng</a>
+  </div>
+</header>

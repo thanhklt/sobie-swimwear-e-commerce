@@ -1,0 +1,3 @@
+<form method="post" action="{{ request.url_for('portal_logout' if request.state.auth_portal.value == 'portal' else 'storefront_logout').path }}">
+  <button type="submit"{% if logout_button_class | default('') %} class="{{ logout_button_class }}"{% endif %}>Đăng xuất</button>
+</form>

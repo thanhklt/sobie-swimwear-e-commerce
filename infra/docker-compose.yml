@@ -5,6 +5,7 @@ services:
     image: postgres:16-alpine
     container_name: postgres
     hostname: postgres
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-sobie_admin}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sobie_admin}
@@ -27,11 +28,11 @@ services:
     command: >
       redis-server
       --appendonly yes
-      --requirepass my_redis_password
+      --requirepass ${REDDIS_PASSWORD:-my_redis_password}
     volumes:
       - redisdb:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "my_redis_password", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDDIS_PASSWORD:-my_redis_password}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 3

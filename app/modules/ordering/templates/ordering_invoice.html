@@ -1,0 +1,37 @@
+{% extends "ordering_base.html" %}
+
+{% block ordering_content %}
+<style>
+  .snap {
+    white-space: pre-wrap;
+    margin: 0;
+    font-size: .88rem;
+    background: var(--mist);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 1rem;
+    overflow: auto;
+  }
+</style>
+
+<div class="rise">
+  <h1>Hóa đơn {{ invoice.invoice_id }}</h1>
+  <p class="page-lead muted">
+    {% if staff_mode %}NV: {{ demo_employee }}{% else %}KH: {{ demo_customer }}{% endif %}
+    · đơn {{ invoice.order_code }} · {{ invoice.created_at }}
+  </p>
+</div>
+
+<section class="panel rise">
+  <h2>Snapshot</h2>
+  <pre class="snap">{{ invoice.snapshot | tojson(indent=2) }}</pre>
+</section>
+
+<div class="row-actions rise">
+  {% if staff_mode %}
+  <a class="btn secondary" href="/dev/ordering/staff">Về NV</a>
+  {% else %}
+  <a class="btn secondary" href="/dev/ordering/orders/{{ invoice.order_code }}">Về đơn</a>
+  {% endif %}
+</div>
+{% endblock %}

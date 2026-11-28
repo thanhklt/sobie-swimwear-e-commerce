@@ -1,0 +1,133 @@
+{% extends "shopping_base.html" %}
+
+{% block shopping_content %}
+<style>
+  .catalog-grid, .wish-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+  .prod {
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    overflow: hidden;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    transition: transform .2s ease, border-color .2s ease;
+  }
+  .prod:hover {
+    transform: translateY(-3px);
+    border-color: var(--sea);
+  }
+  .prod img, .prod .ph {
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+    display: block;
+  }
+  .prod .ph {
+    background: linear-gradient(150deg, #c9e2e4, #eef7f5 60%, #b8d5d8);
+  }
+  .prod .body {
+    padding: .85rem .9rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: .4rem;
+    flex: 1;
+  }
+  .prod .name {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    margin: 0;
+    line-height: 1.2;
+  }
+  .prod form { margin-top: auto; }
+  .prod button { width: 100%; }
+  .section-gap { margin-top: 1.5rem; }
+  .count-pill {
+    display: inline-block;
+    margin-left: .35rem;
+    font-family: var(--font-body);
+    font-size: .85rem;
+    color: var(--muted);
+  }
+</style>
+
+<div class="rise">
+  <h1>Wishlist</h1>
+  <p class="page-lead muted">UC-38 · {{ demo_email }} · thả tim trực tiếp từ lưới sản phẩm</p>
+</div>
+
+<section class="panel rise">
+  <h2>Catalog seed</h2>
+  {% if products %}
+  <div class="catalog-grid">
+    {% for p in products %}
+    <article class="prod">
+      {% if p.image_url %}
+      <img src="{{ p.image_url }}" alt="{{ p.name }}">
+      {% else %}
+      <div class="ph" aria-hidden="true"></div>
+      {% endif %}
+      <div class="body">
+        <h3 class="name">{{ p.name }}</h3>
+        <div class="muted">{{ p.product_id }} · từ {{ "{:,.0f}".format(p.min_price) }}đ</div>
+        {% if p.is_active %}
+          <span class="tag ok">Đang bán</span>
+        {% else %}
+          <span class="tag warn">Ngừng bán</span>
+        {% endif %}
+        {% if p.product_key in wishlist_keys %}
+        <form method="post" action="/dev/shopping/wishlist/remove">
+          <input type="hidden" name="product_key" value="{{ p.product_key }}">
+          <button type="submit" class="secondary">Đã tim · Bỏ</button>
+        </form>
+        {% else %}
+        <form method="post" action="/dev/shopping/wishlist/add">
+          <input type="hidden" name="product_key" value="{{ p.product_key }}">
+          <button type="submit">Thả tim</button>
+        </form>
+        {% endif %}
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="muted" style="margin:0">Chưa có sản phẩm seed.</p>
+  {% endif %}
+</section>
+
+<section class="panel rise section-gap">
+  <h2>Đã yêu thích <span class="count-pill">{{ wishlist.total_items }}</span></h2>
+  {% if wishlist.total_items == 0 %}
+  <p class="muted" style="margin:0">Chưa có sản phẩm nào. Thả tim ở lưới phía trên.</p>
+  {% else %}
+  <div class="wish-grid">
+    {% for item in wishlist.items %}
+    <article class="prod">
+      {% if item.image_url %}
+      <img src="{{ item.image_url }}" alt="{{ item.name }}">
+      {% else %}
+      <div class="ph" aria-hidden="true"></div>
+      {% endif %}
+      <div class="body">
+        <h3 class="name">{{ item.name }}</h3>
+        <div class="muted">{{ item.product_id }} · từ {{ "{:,.0f}".format(item.min_price) }}đ</div>
+        {% if item.is_active %}
+          <span class="tag ok">Đang bán</span>
+        {% else %}
+          <span class="tag warn">Ngừng bán</span>
+        {% endif %}
+        <form method="post" action="/dev/shopping/wishlist/remove">
+          <input type="hidden" name="product_key" value="{{ item.product_key }}">
+          <button type="submit" class="secondary">Bỏ tim</button>
+        </form>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  <p class="muted" style="margin:1rem 0 0">Trang {{ wishlist.page }}</p>
+  {% endif %}
+</section>
+{% endblock %}

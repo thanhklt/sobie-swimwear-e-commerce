@@ -40,7 +40,7 @@
 //     <HỌ TÊN>, <MÀU>, <SIZE>: bỏ dấu (Đ -> D), viết hoa, bỏ khoảng trắng.
 //   - Module (đã chốt 20/11/2026): 1 module = 1 schema PostgreSQL = 1 TableGroup
 //     = 1 thư mục specs/use-cases/<module>/ = 1 package app/modules/<module>/.
-//       identity  : role, account, session
+//       identity  : role, account, shipping_address, session
 //       catalog   : category, collection, gender, size, color, product,
 //                   product_collection, variant, gallery
 //       shopping  : cart, cart_item, wishlist, wishlist_item
@@ -150,6 +150,36 @@ Table identity.account {
 }
 
 Ref: identity.account.account_role_key > identity.role.role_key [delete: restrict]
+
+Table identity.shipping_address {
+  shipping_address_key            uuid [pk, default: `gen_random_uuid()`, note: '[KEY][MOI]']
+  shipping_address_account_key    uuid [not null, note: '[MOI] tài khoản Khách hàng sở hữu sổ']
+  shipping_address_name           varchar(255) [not null, note: '[MOI] họ tên người nhận tại địa chỉ này']
+  shipping_address_phone          varchar(20)  [not null, note: '[MOI] SĐT nhận hàng']
+  shipping_address_house_number   varchar(255) [not null, note: '[MOI] số nhà, đường']
+  shipping_address_ward           varchar(100) [not null, note: '[MOI] phường / xã']
+  shipping_address_city           varchar(255) [not null, note: '[MOI] tỉnh / thành phố']
+  shipping_address_country        varchar(100) [not null, note: '[MOI] quốc gia']
+  shipping_address_is_default     boolean [not null, default: false, note: '[MOI] đúng 1 dòng true / account (partial unique). Địa chỉ đầu tiên = true; set default B → gỡ A']
+  shipping_address_created_at     timestamptz [not null, default: `now()`]
+  shipping_address_updated_at     timestamptz [not null, default: `now()`]
+
+  indexes {
+    shipping_address_account_key [note: 'list sổ theo khách']
+  }
+  Note: '''
+  [MOI] Sổ địa chỉ giao hàng của Khách hàng (đã chốt 27/11/2026, đưa vào GĐ1).
+  Form: tỉnh + phường + số nhà (+ tên, SĐT, quốc gia); không có quận/huyện.
+  Service: địa chỉ đầu → is_default; set_default trong 1 transaction; đồng bộ
+  account_house_number/ward/city/country = địa chỉ mặc định.
+  Postgres: UNIQUE partial index
+  ON (shipping_address_account_key) WHERE shipping_address_is_default
+  — tối đa 1 mặc định / account (khai báo ở init.sql / migration, DBML không diễn tả partial).
+  Ordering chỉ đọc qua service identity / snapshot vào order lúc đặt (không FK order → bảng này).
+  '''
+}
+
+Ref: identity.shipping_address.shipping_address_account_key > identity.account.account_key [delete: cascade]
 
 Table identity.session {
   session_key          uuid [pk, default: `gen_random_uuid()`, note: '[KEY][MOI]']
@@ -644,6 +674,7 @@ Ref: payment.bank_transaction.bank_transaction_order_key > ordering.order.order_
 TableGroup identity {
   identity.role
   identity.account
+  identity.shipping_address
   identity.session
 }
 
@@ -947,4 +978,10 @@ TableGroup inventory {
 //  Q37. [ĐÃ CHỐT 21/11/2026] Ngày trong mã KH- theo giờ Asia/Ho_Chi_Minh.
 //  Q38. [ĐÃ CHỐT 21/11/2026] Giá nhập >= 0.
 //  Q39. [ĐÃ CHỐT 21/11/2026] Giỏ hàng và danh sách yêu thích tạo cùng lúc tạo tài khoản Khách hàng.
+//
+// v2.17 — Sổ địa chỉ giao hàng (27/11/2026)
+//  #  | Bảng / cột                                       | Thay đổi
+// 100 | identity.shipping_address                        | [MOI] sổ N địa chỉ / KH; is_default; mirror lên account_*
+// 101 | TableGroup identity                              | Thêm shipping_address
+// 102 | account địa chỉ                                  | Đổi nghĩa: mirror địa chỉ mặc định (không còn «mỗi khách 1 địa chỉ duy nhất»)
 // =====================================================================

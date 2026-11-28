@@ -93,9 +93,21 @@ Then: hệ thống chuyển sang trang đăng nhập
 And: đăng nhập xong khách quay lại trang thanh toán
 
 ### AC-7: Thiếu thông tin nhận hàng
-Given: khách xóa trống số điện thoại nhận hàng
+Given: khách chưa chọn đủ thông tin nhận hàng (thiếu địa chỉ hoặc để trống trường bắt buộc khi thêm địa chỉ)
 When: khách xác nhận đặt hàng
-Then: hệ thống không tạo đơn và báo thiếu số điện thoại
+Then: hệ thống không tạo đơn
+And: báo trường thiếu / yêu cầu chọn hoặc thêm địa chỉ
+
+### AC-12: Prefill địa chỉ mặc định
+Given: khách có địa chỉ A mặc định và địa chỉ B trong sổ
+When: khách mở trang thanh toán
+Then: hệ thống điền sẵn thông tin nhận hàng theo A
+
+### AC-13: Thêm địa chỉ tại checkout lưu sổ
+Given: khách đang ở trang thanh toán
+When: khách thêm địa chỉ C và xác nhận dùng C cho đơn
+Then: C được lưu trong sổ địa chỉ (UC-41)
+And: lần đặt sau C vẫn xuất hiện trong danh sách địa chỉ
 
 ### AC-8: Hai khách tranh nhau sản phẩm cuối
 Given: "Đỏ / M" còn 1, hai khách cùng có 1 "Đỏ / M" trong giỏ
@@ -185,6 +197,7 @@ Then: khách trở lại biểu mẫu đặt hàng và vẫn có thể nhập ta
 - Mọi mức giảm tính theo phần trăm; tiền làm tròn `ROUND_HALF_UP` về số nguyên VND (đã chốt 15/11/2026).
 - Mỗi đơn áp tối đa 1 khuyến mãi (theo hóa đơn hoặc voucher); khuyến mãi theo sản phẩm được ghi theo từng dòng đơn (theo ERD).
 - Mỗi lần đơn đổi trạng thái (kể cả lúc tạo), hệ thống lưu lịch sử: trạng thái cũ, trạng thái mới, nguồn thay đổi, người đổi (nếu có), thời điểm (theo ERD).
+- Prefill / chọn / thêm địa chỉ từ sổ (UC-41); thêm địa chỉ lưu sổ (đã chốt 27/11/2026). Bỏ quy tắc «sửa chỉ cho đơn / không cập nhật hồ sơ».
 
 ### Giả định [GD]
 - Lượt đã dùng của khuyến mãi được chọn (voucher hoặc khuyến mãi theo hóa đơn) tăng khi tạo đơn.

@@ -1,0 +1,105 @@
+{% extends "shopping_base.html" %}
+
+{% block shopping_shell %}
+<style>
+  .hero {
+    position: relative;
+    min-height: min(86vh, 720px);
+    width: 100%;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .hero-media, .hero-fallback {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .hero-media { animation: drift 14s ease-in-out infinite alternate; }
+  .hero-fallback {
+    background: linear-gradient(140deg, #0a4c54, #116a74 45%, #2f97a0);
+  }
+  .hero-shade {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(105deg, rgba(8, 30, 38, 0.78) 0%, rgba(8, 30, 38, 0.42) 42%, rgba(8, 30, 38, 0.16) 100%);
+  }
+  .hero-copy {
+    position: relative;
+    z-index: 1;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: clamp(3rem, 10vh, 6.5rem) 1.25rem;
+    color: #f4fbfa;
+    animation: rise .7s ease both;
+  }
+  .hero-brand {
+    font-family: var(--font-display);
+    font-size: clamp(3.2rem, 9vw, 5.4rem);
+    margin: 0 0 .4rem;
+    letter-spacing: 0.04em;
+    line-height: .95;
+  }
+  .hero-line {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: clamp(1.35rem, 3vw, 1.9rem);
+    font-weight: 400;
+    margin: 0 0 .7rem;
+    max-width: 18ch;
+  }
+  .hero-sub {
+    margin: 0 0 1.5rem;
+    max-width: 28rem;
+    line-height: 1.55;
+    opacity: .92;
+  }
+  .hero-cta { display: flex; gap: .7rem; flex-wrap: wrap; }
+  .hero-cta .btn {
+    min-width: 9rem;
+    padding: .78rem 1.15rem;
+    border-radius: 12px;
+  }
+  .hero-cta .btn.ghost {
+    background: transparent;
+    color: #fff;
+    border: 1px solid rgba(255,255,255,.55);
+  }
+  .hero-cta .btn.ghost:hover { background: rgba(255,255,255,.1); }
+  .below {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 1.25rem 1.25rem 2.5rem;
+  }
+  .below p { margin: 0; color: var(--muted); }
+  @keyframes drift {
+    from { transform: scale(1.03); }
+    to { transform: scale(1.08) translate(-1.2%, -0.8%); }
+  }
+</style>
+
+<section class="hero" aria-label="Sobie">
+  {% if hero and hero.image_url %}
+  <img class="hero-media" src="{{ hero.image_url }}" alt="{{ hero.name }}">
+  {% else %}
+  <div class="hero-fallback" aria-hidden="true"></div>
+  {% endif %}
+  <div class="hero-shade" aria-hidden="true"></div>
+  <div class="hero-copy">
+    <p class="hero-brand">SOBIE</p>
+    <h1 class="hero-line">Giỏ hàng &amp; wishlist, sẵn sàng thử</h1>
+    <p class="hero-sub">
+      {{ demo_email }} · UC-18 / UC-38 trên dữ liệu seed. Không login thật — adapter tạm.
+    </p>
+    <div class="hero-cta">
+      <a class="btn" href="/dev/shopping/cart">Vào giỏ hàng</a>
+      <a class="btn ghost" href="/dev/shopping/wishlist">Mở wishlist</a>
+    </div>
+  </div>
+</section>
+<div class="below">
+  <p>Ảnh / giá / tồn từ catalog &amp; inventory seed. Khi service công khai sẵn, chỉ đổi adapter.</p>
+</div>
+{% endblock %}

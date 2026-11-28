@@ -33,7 +33,7 @@
      <HỌ TÊN>, <MÀU>, <SIZE>: bỏ dấu (Đ -> D), viết hoa, bỏ khoảng trắng.
    - Module (đã chốt 20/11/2026): 1 module = 1 schema PostgreSQL = 1 TableGroup
      = 1 thư mục specs/use-cases/<module>/ = 1 package app/modules/<module>/.
-       identity  : role, account, session
+       identity  : role, account, shipping_address, session
        catalog   : category, collection, gender, size, color, product,
                    product_collection, variant, gallery
        shopping  : cart, cart_item, wishlist, wishlist_item

@@ -1,0 +1,198 @@
+{% extends "ordering_base.html" %}
+
+{% block ordering_content %}
+<style>
+  .line {
+    display: flex; justify-content: space-between; gap: 1rem;
+    padding: .85rem 0; border-bottom: 1px solid var(--line);
+  }
+  .line:last-of-type { border-bottom: none; }
+  .line-title { margin: 0 0 .2rem; font-weight: 600; }
+  .pay-actions { display: flex; flex-direction: column; gap: .55rem; margin-top: 1rem; }
+  .pay-actions button { width: 100%; padding: .75rem 1rem; }
+  .empty-box { text-align: center; padding: 1.5rem .5rem; }
+  .addr-card {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 1rem 1.05rem;
+    background: #fff;
+  }
+  .addr-card.is-selected { border-color: var(--sea); box-shadow: 0 0 0 1px rgba(47, 151, 160, 0.25); }
+  .addr-name { margin: 0 0 .35rem; font-weight: 600; display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+  .addr-line { margin: 0; font-size: .92rem; }
+  .addr-list { display: flex; flex-direction: column; gap: .65rem; }
+  .addr-item {
+    display: flex; justify-content: space-between; gap: .75rem; flex-wrap: wrap;
+    align-items: flex-start;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: .85rem .9rem;
+    background: #fff;
+  }
+  .addr-item.is-active { border-color: var(--lagoon); background: var(--mist); }
+  .addr-item-actions { display: flex; gap: .4rem; flex-wrap: wrap; }
+  .addr-item-actions form { margin: 0; }
+  .addr-item-actions button, .addr-item-actions .btn { padding: .4rem .7rem; font-size: .82rem; }
+  .panel-head {
+    display: flex; justify-content: space-between; gap: .75rem; flex-wrap: wrap;
+    align-items: center; margin-bottom: .85rem;
+  }
+  .panel-head h2 { margin: 0; }
+</style>
+
+<div class="rise">
+  <h1>Đặt hàng</h1>
+  <p class="page-lead muted">UC-19 COD · UC-20 QR · sổ địa chỉ UC-41 · {{ demo_customer }}</p>
+</div>
+
+{% if quote_error %}
+<div class="panel rise">
+  <div class="empty-box">
+    <p style="margin:0 0 .75rem">{{ quote_error }}</p>
+    {% if cart_empty %}
+    <a class="btn" href="/dev/shopping/cart">Thêm vào giỏ</a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+{% if new_total %}
+<div class="banner err" style="width:100%;max-width:none;margin:0 0 1rem">
+  Tổng đã đổi. Xác nhận lại với
+  <strong>{{ "{:,.0f}".format(new_total|float) }}đ</strong>
+  (đã điền expected_total).
+</div>
+{% endif %}
+
+{% if quote %}
+<div class="layout-2 rise">
+  <div>
+    <section class="panel">
+      <h2>Sản phẩm trong đơn</h2>
+      {% for ln in quote.lines %}
+      <article class="line">
+        <div>
+          <p class="line-title">{{ labels.get(ln.variant_key, ln.variant_key) }}</p>
+          <div class="muted">SL {{ ln.quantity }} · {{ "{:,.0f}".format(ln.unit_price) }}đ</div>
+        </div>
+        <div style="font-family:var(--font-display);font-size:1.15rem;white-space:nowrap">
+          {{ "{:,.0f}".format(ln.line_total) }}đ
+        </div>
+      </article>
+      {% endfor %}
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Địa chỉ giao</h2>
+        {% if address_view == "" and selected_address %}
+        <div class="row-actions">
+          <a class="btn secondary" href="/dev/ordering/checkout?view=list&amp;selected={{ selected_address.shipping_address_key }}">Thay đổi</a>
+          <a class="btn secondary" href="/dev/ordering/checkout?view=add&amp;selected={{ selected_address.shipping_address_key }}">Thêm địa chỉ</a>
+        </div>
+        {% elif address_view != "" %}
+        <a class="btn secondary" href="/dev/ordering/checkout{% if selected_address %}?selected={{ selected_address.shipping_address_key }}{% endif %}">Đóng</a>
+        {% endif %}
+      </div>
+
+      {% if address_view == "list" %}
+      <div class="addr-list">
+        {% for addr in addresses %}
+        <article class="addr-item {% if selected_address and addr.shipping_address_key == selected_address.shipping_address_key %}is-active{% endif %}">
+          <div>
+            <p class="addr-name">
+              {{ addr.name }} · {{ addr.phone }}
+              {% if addr.is_default %}<span class="tag ok">Mặc định</span>{% endif %}
+            </p>
+            <p class="addr-line">{{ addr.house_number }}, {{ addr.ward }}, {{ addr.city }}, {{ addr.country }}</p>
+          </div>
+          <div class="addr-item-actions">
+            <a class="btn" href="/dev/ordering/checkout?selected={{ addr.shipping_address_key }}">Chọn</a>
+            {% if not addr.is_default and addresses|length > 1 %}
+            <form method="post" action="/dev/ordering/checkout/addresses/default">
+              <input type="hidden" name="address_key" value="{{ addr.shipping_address_key }}">
+              <button type="submit" class="secondary">Đặt mặc định</button>
+            </form>
+            {% endif %}
+          </div>
+        </article>
+        {% endfor %}
+      </div>
+      <p style="margin:1rem 0 0">
+        <a class="btn secondary" href="/dev/ordering/checkout?view=add{% if selected_address %}&amp;selected={{ selected_address.shipping_address_key }}{% endif %}">Thêm địa chỉ mới</a>
+      </p>
+
+      {% elif address_view == "add" %}
+      <p class="muted" style="margin:0 0 .85rem">Địa chỉ mới được lưu vào sổ (UC-41) và dùng cho đơn này.</p>
+      <form method="post" action="/dev/ordering/checkout/addresses">
+        <div class="form-grid">
+          <div>
+            <label>Họ tên người nhận</label>
+            <input name="name" required>
+          </div>
+          <div>
+            <label>Điện thoại</label>
+            <input name="phone" required>
+          </div>
+          <div>
+            <label>Số nhà / đường</label>
+            <input name="house_number" required>
+          </div>
+          <div>
+            <label>Phường / xã</label>
+            <input name="ward" required>
+          </div>
+          <div>
+            <label>Tỉnh / thành</label>
+            <input name="city" required>
+          </div>
+          <div>
+            <label>Quốc gia</label>
+            <input name="country" required value="Việt Nam">
+          </div>
+        </div>
+        <div class="row-actions" style="margin-top:1rem">
+          <button type="submit">Lưu vào sổ</button>
+        </div>
+      </form>
+
+      {% elif selected_address %}
+      <div class="addr-card is-selected">
+        <p class="addr-name">
+          {{ selected_address.name }} · {{ selected_address.phone }}
+          {% if selected_address.is_default %}<span class="tag ok">Mặc định</span>{% endif %}
+        </p>
+        <p class="addr-line">{{ selected_address.house_number }}, {{ selected_address.ward }}, {{ selected_address.city }}, {{ selected_address.country }}</p>
+      </div>
+
+      <form method="post" id="place-form" style="margin-top:1rem">
+        <input type="hidden" name="shipping_address_key" value="{{ selected_address.shipping_address_key }}">
+        <input type="hidden" name="expected_total"
+               value="{% if new_total %}{{ new_total }}{% else %}{{ quote.total_price }}{% endif %}">
+        <div class="pay-actions">
+          <button type="submit" formaction="/dev/ordering/checkout/cod">Đặt COD</button>
+          <button type="submit" class="secondary" formaction="/dev/ordering/checkout/qr">Đặt chuyển khoản QR</button>
+        </div>
+      </form>
+
+      {% else %}
+      <p class="muted" style="margin:0">Chưa có địa chỉ trong sổ. Thêm địa chỉ trước khi đặt hàng.</p>
+      {% endif %}
+    </section>
+  </div>
+
+  <aside class="panel sticky-side">
+    <h2>Tổng thanh toán</h2>
+    <ul class="totals">
+      <li><span class="muted">Tạm tính</span><span>{{ "{:,.0f}".format(quote.subtotal) }}đ</span></li>
+      <li><span class="muted">Giảm</span><span>{{ "{:,.0f}".format(quote.discount_amount) }}đ</span></li>
+      <li><span class="muted">Ship</span><span>{{ "{:,.0f}".format(quote.shipping_fee) }}đ</span></li>
+      <li class="grand"><span>Tổng</span><span>{{ "{:,.0f}".format(quote.total_price) }}đ</span></li>
+    </ul>
+    <p class="muted" style="margin:.85rem 0 0;font-size:.85rem">
+      Promotion tạm = NoPromotionGateway. Giỏ sẽ được xóa dòng đã đặt sau khi tạo đơn.
+    </p>
+  </aside>
+</div>
+{% endif %}
+{% endblock %}

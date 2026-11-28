@@ -17,5 +17,5 @@ Phụ thuộc module khác (chỉ qua service công khai):
 - catalog: giá bán theo size lúc đặt.
 - inventory: trừ / cộng lại tồn, đọc giá vốn để chụp vào order_detail_cost_price.
 - promotion: tính mức giảm, tăng / hoàn lượt khuyến mãi.
-- identity: thông tin người đặt.
+- identity: thông tin người đặt; sổ địa chỉ giao hàng (UC-41) khi checkout.
 """

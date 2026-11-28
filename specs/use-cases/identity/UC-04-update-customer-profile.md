@@ -27,6 +27,7 @@ Khách hàng mở trang hồ sơ hoặc bấm "Sử dụng thông tin hồ sơ" 
 - **1a. Admin cập nhật hồ sơ Khách hàng:** Admin chọn tài khoản Khách hàng trong portal quản trị theo UC-07. Admin có thể sửa thông tin hồ sơ, bao gồm email. Hệ thống kiểm tra và lưu thay đổi theo UC-07.
 - **1b. Bổ sung hồ sơ trong checkout:** Checkout (UC-19 hoặc UC-20) mở biểu mẫu hồ sơ với dữ liệu đã lưu. Khách bổ sung hoặc sửa họ tên, ngày sinh, số điện thoại và địa chỉ nhận hàng. Hệ thống kiểm tra và lưu theo bước 4–5. Sau khi lưu thành công, hệ thống về checkout và tự điền tên người nhận, số điện thoại nhận hàng và địa chỉ. Nếu dữ liệu không hợp lệ, hệ thống báo lỗi tại biểu mẫu hồ sơ. Khách có thể đóng biểu mẫu và tiếp tục nhập thông tin nhận hàng ngay tại checkout.
 - **3a. Không thay đổi gì:** khách bấm "Lưu" khi không sửa trường nào — hệ thống báo thành công, dữ liệu giữ nguyên.
+- **3b. Quản lý sổ địa chỉ:** khách mở «Sổ địa chỉ» / «Thay đổi địa chỉ» → UC-41.
 
 ## Exceptions
 - **E1. Số điện thoại trùng tài khoản khác:** hệ thống báo số điện thoại đã được sử dụng, không lưu hồ sơ.
@@ -39,7 +40,7 @@ Khách hàng mở trang hồ sơ hoặc bấm "Sử dụng thông tin hồ sơ" 
 
 ### AC-1: Cập nhật thành công
 Given: Khách hàng đang đăng nhập
-When: khách đổi họ tên, ngày sinh và địa chỉ nhận hàng (số nhà, phường/xã, tỉnh/thành phố, quốc gia) rồi bấm "Lưu"
+When: khách đổi họ tên, ngày sinh rồi bấm "Lưu"
 Then: hệ thống lưu thông tin mới vào account
 And: trang hồ sơ hiển thị thông tin mới
 
@@ -86,10 +87,11 @@ And: ngày sinh chỉ lưu trong hồ sơ
 - **External Systems:** —
 
 ## Notes
-- Mỗi khách chỉ có 1 địa chỉ nhận hàng (sổ nhiều địa chỉ là Out of Scope).
+- Địa chỉ giao hàng không còn «chỉ 1 địa chỉ sửa trên hồ sơ»; dùng sổ `shipping_address` (UC-41).
 
 ### Quyết định đã chốt
-- Thông tin cá nhân (họ tên, ngày sinh, 1 địa chỉ nhận hàng: số nhà, phường/xã, tỉnh/thành phố, quốc gia) nằm trong account cùng email, số điện thoại (đã chốt 21/11/2026, data model v2, thay quyết định tách hồ sơ Customer ngày 15/11/2026).
+- Thông tin cá nhân (họ tên, ngày sinh) nằm trong account cùng email, số điện thoại (đã chốt 21/11/2026).
+- Sổ nhiều địa chỉ giao hàng + 1 mặc định (đã chốt 27/11/2026); `account_*` địa chỉ = mirror mặc định.
 - Email và số điện thoại unique, dùng để đăng nhập; không có username riêng (đã chốt 15/11/2026).
 - Mã tài khoản không sửa được (đã chốt 21/11/2026).
 - Khách hàng tự cập nhật hồ sơ ở storefront. Admin cũng được cập nhật hồ sơ Khách hàng qua UC-07 ở portal quản trị (đã chốt 23/11/2026).

@@ -1,0 +1,128 @@
+{% extends "ordering_base.html" %}
+
+{% block ordering_content %}
+<style>
+  .qr-panel {
+    text-align: center;
+    border: 1px dashed var(--sea);
+    background: linear-gradient(180deg, #f4fbfa, #fff);
+  }
+  .qr-img {
+    display: block;
+    margin: .75rem auto 0;
+    max-width: min(280px, 100%);
+    height: auto;
+    background: #fff;
+  }
+  .qr-code {
+    font-family: var(--font-display);
+    font-size: clamp(1.6rem, 4vw, 2.2rem);
+    letter-spacing: 0.06em;
+    margin: .35rem 0 .75rem;
+  }
+  .status-row { display: flex; flex-wrap: wrap; gap: .45rem; margin-bottom: .85rem; }
+  .history-list li { align-items: flex-start; }
+  .hist-src { font-size: .8em; opacity: .75; }
+</style>
+
+<div class="rise">
+  <h1>Đơn {{ order.order_code }}</h1>
+  <p class="page-lead muted">
+    {% if staff_mode %}{{ demo_employee }} · xem NV (có lý do hủy){% else %}{{ demo_customer }}{% endif %}
+  </p>
+</div>
+
+<div class="layout-2 rise">
+  <div>
+    <section class="panel">
+      <div class="status-row">
+        <span class="tag">Đơn: {{ order.status_label or order.status }}</span>
+        <span class="tag {% if order.payment_status == 'PAID' %}ok{% else %}warn{% endif %}">
+          {{ order.payment_name }} ·
+          {% if order.payment_status == 'PAID' %}Đã thanh toán{% else %}Chưa thanh toán{% endif %}
+        </span>
+      </div>
+      {% if order.payment_name == 'QR' and order.payment_status == 'PAID' and order.status == 'PENDING' %}
+      <p class="muted" style="margin-top:0">
+        Tiền đã khớp. Đơn vẫn chưa xử lý — NV vào trang NV → Xác nhận.
+      </p>
+      {% endif %}
+      <ul class="totals">
+        <li><span class="muted">Khách</span><span>{{ order.customer_name }} · {{ order.customer_phone }}</span></li>
+        <li><span class="muted">Giảm</span><span>{{ "{:,.0f}".format(order.discount_amount) }}đ</span></li>
+        <li><span class="muted">Ship</span><span>{{ "{:,.0f}".format(order.shipping_fee) }}đ</span></li>
+        <li class="grand"><span>Tổng</span><span>{{ "{:,.0f}".format(order.total_price) }}đ</span></li>
+        <li><span class="muted">Tạo</span><span>{{ order.created_at }}</span></li>
+        {% if order.payment_deadline %}
+        <li><span class="muted">Hạn QR</span><span>{{ order.payment_deadline }}</span></li>
+        {% endif %}
+      </ul>
+      {% if order.status_history %}
+      <h2 style="margin:1.1rem 0 .55rem;font-size:1rem">Lịch sử trạng thái</h2>
+      <ul class="totals history-list">
+        {% for h in order.status_history %}
+        <li>
+          <span class="muted">
+            {{ h.event_label or h.status_label or h.to_status }}
+            {% if staff_mode %}
+            <span class="hist-src">({{ h.to_status }} · {{ h.source }})</span>
+            {% endif %}
+            {% if staff_mode and h.note %}<br><em>Lý do: {{ h.note }}</em>{% endif %}
+          </span>
+          <span>{{ h.changed_at }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </section>
+
+    {% if order.show_qr %}
+    <section class="panel qr-panel">
+      <h2>Thanh toán QR</h2>
+      {% if order.vietqr_image_url %}
+      <img
+        class="qr-img"
+        src="{{ order.vietqr_image_url }}"
+        alt="VietQR {{ order.transfer_content }}"
+        width="280"
+        height="280"
+      />
+      {% endif %}
+      {% if order.bank_account_no %}
+      <p class="muted" style="margin:.75rem 0 0">
+        TK {{ order.bank_account_no }}
+        {% if order.bank_account_name %}· {{ order.bank_account_name }}{% endif %}
+      </p>
+      {% endif %}
+      <p class="muted" style="margin:.5rem 0 0">Nội dung chuyển khoản</p>
+      <p class="qr-code">{{ order.transfer_content }}</p>
+      <p class="muted" style="margin:0">
+        Hạn {{ order.payment_deadline }} (UTC). Quét QR chỉ để CK — app không tự PAID khi quét.
+        Production: SePay webhook (UC-25). /dev: NV «Đánh dấu PAID» giả webhook.
+      </p>
+    </section>
+    {% endif %}
+  </div>
+
+  <aside class="panel sticky-side">
+    <h2>Thao tác</h2>
+    <div class="row-actions" style="flex-direction:column;align-items:stretch">
+      {% if not staff_mode and order.status == 'PENDING' %}
+      <form method="post" action="/dev/ordering/orders/{{ order.order_code }}/cancel"
+            onsubmit="return confirm('Hủy đơn này?');">
+        <button type="submit" class="danger" style="width:100%">Hủy đơn (KH)</button>
+      </form>
+      {% endif %}
+      {% if invoice %}
+      <a class="btn" href="/dev/ordering/orders/{{ order.order_code }}/invoice">Xem hóa đơn</a>
+      {% endif %}
+      {% if staff_mode %}
+      <a class="btn secondary" href="/dev/ordering/staff">Về cổng NV</a>
+      {% else %}
+      <a class="btn secondary" href="/dev/ordering/orders">Danh sách đơn</a>
+      <a class="btn secondary" href="/dev/ordering/staff">Sang cổng NV</a>
+      {% endif %}
+    </div>
+  </aside>
+</div>
+{% endblock %}

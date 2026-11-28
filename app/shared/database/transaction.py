@@ -17,11 +17,23 @@ if TYPE_CHECKING:
 
 @asynccontextmanager
 async def transaction(session: AsyncSession) -> AsyncIterator[AsyncSession]:
-    """Mở transaction trên session chưa có transaction đang hoạt động.
+    """Mở / kết thúc transaction trên session.
 
     Service điều phối truyền cùng session cho các service tham gia. Transaction
     commit khi khối kết thúc thành công và rollback khi có ngoại lệ. Bên gọi
     chịu trách nhiệm đóng session.
+
+    Nếu session đã autobegin (SQLAlchemy 2), không gọi begin() lần nữa — commit
+    / rollback ở cuối khối.
     """
+    if session.in_transaction():
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        return
+
     async with session.begin():
         yield session

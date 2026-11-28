@@ -49,6 +49,23 @@ VALUES
    'khachhang@example.com', '0900000003', crypt('Customer@Sobie2026', gen_salt('bf', 10)),
    'Khách Hàng Demo', NULL, '273 An Dương Vương', 'Phường Chợ Quán', 'TP. Hồ Chí Minh', 'Việt Nam');
 
+-- Sổ địa chỉ: 1 dòng mặc định khớp mirror trên account khách demo (UC-41)
+INSERT INTO identity.shipping_address
+  (shipping_address_account_key, shipping_address_name, shipping_address_phone,
+   shipping_address_house_number, shipping_address_ward, shipping_address_city,
+   shipping_address_country, shipping_address_is_default)
+SELECT
+  a.account_key,
+  a.account_name,
+  a.account_phone_number,
+  a.account_house_number,
+  a.account_ward,
+  a.account_city,
+  a.account_country,
+  true
+FROM identity.account a
+WHERE a.account_email = 'khachhang@example.com';
+
 -- ---------------------------------------------------------------------
 -- ordering: phương thức thanh toán
 -- ---------------------------------------------------------------------

@@ -50,18 +50,29 @@ Theo SDD Ebook — Tầng 3: Entity Model trả lời câu hỏi *hệ thống �
 - **Trạng thái:** Hoạt động (`ACTIVE`) | Bị khóa (`LOCKED`)
 - **Thuộc:** Role (đúng 1)
 - **Có một:** Cart, Wishlist (chỉ Khách hàng)
-- **Có nhiều:** Session, Order (Khách hàng đặt), GoodsReceipt (Nhân viên lập), OrderStatusHistory (người đổi trạng thái)
+- **Có nhiều:** ShippingAddress (chỉ Khách hàng), Session, Order (Khách hàng đặt), GoodsReceipt (Nhân viên lập), OrderStatusHistory (người đổi trạng thái)
 - **Quy tắc:**
   - Khách tự đăng ký bằng email đã xác minh qua OTP hoặc Google. Họ tên, số điện thoại, ngày sinh và địa chỉ được bổ sung ở UC-04. Email và số điện thoại đã cung cấp là duy nhất.
   - Tài khoản đăng ký qua OTP lưu mật khẩu băm bằng bcrypt. Tài khoản mới qua Google lưu định danh duy nhất trong `identity.account.account_google_sub` và có thể để trống hash mật khẩu.
   - Ngày đăng ký trong mã `KH-` lấy theo giờ `Asia/Ho_Chi_Minh` (đã chốt 21/11/2026).
   - Ngày sinh bắt buộc với Nhân viên, Admin (mã dùng ngày sinh); không bắt buộc với Khách hàng.
-  - Địa chỉ của Khách hàng là địa chỉ nhận hàng mặc định; mỗi khách 1 địa chỉ.
+  - Khách hàng có **sổ nhiều địa chỉ** giao hàng (`identity.shipping_address`); đúng 1 địa chỉ mặc định; các cột địa chỉ trên Account là mirror của mặc định (đã chốt 27/11/2026).
   - Mã do hệ thống cấp, không sửa. Bộ đếm 4 số riêng cho từng tiền tố KH, NV, AD; `<HỌ TÊN>` bỏ dấu, viết hoa, bỏ khoảng trắng. Cách cấp số không trùng khi nhiều tài khoản tạo cùng lúc: khóa theo tiền tố trong transaction rồi lấy số lớn nhất + 1 `[GD]`.
   - Đổi vai trò chỉ giữa Nhân viên ↔ Admin; đổi thì cấp mã mới (mã cũ không dùng lại), đăng xuất phiên đang mở. Khách hàng không đổi sang vai trò nội bộ và ngược lại.
   - Hệ thống luôn có ít nhất 1 Admin đang hoạt động: chặn đổi vai trò hoặc khóa Admin hoạt động cuối cùng. Admin được tự đổi vai trò, tự khóa mình khi còn Admin khác.
   - Khóa tài khoản kết thúc mọi phiên đăng nhập; dữ liệu giữ nguyên.
   - Phiên đăng nhập lưu ở Session (đã chốt 21/11/2026). Đổi vai trò, khóa tài khoản, đổi mật khẩu xóa mọi Session của tài khoản để mọi phiên kết thúc ngay (đổi mật khẩu kết thúc cả phiên hiện tại).
+
+## ShippingAddress
+- **Đại diện:** một địa chỉ nhận hàng trong sổ của Khách hàng.
+- **Bảng:** `identity.shipping_address`
+- **Trường:** name, phone, house_number, ward, city, country, is_default, created_at, updated_at
+- **Thuộc:** Account (đúng 1, vai trò Khách hàng)
+- **Quy tắc:**
+  - Một account có nhiều địa chỉ; tối đa một `is_default = true`.
+  - Địa chỉ đầu tiên tự mặc định; đặt B làm mặc định thì gỡ A (cùng transaction).
+  - Đồng bộ mirror địa chỉ mặc định lên cột địa chỉ của Account.
+  - Đặt hàng (UC-19/20) chọn hoặc thêm địa chỉ rồi snapshot vào Order; không FK Order → ShippingAddress.
 
 ## Session
 - **Đại diện:** một lần đăng nhập đang còn hiệu lực của một tài khoản trên một trình duyệt.

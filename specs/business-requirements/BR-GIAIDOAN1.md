@@ -40,7 +40,7 @@ Xây dựng website bán đồ bơi online cho một cửa hàng giả định (
 ### Out of Scope
 
 - Mega menu, bộ lọc nâng cao, thêm nhanh vào giỏ từ thẻ sản phẩm
-- Trang Outlet, sổ nhiều địa chỉ
+- Trang Outlet
 - Quên mật khẩu — làm ở giai đoạn 2. Giai đoạn 1 trang đăng nhập storefront vẫn có nút "Quên mật khẩu" cho Khách hàng, nhưng bấm vào không có hành động nào (đã chốt 21/11/2026)
 - Đánh giá sản phẩm (review) — làm ở giai đoạn 2
 - Blog, trang cộng đồng, góp ý, thanh thông báo chạy, banner tùy chỉnh

@@ -13,7 +13,18 @@ dependencies = [
 ]
 
 [dependency-groups]
-test = ["pytest (>=8.3,<10)", "aiosqlite (>=0.20,<1)"]
+test = ["pytest (>=8.3,<10)", "pytest-asyncio (>=0.24,<1)", "aiosqlite (>=0.20,<1)"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+# Cùng event loop cho cả session — tránh asyncpg "another operation is in progress"
+# khi engine SQLAlchemy tạo ở import-time bị gắn loop đã đóng (function-scoped).
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests"]
+markers = [
+    "manual: kiểm tra thủ công trên UI / trình duyệt, không chạy tự động đủ",
+]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

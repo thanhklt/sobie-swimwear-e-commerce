@@ -1,0 +1,94 @@
+{% extends "ordering_base.html" %}
+
+{% block ordering_content %}
+<div class="rise">
+  <h1>Cổng nhân viên</h1>
+  <p class="page-lead muted">{{ demo_employee }} · xác nhận, PAID giả, hủy, giao, UC-24</p>
+</div>
+
+<div class="tools-grid rise">
+  <section class="panel">
+    <h2>Xác nhận đơn</h2>
+    <p class="muted" style="margin-top:0;font-size:.85rem">UC-23 · QR phải PAID trước</p>
+    <form method="post" action="/dev/ordering/staff/confirm" class="row-actions">
+      <input name="order_code" placeholder="Mã đơn" required style="max-width:12rem">
+      <button type="submit">Xác nhận</button>
+    </form>
+  </section>
+
+  <section class="panel">
+    <h2>Giả lập SePay → PAID</h2>
+    <p class="muted" style="margin-top:0;font-size:.85rem">
+      Thay webhook UC-25 · chỉ QR · PENDING · UNPAID còn hạn. COD bị từ chối.
+      Không phải “NV xác nhận đã nhận tiền” production — chỉ để /dev thử ẩn QR rồi UC-23.
+    </p>
+    <form method="post" action="/dev/ordering/staff/mark-paid" class="row-actions">
+      <input name="order_code" placeholder="Mã đơn" required style="max-width:12rem">
+      <button type="submit">Đánh dấu PAID</button>
+    </form>
+  </section>
+
+  <section class="panel">
+    <h2>Hủy bởi NV</h2>
+    <p class="muted" style="margin-top:0;font-size:.85rem">UC-22 · bắt buộc lý do</p>
+    <form method="post" action="/dev/ordering/staff/cancel">
+      <div style="display:flex;flex-direction:column;gap:.55rem">
+        <div>
+          <label>Mã đơn</label>
+          <input name="order_code" required>
+        </div>
+        <div>
+          <label>Lý do</label>
+          <input name="reason" required maxlength="500" placeholder="Khách đổi ý / hết hàng…">
+        </div>
+        <button type="submit" class="danger solid">Hủy đơn</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel">
+    <h2>Chuyển trạng thái giao</h2>
+    <p class="muted" style="margin-top:0;font-size:.85rem">
+      Đã xác nhận → Chờ lấy hàng → Đang giao → Giao thành công (xuất HĐ)
+    </p>
+    <form method="post" action="/dev/ordering/staff/transition" class="row-actions">
+      <input name="order_code" placeholder="Mã đơn" required style="max-width:11rem">
+      <select name="to_status" style="max-width:13rem">
+        <option value="AWAITING_PICKUP">Chờ lấy hàng</option>
+        <option value="SHIPPING">Đang giao</option>
+        <option value="DELIVERED">Giao thành công</option>
+        <option value="DELIVERY_FAILED">Giao không thành công</option>
+      </select>
+      <button type="submit">Chuyển</button>
+    </form>
+  </section>
+
+  <section class="panel">
+    <h2>Tự hủy QR quá hạn</h2>
+    <p class="muted" style="margin-top:0;font-size:.85rem">UC-24 · chạy job ngay</p>
+    <form method="post" action="/dev/ordering/staff/auto-cancel">
+      <button type="submit">Chạy job</button>
+    </form>
+  </section>
+
+  <section class="panel">
+    <h2>Xem đơn + lịch sử</h2>
+    <p class="muted" style="margin-top:0;font-size:.85rem">
+      Timeline trạng thái + thời gian; NV thấy lý do hủy (KH không thấy).
+    </p>
+    <form method="post" action="/dev/ordering/staff/lookup-order" class="row-actions">
+      <input name="order_code" placeholder="Mã đơn" required style="max-width:12rem">
+      <button type="submit">Mở</button>
+    </form>
+  </section>
+
+  <section class="panel">
+    <h2>Xem hóa đơn</h2>
+    <p class="muted" style="margin-top:0;font-size:.85rem">UC-27 · mã dạng HD-XXXXXXXX</p>
+    <form method="post" action="/dev/ordering/staff/lookup-invoice" class="row-actions">
+      <input name="invoice_id" placeholder="HD-XXXXXXXX" required style="max-width:14rem">
+      <button type="submit">Mở</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

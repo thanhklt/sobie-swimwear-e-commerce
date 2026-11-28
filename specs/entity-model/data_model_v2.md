@@ -1043,6 +1043,9 @@ Có hiệu lực ngay khi tạo; hết hiệu lực khi Nhân viên bấm "Kết
 Trạng thái hiển thị: ENABLED -> "Đang hiệu lực"; DISABLED -> "Đã kết thúc".
 
 ORDER / CODE — có thời điểm bắt đầu và kết thúc (đã chốt Q25):
+Nhân viên chọn ngày theo lịch Asia/Ho_Chi_Minh. Service lưu:
+start_date = 00:00:00 ngày bắt đầu (ICT→UTC); end_date = 00:00:00 ngày kế tiếp
+ngày kết thúc (ICT→UTC) — tức áp dụng đến hết ngày đã chọn (đã chốt 24/11/2026).
 Hết hiệu lực theo 2 cách:
 1. Hết hạn: now >= end_date (không cần thao tác, status vẫn ENABLED).
 2. Nhân viên bấm kết thúc trước hạn: status = DISABLED; end_date giữ nguyên

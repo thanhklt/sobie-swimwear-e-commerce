@@ -81,15 +81,15 @@ Then: lịch sử trạng thái đơn ghi "Chưa xử lý → Đã hủy", ngu�
 
 ### Quyết định đã chốt
 - Trạng thái đơn: Chưa xử lý → Đã xác nhận → Chờ lấy hàng → Đang giao → Giao thành công | Giao không thành công; Đã hủy (đã chốt 15/11/2026, cập nhật 20/11/2026: thêm "Chờ lấy hàng", bỏ "Bị từ chối").
-- Đơn bị hủy (khách hủy, Nhân viên hủy hoặc hệ thống tự hủy) thì cộng lại tồn kho và hoàn lượt voucher (đã chốt 15/11/2026).
+- Đơn bị hủy (khách hủy, Nhân viên hủy hoặc hệ thống tự hủy) thì cộng lại tồn kho và hoàn lượt của khuyến mãi đã áp — cả voucher lẫn khuyến mãi theo hóa đơn (đã chốt 15/11/2026; xác nhận hoàn lượt hóa đơn 23/11/2026 theo data model v2 / UC-31).
 - Mỗi lần đơn đổi trạng thái, hệ thống lưu lịch sử: trạng thái cũ, trạng thái mới, nguồn thay đổi, người đổi (nếu có), thời điểm (theo ERD).
 
 ### Giả định [GD]
 - Tác vụ chạy mỗi 5 phút.
-- Tự hủy cũng hoàn lượt của khuyến mãi theo hóa đơn đã áp (voucher đã chốt).
 
 ## History
 - v1 (2026-11-15): initial
 - v2 (2026-11-15): chốt bộ trạng thái đơn, cộng lại tồn kho và hoàn lượt voucher khi tự hủy
 - v3 (2026-11-15): hoàn lượt khuyến mãi theo hóa đơn khi tự hủy; lưu lịch sử trạng thái đơn (theo ERD); thêm AC-6, AC-7
 - v4 (2026-11-20): đồng bộ BR-GIAIDOAN1 — thêm trạng thái "Chờ lấy hàng", bỏ "Bị từ chối"; UC-25 đổi thành đối soát qua webhook SePay
+- v5 (2026-11-24): chuyển hoàn lượt khuyến mãi theo hóa đơn từ giả định sang quyết định đã chốt (đồng bộ UC-31 / data model v2)

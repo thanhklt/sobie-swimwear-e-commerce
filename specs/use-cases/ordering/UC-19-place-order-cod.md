@@ -21,8 +21,8 @@ Khách bấm "Đặt hàng" trên trang giỏ hàng.
 `GET /api/v1/ordering/checkout` hiện hiển thị giỏ và hỗ trợ gộp giỏ sau đăng nhập. Biểu mẫu thông tin nhận hàng và nút “Sử dụng thông tin hồ sơ” cho đơn COD còn chờ triển khai.
 
 ## Main Flow
-1. Hệ thống mở trang thanh toán với các trường tên người nhận, địa chỉ nhận hàng (số nhà, đường; phường/xã; tỉnh/thành phố; quốc gia) và số điện thoại nhận hàng. Nút "Sử dụng thông tin hồ sơ" chỉ dùng được khi hồ sơ đã lưu đủ họ tên, ngày sinh, số điện thoại và địa chỉ nhận hàng hợp lệ. Hệ thống chỉ sao chép dữ liệu hồ sơ khi khách bấm nút.
-2. Khách nhập thông tin nhận hàng hoặc bấm "Sử dụng thông tin hồ sơ" để sao chép họ tên, địa chỉ và số điện thoại từ hồ sơ vào các trường tương ứng. Khách vẫn có thể sửa từng trường sau khi sao chép. Thông tin cuối cùng trên biểu mẫu được dùng cho riêng đơn hàng và không cập nhật hồ sơ khách.
+1. Hệ thống mở biểu mẫu với các trường tên người nhận, số điện thoại nhận hàng, và địa chỉ nhận hàng gồm số nhà và đường, phường/xã, tỉnh/thành phố, quốc gia. Khách có thể nhập tay ngay.
+2. Khách nhập thông tin nhận hàng hoặc bấm "Sử dụng thông tin hồ sơ". Nếu hồ sơ có đủ họ tên, ngày sinh, số điện thoại và địa chỉ hợp lệ, hệ thống sao chép tên, số điện thoại và địa chỉ vào biểu mẫu. Nếu hồ sơ chưa đầy đủ, áp dụng 2a. Khách vẫn có thể sửa các trường nhận hàng trước khi xác nhận. Đơn lưu thông tin nhận hàng cuối cùng trên biểu mẫu.
 3. Khách chọn phương thức "Thanh toán khi nhận hàng (COD)" và có thể nhập mã voucher.
 4. Hệ thống tính và hiển thị: tạm tính (đã áp khuyến mãi theo sản phẩm trên từng dòng), mức giảm do UC-31 chọn (tối đa 1 khuyến mãi: theo hóa đơn hoặc voucher), phí vận chuyển cố định, tổng thanh toán. Mọi mức giảm tính theo phần trăm, tiền làm tròn `ROUND_HALF_UP` về số nguyên VND.
 5. Khách bấm "Xác nhận đặt hàng".
@@ -31,6 +31,7 @@ Khách bấm "Đặt hàng" trên trang giỏ hàng.
 
 ## Alternative Flows
 - **0a. Khách chưa đăng nhập:** bấm "Đặt hàng" thì chuyển sang UC-02 Đăng nhập; đăng nhập xong quay lại trang thanh toán với giỏ đã gộp.
+- **2a. Hồ sơ chưa đủ thông tin để tự điền:** nút mở biểu mẫu cập nhật hồ sơ ngay tại checkout (UC-04). Khách bổ sung thông tin, lưu hồ sơ hợp lệ rồi quay lại biểu mẫu đặt hàng với thông tin nhận hàng được tự điền. Nếu có lỗi, biểu mẫu hồ sơ báo lỗi và cho khách sửa. Khách có thể đóng biểu mẫu để tiếp tục nhập tay.
 - **3a. Không nhập voucher:** UC-31 chỉ xét khuyến mãi theo giá trị hóa đơn.
 - **4a. Không có khuyến mãi theo hóa đơn hay voucher nào áp được:** mức giảm bằng 0; đơn không gắn khuyến mãi nào.
 
@@ -38,7 +39,7 @@ Khách bấm "Đặt hàng" trên trang giỏ hàng.
 - **E1. Hết hàng khi xác nhận:** một dòng không còn đủ tồn kho → không tạo đơn, rollback toàn bộ transaction, báo dòng nào thiếu hàng.
 - **E2. Voucher không hợp lệ:** UC-31 báo lỗi; khách sửa hoặc bỏ voucher rồi đặt lại.
 - **E3. Thiếu thông tin nhận hàng:** nếu thiếu tên người nhận, số điện thoại nhận hàng hoặc một phần bắt buộc của địa chỉ nhận hàng, hệ thống báo trường thiếu và không tạo đơn.
-- **E4. Giá hoặc mức giảm thay đổi trước khi xác nhận:** hệ thống tính lại theo giá hiện tại, báo khách và yêu cầu xác nhận lại `[GD]`.
+- **E4. Giá, mức giảm hoặc nguồn mức giảm thay đổi trước khi xác nhận:** hệ thống tính lại và yêu cầu khách xác nhận kết quả mới trước khi tạo đơn (UC-31 E5).
 - **E5. Khuyến mãi hết lượt hoặc không còn đủ điều kiện khi xác nhận:** hệ thống không tạo đơn, không trừ tồn kho hoặc tăng lượt khuyến mãi; cập nhật tổng thanh toán và yêu cầu khách xác nhận lại `[GD]`.
 - **E6. Lỗi tạo đơn hoặc cập nhật giỏ:** rollback toàn bộ transaction; đơn, tồn kho, lượt khuyến mãi và giỏ giữ nguyên.
 - **E7. Sản phẩm hoặc biến thể đã ngừng bán khi xác nhận:** tại bước 6, một sản phẩm cha hoặc biến thể không còn tồn tại hoặc đã INACTIVE trong Database → rollback toàn bộ transaction, báo rõ dòng không còn được bán; không tạo đơn, không trừ tồn kho, không thay đổi lượt dùng khuyến mãi hay xóa dòng giỏ.
@@ -152,9 +153,18 @@ And: hồ sơ tài khoản giữ nguyên
 
 ### AC-17: Hồ sơ chưa đầy đủ vẫn đặt hàng bằng cách nhập tay
 Given: hồ sơ đã có họ tên, số điện thoại và địa chỉ nhận hàng nhưng thiếu ngày sinh
-When: khách mở trang thanh toán
-Then: nút "Sử dụng thông tin hồ sơ" không dùng được
-And: khách vẫn đặt được hàng khi nhập tay đầy đủ thông tin nhận hàng hợp lệ và đáp ứng các điều kiện đặt hàng khác
+When: khách nhập tay đầy đủ thông tin nhận hàng hợp lệ và xác nhận
+Then: khách vẫn đặt được hàng khi đáp ứng các điều kiện đặt hàng khác
+
+### AC-18: Mở biểu mẫu hồ sơ và tự điền sau khi lưu
+Given: hồ sơ còn thiếu ít nhất một thông tin để tự điền
+When: khách bấm "Sử dụng thông tin hồ sơ" và lưu hồ sơ hợp lệ theo UC-04
+Then: hệ thống trở về biểu mẫu đặt hàng với tên người nhận, số điện thoại và địa chỉ được tự điền
+
+### AC-19: Quay lại nhập tay khi chưa cập nhật hồ sơ
+Given: khách đang mở biểu mẫu bổ sung hồ sơ từ checkout
+When: khách đóng biểu mẫu hồ sơ
+Then: khách trở lại biểu mẫu đặt hàng và vẫn có thể nhập tay thông tin nhận hàng
 
 ## Dependencies
 - **Upstream UC:** UC-02 Đăng nhập, UC-04 Cập nhật hồ sơ khách hàng, UC-14 Quản lý sản phẩm, UC-15 Quản lý biến thể màu × size, UC-18 Quản lý giỏ hàng, UC-31 Tính mức giảm cho đơn hàng
@@ -169,6 +179,7 @@ And: khách vẫn đặt được hàng khi nhập tay đầy đủ thông tin n
 - Service catalog phải dùng cùng transaction với tạo đơn khi kiểm tra trạng thái sản phẩm cha và biến thể, giữ khóa sản phẩm cha để đồng bộ với UC-14/15; không kiểm tra ACTIVE ngoài transaction rồi tạo đơn sau khi đã nhả khóa. Việc kiểm tra khi thêm giỏ hay TTL cache không thay thế bước này.
 
 ### Quyết định đã chốt
+- Nếu giá, mức giảm hoặc nguồn mức giảm thay đổi, khách xác nhận lại kết quả mới trước khi tạo đơn (UC-31 E5).
 - Xác nhận COD phải kiểm tra đồng thời sản phẩm cha ACTIVE, biến thể ACTIVE và tồn kho hiện hành qua Service công khai trong transaction tạo đơn; sản phẩm hoặc biến thể đã ngừng bán thì từ chối, rollback toàn bộ và báo dòng lỗi (UC-15-Q7; bổ sung điều kiện sản phẩm cha theo yêu cầu xử lý rà soát vòng 3 tại Codex 23/11/2026).
 - Trạng thái đơn: Chưa xử lý → Đã xác nhận → Chờ lấy hàng → Đang giao → Giao thành công | Giao không thành công; Đã hủy (đã chốt 15/11/2026, cập nhật 20/11/2026: thêm "Chờ lấy hàng", bỏ "Bị từ chối").
 - Mọi mức giảm tính theo phần trăm; tiền làm tròn `ROUND_HALF_UP` về số nguyên VND (đã chốt 15/11/2026).
@@ -178,7 +189,6 @@ And: khách vẫn đặt được hàng khi nhập tay đầy đủ thông tin n
 ### Giả định [GD]
 - Lượt đã dùng của khuyến mãi được chọn (voucher hoặc khuyến mãi theo hóa đơn) tăng khi tạo đơn.
 - Các dòng đã đặt được xóa khỏi giỏ sau khi đặt thành công.
-- Giá hoặc mức giảm thay đổi trước khi xác nhận thì tính lại và yêu cầu khách xác nhận lại.
 
 ## History
 - v1 (2026-11-15): initial
@@ -195,3 +205,4 @@ And: khách vẫn đặt được hàng khi nhập tay đầy đủ thông tin n
 - v11 (2026-11-23): merge main, giữ kiểm tra trạng thái Catalog dưới khóa cha (E7, AC-12..14) cùng kiểm tra lại giá/khuyến mãi và xóa giỏ trong transaction; không thay các giả định chưa chốt.
 - v12 (2026-11-23): sửa AC liên UC theo quy tắc chỉ sửa Mô tả sau CONFIRMED: trạng thái INACTIVE trong fixture được đặt trước xác nhận nhập; thao tác ngừng bán sau CONFIRMED bị từ chối, đặt hàng chờ khóa rồi đọc lại ACTIVE và tiếp tục khi đủ điều kiện. Không đổi luồng nghiệp vụ hoặc các giả định khác.
 - v13 (2026-11-23): chốt nút "Sử dụng thông tin hồ sơ", điều kiện hồ sơ đầy đủ và lưu thông tin nhận hàng theo từng đơn.
+- v14 (2026-11-27): cho phép nhập tay hoặc bổ sung hồ sơ tại checkout để tự điền sau khi lưu (2a, AC-17–AC-19); đồng bộ điều kiện xác nhận lại với UC-31.

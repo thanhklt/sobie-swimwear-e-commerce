@@ -2,7 +2,7 @@
 
 ## Metadata
 - **Phiên bản:** v2.1 (21/11/2026)
-- **Nguồn:** [data_model_v2.dbml](data_model_v2.dbml) (bản vẽ: [data_model_v2.md](data_model_v2.md)), [BR-GIAIDOAN1.md](../business-requirements/BR-GIAIDOAN1.md), [use case](../use-cases/README.md)
+- **Nguồn:** [data_model_v2.dbml](data_model_v2.dbml) (bản vẽ: [data_model_v2.md](data_model_v2.md)), [BR-GIAIDOAN1.md](../business-requirements/BR-GIAIDOAN1.md), [use case](../README.md)
 
 ## Quy ước
 

@@ -49,7 +49,7 @@ Khách vãng lai bấm "Đăng ký" trên website.
 - Có một tài khoản mới vai trò Khách hàng, trạng thái Hoạt động, với email đã xác minh và mã `KH-...`.
 - Tài khoản đăng ký qua OTP có mật khẩu Sobie đã được băm bằng bcrypt. Khách được chuyển đến màn hình đăng nhập.
 - Tài khoản đăng ký qua Google có liên kết Google để đăng nhập theo UC-02 và không có mật khẩu Sobie.
-- Họ tên, số điện thoại, ngày sinh và địa chỉ nhận hàng để trống khi tạo tài khoản. Khách bổ sung các thông tin này ở UC-04.
+- Đăng ký qua Google lưu email đã xác minh và định danh Google (`sub`); đăng ký trực tiếp lưu email đã xác minh và mật khẩu đã băm. Họ tên, ngày sinh, số điện thoại và địa chỉ nhận hàng được khách bổ sung qua UC-04.
 - Tài khoản có 1 giỏ hàng trống và 1 danh sách yêu thích trống (UC-18, UC-38).
 
 ## Acceptance Criteria
@@ -170,7 +170,7 @@ And: sau lần nhập sai thứ năm, đồng hồ đếm 5 phút tính từ l�
 - Người đã đăng nhập mở trang đăng ký được chuyển về trang chủ.
 - Sau khi tạo tài khoản qua Google, hệ thống đăng nhập ngay và chuyển khách về trang chủ hoặc checkout nếu đang đặt hàng (đã chốt 26/11/2026).
 - Sobie dùng email đã xác minh của Google để liên kết tài khoản Khách hàng trùng email mà không gửi OTP (đã chốt 26/11/2026).
-- Khách mới có thể để trống họ tên và số điện thoại. Tài khoản Google lưu định danh Google và có thể chưa có hash mật khẩu.
+- Tài khoản Khách hàng mới chỉ nhận dữ liệu xác thực từ luồng đăng ký. Thông tin hồ sơ do khách nhập sau khi tạo tài khoản, tại trang hồ sơ hoặc bằng nút tự điền ở checkout.
 
 ## History
 - v1 (2026-11-15): initial
@@ -185,8 +185,6 @@ And: sau lần nhập sai thứ năm, đồng hồ đếm 5 phút tính từ l�
 - v10 (2026-11-23): cập nhật E1 và AC-16 để khách dùng Google có thể đăng nhập vào tài khoản Sobie hiện có.
 - v11 (2026-11-23): bỏ các trường hồ sơ khỏi hai luồng đăng ký và bỏ E2, AC-3, AC-9, AC-10 liên quan.
 - v12 (2026-11-23): đồng bộ E1 và AC-16 với xác minh OTP khi liên kết Google lần đầu ở UC-02.
-<<<<<<< HEAD
 - v13 (2026-11-26): thêm AC-18 đồng hồ đếm ngược gửi lại OTP; ghi module notification ở Dependencies.
-=======
->>>>>>> fcb9380e60b4edef3fd9791b45e5863224124b98
 - v14 (2026-11-26): gộp đăng ký và đăng nhập Google, đăng nhập ngay sau khi tạo tài khoản và liên kết theo email không cần OTP.
+- v15 (2026-11-27): phân biệt dữ liệu xác thực lưu theo phương thức và dẫn chiếu cập nhật hồ sơ từ checkout.

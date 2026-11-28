@@ -11,10 +11,10 @@
 - Admin cập nhật hồ sơ của tài khoản Khách hàng qua UC-07.
 
 ## Trigger
-Khách hàng bấm "Lưu" trên trang hồ sơ của mình, hoặc Admin lưu thay đổi cho tài khoản Khách hàng đã chọn trong portal quản trị.
+Khách hàng mở trang hồ sơ hoặc bấm "Sử dụng thông tin hồ sơ" ở checkout khi hồ sơ chưa đầy đủ. Admin có thể lưu thay đổi cho tài khoản Khách hàng đã chọn trong portal quản trị.
 
 ## Preconditions
-- Khách hàng đang đăng nhập ở storefront và mở hồ sơ của mình, hoặc Admin đang đăng nhập ở portal quản trị và đã chọn một tài khoản Khách hàng theo UC-07.
+- Khách hàng đang đăng nhập ở storefront, hoặc Admin đang đăng nhập ở portal quản trị và đã chọn một tài khoản Khách hàng theo UC-07.
 
 ## Main Flow
 1. Khách hàng mở trang hồ sơ.
@@ -25,6 +25,7 @@ Khách hàng bấm "Lưu" trên trang hồ sơ của mình, hoặc Admin lưu th
 
 ## Alternative Flows
 - **1a. Admin cập nhật hồ sơ Khách hàng:** Admin chọn tài khoản Khách hàng trong portal quản trị theo UC-07. Admin có thể sửa thông tin hồ sơ, bao gồm email. Hệ thống kiểm tra và lưu thay đổi theo UC-07.
+- **1b. Bổ sung hồ sơ trong checkout:** Checkout (UC-19 hoặc UC-20) mở biểu mẫu hồ sơ với dữ liệu đã lưu. Khách bổ sung hoặc sửa họ tên, ngày sinh, số điện thoại và địa chỉ nhận hàng. Hệ thống kiểm tra và lưu theo bước 4–5. Sau khi lưu thành công, hệ thống về checkout và tự điền tên người nhận, số điện thoại nhận hàng và địa chỉ. Nếu dữ liệu không hợp lệ, hệ thống báo lỗi tại biểu mẫu hồ sơ. Khách có thể đóng biểu mẫu và tiếp tục nhập thông tin nhận hàng ngay tại checkout.
 - **3a. Không thay đổi gì:** khách bấm "Lưu" khi không sửa trường nào — hệ thống báo thành công, dữ liệu giữ nguyên.
 
 ## Exceptions
@@ -66,6 +67,12 @@ When: Admin lưu họ tên hoặc địa chỉ nhận hàng hợp lệ cho tài 
 Then: hệ thống cập nhật hồ sơ của tài khoản Khách hàng đó và giữ nguyên mã `KH-`
 And: trang hồ sơ của Khách hàng hiển thị thông tin đã cập nhật
 
+### AC-6: Bổ sung hồ sơ để tự điền trong checkout
+Given: Khách hàng đang checkout và hồ sơ còn thiếu hoặc có thông tin không hợp lệ
+When: khách bấm "Sử dụng thông tin hồ sơ" và lưu biểu mẫu hồ sơ với đủ dữ liệu hợp lệ
+Then: hệ thống lưu hồ sơ và tự điền tên người nhận, số điện thoại nhận hàng và địa chỉ trên biểu mẫu đặt hàng
+And: ngày sinh chỉ lưu trong hồ sơ
+
 ## Hiện trạng triển khai
 
 - Khách hàng xem và lưu hồ sơ của mình tại `/api/v1/identity/account/profile`. Admin lưu hồ sơ tài khoản Khách hàng đã chọn tại `POST /api/v1/identity/portal/accounts/{account_key}/edit` theo UC-07.
@@ -86,7 +93,7 @@ And: trang hồ sơ của Khách hàng hiển thị thông tin đã cập nhật
 - Email và số điện thoại unique, dùng để đăng nhập; không có username riêng (đã chốt 15/11/2026).
 - Mã tài khoản không sửa được (đã chốt 21/11/2026).
 - Khách hàng tự cập nhật hồ sơ ở storefront. Admin cũng được cập nhật hồ sơ Khách hàng qua UC-07 ở portal quản trị (đã chốt 23/11/2026).
-- Trên trang thanh toán COD và QR, nút "Sử dụng thông tin hồ sơ" chỉ dùng được khi hồ sơ đã lưu đủ họ tên, ngày sinh, số điện thoại và địa chỉ nhận hàng hợp lệ. Khi khách bấm, hệ thống sao chép họ tên, số điện thoại và địa chỉ vào biểu mẫu của đơn. Ngày sinh chỉ là điều kiện sử dụng nút. Khách có thể nhập tay hoặc sửa thông tin cho riêng đơn hàng (đã chốt 23/11/2026).
+- Khách có thể nhập tay tên người nhận, số điện thoại nhận hàng và địa chỉ nhận hàng. Khi khách bấm "Sử dụng thông tin hồ sơ", hệ thống tự điền ba thông tin nhận hàng nếu hồ sơ đã có đủ họ tên, ngày sinh, số điện thoại và địa chỉ hợp lệ. Nếu hồ sơ còn thiếu hoặc có dữ liệu không hợp lệ, hệ thống mở biểu mẫu cập nhật hồ sơ ngay trong checkout theo UC-04. Sau khi lưu hồ sơ hợp lệ, hệ thống tự điền thông tin nhận hàng và đưa khách về biểu mẫu đặt hàng. Khách có thể sửa các giá trị trước khi xác nhận. Đơn lưu thông tin nhận hàng cuối cùng tại thời điểm đặt. Ngày sinh là điều kiện hồ sơ đầy đủ (đã chốt 27/11/2026).
 
 - Đổi số điện thoại không cần xác minh lại (đã chốt 24/11/2026).
 - Khách hàng không tự đổi email. Email chỉ đổi qua Admin (UC-07) vì Sobie liên kết Google theo email đã xác minh (UC-01, UC-02) (đã chốt 26/11/2026).
@@ -98,3 +105,4 @@ And: trang hồ sơ của Khách hàng hiển thị thông tin đã cập nhật
 - v4 (2026-11-23): dùng nút "Sử dụng thông tin hồ sơ" khi đặt hàng và chốt điều kiện hồ sơ đầy đủ, gồm ngày sinh.
 - v5 (2026-11-23): chốt quyền cập nhật hồ sơ Khách hàng cho chủ tài khoản và Admin qua UC-07.
 - v6 (2026-11-26): email chỉ xem trên hồ sơ storefront, AC-3 kiểm tra số điện thoại trùng.
+- v7 (2026-11-27): thêm luồng cập nhật hồ sơ tại checkout và tự điền sau khi lưu hợp lệ.

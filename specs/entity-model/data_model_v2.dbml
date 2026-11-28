@@ -307,6 +307,7 @@ Table shopping.wishlist_item {
   wishlist_item_key          uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
   wishlist_item_wishlist_key uuid [not null, note: '[SUA] trỏ tới wishlist (đã chốt Q11)']
   wishlist_item_product_key  uuid [not null]
+  wishlist_item_added_at     timestamptz [not null, default: `now()`, note: '[GD] UC-38 AC-3 sắp xếp mới thêm trước; ERD trước đó không có cột thời gian']
 
   indexes {
     (wishlist_item_wishlist_key, wishlist_item_product_key) [unique, note: '[MOI] mỗi sản phẩm 1 lần / danh sách yêu thích (BR-002)']
@@ -501,6 +502,21 @@ Table shopping.cart_item {
 
 Ref: shopping.cart_item.cart_item_cart_key > shopping.cart.cart_key [delete: cascade]
 Ref: shopping.cart_item.cart_item_variant_key > catalog.variant.variant_key [delete: cascade]
+
+Table shopping.cart_merge_request {
+  cart_merge_request_key          uuid [pk, default: `gen_random_uuid()`, note: '[GD] UC-18 AC-10/11']
+  cart_merge_request_account_key  uuid [not null]
+  cart_merge_request_id           varchar(64) [not null, note: 'Mã gộp do trình duyệt sinh, cố định cho một lần gộp']
+  cart_merge_request_payload_hash char(64) [not null, note: 'SHA-256 payload gộp']
+  cart_merge_request_created_at   timestamptz [not null, default: `now()`]
+
+  indexes {
+    (cart_merge_request_account_key, cart_merge_request_id) [unique]
+  }
+  Note: '[GD] Chống cộng trùng khi gộp giỏ localStorage (UC-18 AC-10, AC-11). Nhánh feature/shopping.'
+}
+
+Ref: shopping.cart_merge_request.cart_merge_request_account_key > identity.account.account_key [delete: cascade]
 
 Table ordering.payment {
   payment_key  uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']

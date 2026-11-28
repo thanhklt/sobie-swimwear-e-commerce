@@ -143,20 +143,20 @@ def test_uc01_ac17_otp_locks_for_five_minutes_after_fifth_failure(world):
 def test_uc01_ac18_resend_countdown(world):
     client = world.client
     register_url = f"{PREFIX}/register"
-    disabled_button = r"<button\b[^>]*\bdisabled>Gửi lại mã</button>"
+    disabled_button = r"<button\b[^>]*\bdisabled[^>]*>\s*Gửi lại mã sau <span>{}</span>\s*</button>"
 
     page = begin(client)
-    assert re.search(disabled_button, page.text)
+    assert re.search(disabled_button.format("05:00"), page.text)
     assert 'data-resend-after="300"' in page.text and "<span>05:00</span>" in page.text
 
     world.advance(120)
     page = client.get(register_url)
-    assert re.search(disabled_button, page.text)
+    assert re.search(disabled_button.format("03:00"), page.text)
     assert 'data-resend-after="180"' in page.text and "<span>03:00</span>" in page.text
 
     world.advance(180)
     page = client.get(register_url)
-    resend_button = re.search(r"<button\b[^>]*>Gửi lại mã</button>", page.text)
+    resend_button = re.search(r"<button\b[^>]*>\s*Gửi lại mã\s*</button>", page.text)
     assert resend_button and "disabled" not in resend_button.group()
     assert "data-resend-after=" not in page.text
 
@@ -165,7 +165,7 @@ def test_uc01_ac18_resend_countdown(world):
     for _ in range(5):
         page = post(client, f"{register_url}/otp", otp="000000")
     assert page.status_code == 429 and 'name="otp"' not in page.text
-    assert re.search(disabled_button, page.text)
+    assert re.search(disabled_button.format("05:00"), page.text)
     assert 'data-resend-after="300"' in page.text and "<span>05:00</span>" in page.text
 
 

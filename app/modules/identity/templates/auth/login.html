@@ -1,53 +1,29 @@
-{% extends "identity/_layouts/auth.html" %}
-{% from "identity/_partials/auth_fields.html" import credentials %}
+{% extends "identity/_layouts/storefront_auth.html" %}
+{% from "identity/_partials/auth_fields.html" import credentials, login_notices, password_toggles %}
 {% from "identity/_partials/icons.html" import google %}
+{% from "_storefront/icons.html" import icon %}
 
 {% block title %}Đăng nhập · Sobie{% endblock %}
-{% block account_content %}
+{% block auth_content %}
   <header class="identity-intro">
-    {% block login_intro %}
-      <p class="identity-eyebrow">Sobie / Summer Club</p>
-      <h1 id="identity-title">Hẹn bạn dưới nước!</h1>
-      <p>Đăng nhập để khám phá, lưu sản phẩm yêu thích và theo dõi đơn hàng.</p>
-    {% endblock %}
+    <h1 id="identity-title">ĐĂNG NHẬP</h1>
+    <p>Chào mừng bạn trở lại với SOBIE.</p>
   </header>
 
-  {% if registered %}<p class="identity-notice" role="status">Đăng ký thành công.</p>{% endif %}
-  {% if password_changed %}<p class="identity-notice" role="status">Đổi mật khẩu thành công.</p>{% endif %}
-  {% if self_locked %}<p class="identity-notice" role="status">Đã khóa tài khoản.</p>{% endif %}
-  {% if role_changed %}<p class="identity-notice" role="status">Đã đổi vai trò. Vui lòng đăng nhập lại.</p>{% endif %}
-  {% if result.message and not result.field %}
-    <p class="identity-notice" role="alert">{{ result.message }}</p>
-  {% endif %}
+  {{ login_notices(result, registered, password_changed, self_locked, role_changed) }}
 
   <form class="identity-form" method="post" action="{{ form_action }}">
-    {{ credentials(identifier, result) }}
-    {% block login_options %}
-      <div class="identity-login-options">
-        <label><input type="checkbox"> Ghi nhớ đăng nhập</label>
-        <button class="identity-forgot" type="button">Quên mật khẩu?</button>
-      </div>
-    {% endblock %}
-    <button class="identity-button" type="submit">Đăng nhập <span aria-hidden="true">→</span></button>
+    {{ credentials(identifier, result, "Tài khoản") }}
+    <button class="identity-forgot" type="button">Quên mật khẩu?</button>
+    <button class="identity-button" type="submit">Đăng nhập {{ icon("arrow") }}</button>
   </form>
 
-  {% block login_alternatives %}
-    <div class="identity-divider">hoặc</div>
-    <a class="identity-button identity-button--secondary"
-       href="{{ request.url_for('start_google_registration').path }}?{{ google_query }}">{{ google() }} Đăng nhập với Google</a>
-    <p class="identity-alternative">Chưa có tài khoản?
-      <a href="{{ request.url_for('registration_form').path }}">Đăng ký ngay</a>
-    </p>
-  {% endblock %}
+  <div class="identity-divider">hoặc</div>
+  <a class="identity-button identity-button--secondary"
+     href="{{ request.url_for('start_google_registration').path }}?{{ google_query }}">{{ google() }} Đăng nhập với Google</a>
+  <p class="identity-alternative">Chưa có tài khoản?
+    <a href="{{ request.url_for('registration_form').path }}">Đăng ký</a>
+  </p>
 
-  <script>
-    const password = document.getElementById("password");
-    const toggle = document.querySelector(".identity-password-toggle");
-    toggle.addEventListener("click", () => {
-      const reveal = password.type === "password";
-      password.type = reveal ? "text" : "password";
-      toggle.setAttribute("aria-pressed", String(reveal));
-      toggle.setAttribute("aria-label", reveal ? "Ẩn mật khẩu" : "Hiện mật khẩu");
-    });
-  </script>
+  {{ password_toggles() }}
 {% endblock %}

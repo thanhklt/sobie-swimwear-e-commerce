@@ -161,7 +161,7 @@ def test_uc02_ac7_checkout_merges_cart_once(world, monkeypatch, branch):
     assert entry.path == LOGIN and parse_qs(entry.query) == {"return_url": [CHECKOUT]}
     page = client.get(start.headers["location"])
     if branch == "password":
-        action = unescape(re.search(r'<form [^>]*action="([^"]+)"', page.text)[1])
+        action = unescape(re.search(r'<form\b[^>]*\bclass="identity-form"[^>]*action="([^"]+)"', page.text)[1])
         response = post(client, action, identifier="google@example.com", password="123456")
     else:
         url = unescape(re.search(r'href="([^"]+/register/google\?[^"]+)"', page.text)[1])

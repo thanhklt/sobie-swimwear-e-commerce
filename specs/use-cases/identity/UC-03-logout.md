@@ -62,11 +62,11 @@ Then: hệ thống coi như chưa đăng nhập
 
 ### Quyết định đã chốt
 - Đăng xuất xóa dòng `identity.session` của phiên hiện tại, có hiệu lực ngay (đã chốt 21/11/2026, thay quyết định "chỉ hủy refresh token" cùng ngày).
+- Đăng xuất chỉ kết thúc phiên trên thiết bị hiện tại.
+- Sau đăng xuất chuyển về trang chủ `/`.
 
 ### Giả định [GD]
 - Toàn bộ UC này là giả định: BR-001 chỉ nêu đăng ký và đăng nhập, không nêu đăng xuất.
-- Đăng xuất chỉ kết thúc phiên trên thiết bị hiện tại.
-- Sau đăng xuất chuyển về trang chủ.
 
 ## History
 - v1 (2026-11-15): initial

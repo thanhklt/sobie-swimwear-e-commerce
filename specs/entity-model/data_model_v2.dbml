@@ -107,10 +107,11 @@ Table identity.account {
   account_id            varchar(100) [not null, unique, note: '[KEY][MOI] mã tự nhiên theo vai trò, hệ thống cấp (chuyển từ customer_id / employee_id / admin_id). KH-<YYYYMMDD ngày đăng ký>-<4 số>; NV- / AD-<HỌ TÊN>-<YYYYMMDD ngày sinh>-<4 số>. Bộ đếm 4 số riêng cho từng tiền tố KH, NV, AD. Không sửa, trừ khi đổi vai trò NV <-> AD thì cấp mã mới (Q16, Q32). Ngày đăng ký lấy theo giờ Asia/Ho_Chi_Minh (đã chốt 21/11/2026).']
   account_role_key      uuid [not null, note: '[RBAC] mỗi tài khoản đúng 1 vai trò (đã chốt Q17)']
   account_email         varchar(255) [not null, unique, note: '[MOI] đăng nhập bằng email']
-  account_phone_number  varchar(20)  [not null, unique, note: '[MOI] đăng nhập bằng SĐT; là SĐT của người dùng (Q5)']
-  account_hash_password varchar(255) [not null, note: 'Băm bcrypt (đã chốt 21/11/2026)']
+  account_phone_number  varchar(20)  [unique, note: 'Khách hàng có thể bổ sung ở UC-04. Bắt buộc với Nhân viên và Admin.']
+  account_hash_password varchar(255) [note: 'Mật khẩu Sobie băm bằng bcrypt. Có thể NULL với tài khoản chỉ dùng Google.']
+  account_google_sub    varchar(255) [unique, note: 'Định danh Google cho Khách hàng. Có thể NULL khi chưa liên kết. Lưu khi tạo tài khoản qua Google hoặc liên kết qua email đã được Google xác minh (UC-01, UC-02).']
   account_status        varchar(20)  [not null, default: 'ACTIVE', note: '[MOI] khóa / mở khóa. CHECK IN (ACTIVE, LOCKED)']
-  account_name          varchar(255) [not null, note: '[MOI] họ tên (chuyển từ customer_name / employee_name / admin_name)']
+  account_name          varchar(255) [note: 'Khách hàng có thể bổ sung ở UC-04. Bắt buộc với Nhân viên và Admin.']
   account_date_of_birth date [note: '[MOI] ngày sinh. Bắt buộc với Nhân viên / Admin (mã dùng ngày sinh), không bắt buộc với Khách hàng — service kiểm tra theo vai trò']
   account_house_number  varchar(255) [note: '[MOI] số nhà, đường']
   account_ward          varchar(100) [note: '[MOI] phường / xã']
@@ -126,9 +127,9 @@ Table identity.account {
   [BO] 3 bảng hồ sơ identity.customer, identity.employee, identity.admin vì có cùng
   các trường; thay quyết định BR-001 ngày 15/11 "tài khoản tách khỏi hồ sơ".
   [BO] account_username — BR: không có username riêng.
-  Địa chỉ trên account (house/ward/city/country): với Khách hàng là **mirror địa chỉ
-  mặc định** trong sổ `identity.shipping_address` (đã chốt 27/11/2026). Sổ có nhiều
-  địa chỉ; đặt hàng chụp snapshot từ địa chỉ đang chọn vào order.
+  Mỗi tài khoản phải có hash mật khẩu Sobie hoặc định danh Google. Chỉ tài khoản
+  Khách hàng có thể có định danh Google và định danh phải khác rỗng.
+  Địa chỉ: với Khách hàng là địa chỉ hồ sơ để sao chép vào biểu mẫu đặt hàng khi khách yêu cầu.
   [RBAC] Vai trò lấy từ identity.role qua account_role_key.
   Đổi vai trò: chỉ giữa employee và admin (BR-001, chốt 20/11/2026); không đổi
   customer <-> employee / admin. Cập nhật account_role_key và cấp account_id mới
@@ -245,7 +246,7 @@ Table catalog.color {
 Table catalog.product {
   product_key                uuid [pk, default: `gen_random_uuid()`, note: '[KEY]']
   product_id                 varchar(10) [not null, unique, note: '[KEY] mã tự nhiên, hệ thống cấp, không sửa (đã chốt): SP-<4 số tăng dần>, ví dụ SP-0001']
-  product_name               varchar(255) [not null]
+  product_name               varchar(255) [not null, note: 'Lưu tên đã trim, giữ hoa/thường; duy nhất theo LOWER(TRIM(product_name)) (UC-14-Q9, đã chốt 23/11/2026)']
   product_description        text
   product_total_score_review numeric(3,2) [not null, default: 0, note: 'Giữ theo ERD; review là giai đoạn 2, chưa dùng ở MVP']
   product_status             varchar(20) [not null, default: 'INACTIVE', note: 'CHECK IN (ACTIVE, INACTIVE)']
@@ -254,11 +255,20 @@ Table catalog.product {
   product_category_key       uuid [not null, note: '[KEY]']
   product_gender_key         uuid [not null, note: '[KEY]']
 
+  indexes {
+    (`LOWER(TRIM(product_name))`) [unique, name: 'idx_product_name_unique']
+  }
+
   Note: '''
   [BO] product_supplier_id (đã chốt Q1) — BR không gắn sản phẩm với 1 nhà cung cấp;
   nhà cung cấp gắn với phiếu nhập (dashboard "tiền nhập theo NCC" lấy từ
   goods_receipt). Giữ FK này sẽ chặn nhập cùng sản phẩm từ NCC khác.
-  Chỉ chuyển ACTIVE khi đã có biến thể và mọi size đã có giá (UC-14).
+  Suốt khi ACTIVE phải có ít nhất 1 ảnh gallery, ít nhất 1 biến thể tồn tại
+  (không yêu cầu biến thể đó ACTIVE), mọi size có giá > 0; tồn kho = 0 vẫn hợp lệ.
+  Chặn thao tác làm mất điều kiện, yêu cầu chuyển INACTIVE trước; không tự đổi trạng thái.
+  UC-14/15/16 cùng khóa dòng product FOR UPDATE trong một transaction từ trước
+  kiểm tra trạng thái/đọc giá/ghi dữ liệu con đến commit (UC-14-Q8, chốt 23/11/2026).
+  Đây là bất biến được bảo vệ bởi giao thức transaction, không phải CHECK trên một cột.
   '''
 }
 
@@ -899,6 +909,13 @@ TableGroup inventory {
 // 97  | identity.account.account_hash_password             | Ghi thuật toán băm bcrypt (Q36)
 // 98  | shopping.cart / shopping.wishlist                 | Ghi thời điểm tạo giỏ hàng và danh sách yêu thích (Q39)
 // 99  | inventory.goods_receipt_detail.goods_receipt_detail_unit_price | Ghi rõ giá nhập bằng 0 hợp lệ (Q38)
+//
+// v2.17 — Đồng bộ UC-14-Q8/Q9 (developer duyệt tại Codex 23/11/2026)
+// 100 | catalog.product                                  | Unique index LOWER(TRIM(product_name));
+//     |                                                  | ghi bất biến ACTIVE và khóa chung UC-14/15/16.
+//
+// v2.18 — Đồng bộ UC-01/02/04 (27/11/2026)
+// 101 | identity.account | Thêm định danh Google duy nhất và đồng bộ tính tùy chọn của mật khẩu, họ tên và số điện thoại.
 //
 // OPEN QUESTIONS [GD]
 //  Q1. [ĐÃ CHỐT] Bỏ product_supplier_id.

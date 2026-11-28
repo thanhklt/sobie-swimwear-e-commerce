@@ -2,7 +2,7 @@
 
 ## Metadata
 - **Phiên bản:** v2.1 (21/11/2026)
-- **Nguồn:** [data_model_v2.dbml](data_model_v2.dbml) (bản vẽ: [data_model_v2.md](data_model_v2.md)), [BR-GIAIDOAN1.md](../business-requirements/BR-GIAIDOAN1.md), [use case](../use-cases/README.md)
+- **Nguồn:** [data_model_v2.dbml](data_model_v2.dbml) (bản vẽ: [data_model_v2.md](data_model_v2.md)), [BR-GIAIDOAN1.md](../business-requirements/BR-GIAIDOAN1.md), [use case](../README.md)
 
 ## Quy ước
 
@@ -27,6 +27,7 @@ Theo SDD Ebook — Tầng 3: Entity Model trả lời câu hỏi *hệ thống �
 | inventory | Supplier, GoodsReceipt, GoodsReceiptDetail, Stock | — |
 | shipping | (không có) | Trang giả lập vận chuyển |
 | reporting | (không có) | Dashboard (view tổng hợp) |
+| notification | (không có) | Mẫu email (tiêu đề, nội dung) |
 
 ---
 
@@ -45,14 +46,14 @@ Theo SDD Ebook — Tầng 3: Entity Model trả lời câu hỏi *hệ thống �
 - **Đại diện:** một người dùng của hệ thống — Khách hàng, Nhân viên hoặc Admin — gồm thông tin đăng nhập và thông tin cá nhân.
 - **Bảng:** `identity.account`
 - **Mã:** `KH-<YYYYMMDD ngày đăng ký>-<4 số>` | `NV-<HỌ TÊN>-<YYYYMMDD ngày sinh>-<4 số>` | `AD-<HỌ TÊN>-<YYYYMMDD ngày sinh>-<4 số>`
-- **Trường:** email, phone_number, hash_password, status, name, date_of_birth, house_number, ward, city, country, created_at (ngày đăng ký)
+- **Trường:** email, phone_number, hash_password, google_sub, status, name, date_of_birth, house_number, ward, city, country, created_at (ngày đăng ký)
 - **Trạng thái:** Hoạt động (`ACTIVE`) | Bị khóa (`LOCKED`)
 - **Thuộc:** Role (đúng 1)
 - **Có một:** Cart, Wishlist (chỉ Khách hàng)
 - **Có nhiều:** ShippingAddress (chỉ Khách hàng), Session, Order (Khách hàng đặt), GoodsReceipt (Nhân viên lập), OrderStatusHistory (người đổi trạng thái)
 - **Quy tắc:**
-  - Đăng ký bắt buộc đủ email và số điện thoại, cả hai duy nhất; đăng nhập bằng một trong hai; không có username.
-  - Mật khẩu băm bằng bcrypt (đã chốt 21/11/2026).
+  - Khách tự đăng ký bằng email đã xác minh qua OTP hoặc Google. Họ tên, số điện thoại, ngày sinh và địa chỉ được bổ sung ở UC-04. Email và số điện thoại đã cung cấp là duy nhất.
+  - Tài khoản đăng ký qua OTP lưu mật khẩu băm bằng bcrypt. Tài khoản mới qua Google lưu định danh duy nhất trong `identity.account.account_google_sub` và có thể để trống hash mật khẩu.
   - Ngày đăng ký trong mã `KH-` lấy theo giờ `Asia/Ho_Chi_Minh` (đã chốt 21/11/2026).
   - Ngày sinh bắt buộc với Nhân viên, Admin (mã dùng ngày sinh); không bắt buộc với Khách hàng.
   - Khách hàng có **sổ nhiều địa chỉ** giao hàng (`identity.shipping_address`); đúng 1 địa chỉ mặc định; các cột địa chỉ trên Account là mirror của mặc định (đã chốt 27/11/2026).
@@ -293,9 +294,10 @@ Theo SDD Ebook — Tầng 3: Entity Model trả lời câu hỏi *hệ thống �
 - **Bảng:** `inventory.supplier`
 - **Mã:** `NCC-<4 số>`
 - **Trường:** name, phone_number, email, address, status
+- **Tên:** bắt buộc, không trùng với nhà cung cấp khác kể cả nhà cung cấp "Ngừng hợp tác"; so sánh bỏ khoảng trắng đầu/cuối, không phân biệt hoa/thường nhưng phân biệt dấu tiếng Việt; khi sửa loại trừ chính nhà cung cấp đang sửa (UC-32, đã chốt 22/11/2026).
 - **Trạng thái:** Đang hợp tác (`ACTIVE`) | Ngừng hợp tác (`INACTIVE`)
 - **Có nhiều:** GoodsReceipt
-- **Quy tắc:** chỉ nhà cung cấp Đang hợp tác được chọn khi lập phiếu; đã có phiếu nhập thì không xóa, chỉ ngừng hợp tác `[GD]`.
+- **Quy tắc:** chỉ nhà cung cấp Đang hợp tác được chọn khi lập phiếu; cho phép xóa hẳn khi chưa có phiếu nhập; nếu có phiếu tham chiếu ở bất kỳ trạng thái nào thì từ chối xóa và gợi ý ngừng hợp tác (UC-32, đã chốt 22/11/2026).
 
 ## GoodsReceipt / GoodsReceiptDetail
 - **Đại diện:** một phiếu nhập hàng / một dòng biến thể trong phiếu.

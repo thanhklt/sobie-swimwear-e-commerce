@@ -1,0 +1,36 @@
+{% from "_storefront/icons.html" import icon %}
+
+<article class="home-card home-card--{{ card_size }}">
+  <div class="home-card__media">
+    <img src="{{ product.image_url }}" width="1254" height="1254" alt="{{ product.name }}" loading="lazy">
+    <div class="home-card__badges">
+      {% if product.discount_percent is not none %}
+        <span class="home-card__badge home-card__badge--sale">-{{ product.discount_percent }}%</span>
+      {% endif %}
+      {% if product.out_of_stock %}
+        <span class="home-card__badge">Hết hàng</span>
+      {% endif %}
+    </div>
+    <span class="home-card__heart">{{ icon("heart") }}</span>
+  </div>
+  <div class="home-card__body">
+    <h3>{{ product.name }}</h3>
+    <p class="home-card__price">
+      Từ
+      {% if product.sale_price is not none %}
+        <strong class="home-card__sale-price">{{ product.sale_price | vnd }}</strong>
+        <del>{{ product.price | vnd }}</del>
+      {% else %}
+        <strong>{{ product.price | vnd }}</strong>
+      {% endif %}
+    </p>
+    <div class="home-card__bottom">
+      <div class="home-card__colors" aria-hidden="true">
+        {% for color in product.colors %}
+          <span style="--swatch: {{ color }}"></span>
+        {% endfor %}
+      </div>
+      <a href="{{ product.detail_url }}" aria-label="Xem chi tiết {{ product.name }}">Xem chi tiết {{ icon("arrow") }}</a>
+    </div>
+  </div>
+</article>

@@ -8,6 +8,8 @@ from pathlib import Path
 from fastapi.templating import Jinja2Templates
 from jinja2 import ChoiceLoader, Environment, FileSystemLoader, PrefixLoader
 
+from app.config.store import STORE_HOTLINE, STORE_SHIPPING_FEE, STORE_ZALO_URL
+
 _APP_DIR = Path(__file__).resolve().parents[2]
 _modules: dict[str, FileSystemLoader] = {}
 
@@ -23,6 +25,18 @@ templates = Jinja2Templates(
         ]),
     ),
 )
+
+
+def format_vnd(amount: int) -> str:
+    return f"{amount:,}".replace(",", ".") + "₫"
+
+
+templates.env.filters["vnd"] = format_vnd
+templates.env.globals["store"] = {
+    "hotline": STORE_HOTLINE,
+    "zalo_url": STORE_ZALO_URL,
+    "shipping_fee": STORE_SHIPPING_FEE,
+}
 
 
 def register_templates(module: str, directory: Path) -> None:

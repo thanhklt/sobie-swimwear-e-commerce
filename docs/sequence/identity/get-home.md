@@ -2,6 +2,8 @@
 
 UC-02/03 · Điều hướng storefront.
 
+Endpoint đã chuyển sang [trang chủ catalog](../catalog/get-home.md).
+
 ```mermaid
 sequenceDiagram
     actor Browser as Trình duyệt

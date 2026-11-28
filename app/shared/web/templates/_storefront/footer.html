@@ -1,0 +1,40 @@
+{% from "_storefront/icons.html" import icon %}
+
+<footer class="store-footer" role="contentinfo">
+  <div class="store-wrap store-footer__layout">
+    <div class="store-footer__brand">
+      <a class="store-logo" href="{{ request.url_for('root').path }}" aria-label="Sobie – Trang chủ">SOBIE</a>
+      <p>Đồ bơi cho hiệu suất, phong cách và sự tự tin.</p>
+      <a href="#">Giới thiệu</a>
+      <a href="tel:{{ store.hotline }}">Hotline {{ store.hotline }}</a>
+      <a href="{{ store.zalo_url }}">Tư vấn Zalo</a>
+    </div>
+    <nav class="store-footer__nav" aria-label="Liên kết cuối trang">
+      <div>
+        <h2>Danh mục</h2>
+        <a href="#">Bikini</a>
+        <a href="#">Đồ bơi một mảnh</a>
+        <a href="#">Quần bơi nam</a>
+        <a href="#">Đồ bơi trẻ em</a>
+      </div>
+      <div>
+        <h2>Chính sách</h2>
+        <a href="#">Thanh toán</a>
+        <a href="#">Giao hàng</a>
+        <a href="#">Đổi trả</a>
+      </div>
+      <div>
+        <h2>FAQ</h2>
+        <a href="#">Câu hỏi thường gặp</a>
+      </div>
+      <div>
+        <h2>Bảng size</h2>
+        <a href="#">Hướng dẫn chọn size</a>
+      </div>
+    </nav>
+    <div class="store-footer__payments" aria-label="Phương thức thanh toán">
+      <div>{{ icon("box") }} <span><strong>COD</strong> Thanh toán khi nhận hàng</span></div>
+      <div>{{ icon("qr") }} <span><strong>QR</strong> Thanh toán qua mã QR</span></div>
+    </div>
+  </div>
+</footer>
